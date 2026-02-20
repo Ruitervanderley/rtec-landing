@@ -1,34 +1,25 @@
 import type { Metadata, Viewport } from 'next';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { PostHogProvider } from '@/components/analytics/PostHogProvider';
-import { DemoBadge } from '@/components/DemoBadge';
 import { routing } from '@/libs/I18nRouting';
 import '@/styles/global.css';
 
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-sans',
+});
+
 export const metadata: Metadata = {
   icons: [
-    {
-      rel: 'apple-touch-icon',
-      url: '/apple-touch-icon.png',
-    },
-    {
-      rel: 'icon',
-      type: 'image/png',
-      sizes: '32x32',
-      url: '/favicon-32x32.png',
-    },
-    {
-      rel: 'icon',
-      type: 'image/png',
-      sizes: '16x16',
-      url: '/favicon-16x16.png',
-    },
-    {
-      rel: 'icon',
-      url: '/favicon.ico',
-    },
+    { rel: 'apple-touch-icon', url: '/rtec-logo.png', sizes: '180x180' },
+    { rel: 'icon', type: 'image/png', sizes: '32x32', url: '/rtec-logo.png' },
+    { rel: 'icon', type: 'image/png', sizes: '16x16', url: '/rtec-logo.png' },
+    { rel: 'icon', url: '/rtec-logo.png' },
   ],
 };
 
@@ -54,14 +45,12 @@ export default async function RootLayout(props: {
   setRequestLocale(locale);
 
   return (
-    <html lang={locale}>
-      <body>
+    <html lang={locale} className={plusJakarta.variable}>
+      <body className="font-sans antialiased">
         <NextIntlClientProvider>
           <PostHogProvider>
             {props.children}
           </PostHogProvider>
-
-          <DemoBadge />
         </NextIntlClientProvider>
       </body>
     </html>

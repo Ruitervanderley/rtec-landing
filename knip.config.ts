@@ -5,6 +5,9 @@ const config: KnipConfig = {
   ignore: [
     '.storybook/**/*',
     'checkly.config.ts',
+    'scripts/run-db-migrate.cjs',
+    'src/components/DemoBadge.tsx',
+    'src/components/DemoBanner.tsx',
     'src/libs/I18n.ts',
     'src/types/I18n.ts',
     'src/utils/Helpers.ts',

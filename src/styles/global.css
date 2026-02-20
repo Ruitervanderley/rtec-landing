@@ -1,3 +1,98 @@
 @layer theme, base, clerk, components, utilities; /* Ensure Clerk is compatible with Tailwind CSS v4 */
 
 @import 'tailwindcss';
+
+@theme {
+  --font-family-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Landing page animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+/* Stagger delays for grid items */
+.animate-delay-1 {
+  animation-delay: 0.1s;
+}
+.animate-delay-2 {
+  animation-delay: 0.2s;
+}
+.animate-delay-3 {
+  animation-delay: 0.3s;
+}
+.animate-delay-4 {
+  animation-delay: 0.4s;
+}
+
+/* Animate when parent .animate-in-view gets .visible */
+.animate-in-view .animate-on-visible {
+  opacity: 0;
+}
+
+.animate-in-view.visible .animate-on-visible {
+  animation: fade-in-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-in-view.visible .stagger-1 {
+  animation-delay: 0.08s;
+}
+.animate-in-view.visible .stagger-2 {
+  animation-delay: 0.16s;
+}
+.animate-in-view.visible .stagger-3 {
+  animation-delay: 0.24s;
+}
+.animate-in-view.visible .stagger-4 {
+  animation-delay: 0.32s;
+}
+.animate-in-view.visible .stagger-5 {
+  animation-delay: 0.4s;
+}
+
+/* Skip link: visible on focus for keyboard users */
+.skip-link {
+  @apply sr-only rounded-lg focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:px-4 focus:py-3 focus:bg-emerald-600 focus:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400;
+}
+
+.skip-link:focus {
+  clip: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  position: absolute;
+  width: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-in-view.visible .animate-on-visible {
+    animation-duration: 0.01ms;
+    animation-delay: 0s;
+  }
+}

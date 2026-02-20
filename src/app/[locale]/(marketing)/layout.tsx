@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { DemoBanner } from '@/components/DemoBanner';
-import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { BackToTop } from '@/components/BackToTop';
+import { FloatingWhatsApp } from '@/components/FloatingWhatsApp';
 import { Link } from '@/libs/I18nNavigation';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 
@@ -12,85 +12,25 @@ export default async function Layout(props: {
   setRequestLocale(locale);
   const t = await getTranslations({
     locale,
-    namespace: 'RootLayout',
+    namespace: 'Index',
   });
 
   return (
-    <>
-      <DemoBanner />
-      <BaseTemplate
-        leftNav={(
-          <>
-            <li>
-              <Link
-                href="/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('home_link')}
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/about/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('about_link')}
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/counter/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('counter_link')}
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/portfolio/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('portfolio_link')}
-              </Link>
-            </li>
-            <li>
-              <a
-                className="border-none text-gray-700 hover:text-gray-900"
-                href="https://github.com/ixartz/Next-js-Boilerplate"
-              >
-                GitHub
-              </a>
-            </li>
-          </>
-        )}
-        rightNav={(
-          <>
-            <li>
-              <Link
-                href="/sign-in/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('sign_in_link')}
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                href="/sign-up/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('sign_up_link')}
-              </Link>
-            </li>
-
-            <li>
-              <LocaleSwitcher />
-            </li>
-          </>
-        )}
-      >
-        <div className="py-5 text-xl [&_p]:my-6">{props.children}</div>
-      </BaseTemplate>
-    </>
+    <BaseTemplate
+      rightNav={(
+        <li>
+          <Link
+            href="/#cta"
+            className="rounded-xl border border-zinc-400 bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm transition-all duration-200 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 hover:shadow focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none"
+          >
+            {t('header_cta')}
+          </Link>
+        </li>
+      )}
+    >
+      {props.children}
+      <FloatingWhatsApp />
+      <BackToTop />
+    </BaseTemplate>
   );
 }

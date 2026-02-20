@@ -14,6 +14,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return allRoutes.map(route => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
+    changeFrequency: route === '' ? 'weekly' as const : 'monthly' as const,
+    priority: route === '' ? 1 : 0.7,
     alternates: {
       languages: Object.fromEntries(
         AppConfig.locales
