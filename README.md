@@ -59,6 +59,18 @@ As demais variáveis seguem o [Next.js Boilerplate](https://github.com/ixartz/Ne
 
 Inclui ainda: botão flutuante WhatsApp, botão voltar ao topo, link do sitemap no footer, SEO (meta, Open Graph, JSON-LD) e acessibilidade (skip link, landmarks, contraste).
 
+## Subdomínios operacionais
+
+O site comercial pode ficar separado dos sistemas técnicos. Use subdomínios para organizar a operação da Rtec:
+
+| Subdomínio | Uso |
+|------------|-----|
+| **api.rtectecnologia.com.br** | API e webhooks para agentes de IA, bots (ex.: Python/Telegram como o da Arruda). Endereço fixo onde os serviços recebem chamadas e atualizações. |
+| **suporte.rtectecnologia.com.br** | Portal de chamados (ticketing) para clientes de infraestrutura (ex.: escola de Catalão). Abertura e acompanhamento de pedidos de manutenção, substituindo a bagunça do WhatsApp. |
+| **painel.rtectecnologia.com.br** | Painel futuro para clientes: relatórios dos agentes de IA e relatórios de uptime da rede. |
+
+Cada subdomínio pode ser um projeto ou serviço próprio; o domínio principal continua só com a landing e a imagem comercial.
+
 ## Deploy na Cloudflare Pages
 
 O deploy na Cloudflare Pages usa **static export**: o build gera a pasta `out` com HTML/CSS/JS estáticos. Use o script dedicado; o build normal (`npm run build`) não gera `out`.

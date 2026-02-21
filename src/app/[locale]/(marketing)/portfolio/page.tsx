@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import Image from 'next/image';
 import { Link } from '@/libs/I18nNavigation';
 
 type IPortfolioProps = {
@@ -29,42 +28,50 @@ export default async function Portfolio(props: IPortfolioProps) {
   });
 
   return (
-    <>
-      <p>{t('presentation')}</p>
+    <div className="min-h-full bg-slate-50 py-12 sm:py-16">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <h1 className="text-center text-3xl font-semibold tracking-tight text-slate-800 sm:text-4xl">
+          {t('page_title')}
+        </h1>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">
+          {t('page_subtitle')}
+        </p>
 
-      <div className="grid grid-cols-1 justify-items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }, (_, i) => (
+        <div className="mt-12 grid gap-8 sm:grid-cols-1 md:grid-cols-2">
+          <article className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+            <div className="mb-3 inline-flex rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
+              {t('card1_badge')}
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800">
+              {t('card1_title')}
+            </h2>
+            <p className="mt-3 text-slate-600">
+              {t('card1_description')}
+            </p>
+          </article>
+
+          <article className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+            <div className="mb-3 inline-flex rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
+              {t('card2_badge')}
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800">
+              {t('card2_title')}
+            </h2>
+            <p className="mt-3 text-slate-600">
+              {t('card2_description')}
+            </p>
+          </article>
+        </div>
+
+        <div className="mt-14 text-center">
           <Link
-            className="hover:text-blue-700"
-            key={i}
-            href={`/portfolio/${i}`}
+            href="/#cta"
+            className="inline-flex items-center justify-center rounded-xl border border-emerald-600 bg-emerald-600 px-6 py-3 text-base font-medium text-white shadow-sm transition-colors hover:border-emerald-700 hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none"
           >
-            {t('portfolio_name', { name: i })}
+            {t('cta_button')}
           </Link>
-        ))}
+        </div>
       </div>
-
-      <div className="mt-5 text-center text-sm">
-        {`${t('error_reporting_powered_by')} `}
-        <a
-          className="text-blue-700 hover:border-b-2 hover:border-blue-700"
-          href="https://sentry.io/for/nextjs/?utm_source=github&utm_medium=paid-community&utm_campaign=general-fy25q1-nextjs&utm_content=github-banner-nextjsboilerplate-logo"
-        >
-          Sentry
-        </a>
-      </div>
-
-      <a
-        href="https://sentry.io/for/nextjs/?utm_source=github&utm_medium=paid-community&utm_campaign=general-fy25q1-nextjs&utm_content=github-banner-nextjsboilerplate-logo"
-      >
-        <Image
-          className="mx-auto mt-2"
-          src="/assets/images/sentry-dark.png"
-          alt="Sentry"
-          width={128}
-          height={38}
-        />
-      </a>
-    </>
+    </div>
   );
-};
+}

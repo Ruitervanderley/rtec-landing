@@ -94,9 +94,17 @@
     "translation_powered_by": "Translation powered by"
   },
   "Portfolio": {
-    "meta_title": "Portfolio",
-    "meta_description": "Welcome to my portfolio page!",
-    "presentation": "Welcome to my portfolio page! Here you will find a carefully curated collection of my work and accomplishments. Through this portfolio, I'm to showcase my expertise, creativity, and the value I can bring to your projects.",
+    "meta_title": "Nossos Casos de Sucesso | Rtec Tecnologia",
+    "meta_description": "Conheça projetos reais de infraestrutura e automação com IA: rede e câmeras em Catalão e bot de monitoramento para a Arruda.",
+    "page_title": "Nossos Casos de Sucesso",
+    "page_subtitle": "Projetos que mostram nossa atuação em infraestrutura e em automação com Inteligência Artificial.",
+    "card1_badge": "Infraestrutura",
+    "card1_title": "Modernização de Rede e Segurança Escolar",
+    "card1_description": "Planejamento e execução de infraestrutura de rede de alta performance e sistema de monitoramento por câmeras para uma instituição de ensino em Catalão - GO, garantindo segurança e conectividade contínua.",
+    "card2_badge": "IA e Automação",
+    "card2_title": "Agente de Monitoramento Inteligente",
+    "card2_description": "Desenvolvimento de um bot corporativo em Python integrado ao Telegram para a empresa Arruda, automatizando o fluxo de informações e acelerando a tomada de decisão da equipe.",
+    "cta_button": "Quero um projeto como esses",
     "portfolio_name": "Portfolio {name}",
     "error_reporting_powered_by": "Error reporting powered by"
   },
