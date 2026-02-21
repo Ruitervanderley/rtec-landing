@@ -1,11 +1,16 @@
 import type { Metadata } from 'next';
 import { UserProfile } from '@clerk/nextjs';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { AppConfig } from '@/utils/AppConfig';
 import { getI18nPath } from '@/utils/Helpers';
 
 type IUserProfilePageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export function generateStaticParams() {
+  return AppConfig.locales.map(locale => ({ locale, 'user-profile': [] }));
+}
 
 export async function generateMetadata(props: IUserProfilePageProps): Promise<Metadata> {
   const { locale } = await props.params;

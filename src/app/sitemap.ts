@@ -2,6 +2,8 @@ import type { MetadataRoute } from 'next';
 import { AppConfig } from '@/utils/AppConfig';
 import { getBaseUrl, getI18nPath } from '@/utils/Helpers';
 
+export const dynamic = 'force-static';
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = getBaseUrl();
 

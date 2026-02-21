@@ -1,8 +1,12 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 import withBundleAnalyzer from '@next/bundle-analyzer';
 import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 import './src/libs/Env';
+
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+const stubDir = path.resolve(__dirname, 'stub');
 
 // Define the base Next.js configuration
 const baseConfig: NextConfig = {
@@ -15,6 +19,10 @@ const baseConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/': ['./migrations/**/*'],
   },
+  ...(isStaticExport && {
+    output: 'export',
+    images: { unoptimized: true },
+  }),
 };
 
 // Initialize the Next-Intl plugin
@@ -25,8 +33,8 @@ if (process.env.ANALYZE === 'true') {
   configWithPlugins = withBundleAnalyzer()(configWithPlugins);
 }
 
-// Conditionally enable Sentry configuration
-if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
+// Conditionally enable Sentry configuration (skip for static export)
+if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED && !isStaticExport) {
   configWithPlugins = withSentryConfig(configWithPlugins, {
     // For all available options, see:
     // https://www.npmjs.com/package/@sentry/webpack-plugin#options
@@ -64,5 +72,23 @@ if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
   });
 }
 
-const nextConfig = configWithPlugins;
+type WebpackConfigWithResolve = { resolve?: { alias?: Record<string, string> }; [k: string]: unknown };
+
+const nextConfig = isStaticExport
+  ? (() => {
+      const prevWebpack = configWithPlugins.webpack;
+      return {
+        ...configWithPlugins,
+        webpack: (config: WebpackConfigWithResolve, options: { isServer?: boolean; nextRuntime?: string }) => {
+          const c = prevWebpack ? (prevWebpack as (c: WebpackConfigWithResolve, o: unknown) => WebpackConfigWithResolve)(config, options) : config;
+          c.resolve ??= {};
+          c.resolve.alias ??= {};
+          const alias = c.resolve.alias as Record<string, string>;
+          alias['@clerk/nextjs'] = path.join(stubDir, 'clerk-nextjs.tsx');
+          alias['@clerk/nextjs/server'] = path.join(stubDir, 'clerk-nextjs-server.ts');
+          return c;
+        },
+      };
+    })()
+  : configWithPlugins;
 export default nextConfig;

@@ -11,6 +11,7 @@
     "build:next": "next build --webpack",
     "build-local": "run-p db-server:memory build:next --race",
     "build": "next build --webpack",
+    "build:pages": "node scripts/build-for-pages.cjs",
     "build:with-db": "run-s db:migrate build:next",
     "start": "next start",
     "build-stats": "cross-env ANALYZE=true npm run build",
@@ -101,7 +102,7 @@
     "semantic-release": "^25.0.3",
     "storybook": "^10.2.4",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3",
+    "typescript": "5.9.3",
     "vite-tsconfig-paths": "^6.0.5",
     "vitest": "^4.0.18",
     "vitest-browser-react": "^2.0.5"

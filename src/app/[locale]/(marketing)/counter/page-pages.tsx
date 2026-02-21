@@ -1,10 +1,12 @@
+/** Static version for Cloudflare Pages — no CurrentCount (no headers/db). */
 import type { Metadata } from 'next';
 import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import { CounterForm } from '@/components/CounterForm';
-import { CurrentCount } from '@/components/CurrentCount';
 import { AppConfig } from '@/utils/AppConfig';
+
+export const dynamic = 'force-static';
 
 export function generateStaticParams() {
   return AppConfig.locales.map(locale => ({ locale }));
@@ -25,15 +27,16 @@ export async function generateMetadata(props: {
   };
 }
 
-export default function Counter() {
+export default function CounterPages() {
   const t = useTranslations('Counter');
+  const tCount = useTranslations('CurrentCount');
 
   return (
     <>
       <CounterForm />
 
       <div className="mt-3">
-        <CurrentCount />
+        <div>{tCount('count', { count: 0 })}</div>
       </div>
 
       <div className="mt-5 text-center text-sm">
@@ -59,4 +62,4 @@ export default function Counter() {
       </a>
     </>
   );
-};
+}

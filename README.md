@@ -59,6 +59,19 @@ As demais variáveis seguem o [Next.js Boilerplate](https://github.com/ixartz/Ne
 
 Inclui ainda: botão flutuante WhatsApp, botão voltar ao topo, link do sitemap no footer, SEO (meta, Open Graph, JSON-LD) e acessibilidade (skip link, landmarks, contraste).
 
+## Deploy na Cloudflare Pages
+
+O build (`npm run build`) já roda sem banco na Cloudflare. O erro **"Missing entry-point to Worker script or to assets directory"** aparece quando está configurado um **Deploy command** (ex.: `npx wrangler deploy`) que não combina com um app Next.js comum.
+
+**Ajuste no painel:**
+
+1. **Workers & Pages** → seu projeto → **Settings** → **Builds & deployments**.
+2. **Deploy command**: deixe **em branco** (remova `npx wrangler deploy` se estiver preenchido).
+3. **Build command**: mantenha `npm run build`.
+4. **Build output directory**: use o valor indicado pelo preset. Se estiver em **Framework preset: None**, troque para **Next.js** para a Cloudflare usar o fluxo correto de build e deploy do Next.js.
+
+Sem um deploy command customizado, a Cloudflare passa a publicar o resultado do build conforme o preset (Next.js), em vez de chamar o Wrangler sem configuração.
+
 ## Scripts principais
 
 | Comando | Descrição |

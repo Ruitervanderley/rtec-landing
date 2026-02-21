@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Hello } from '@/components/Hello';
+import { AppConfig } from '@/utils/AppConfig';
+
+export function generateStaticParams() {
+  return AppConfig.locales.map(locale => ({ locale }));
+}
 
 export async function generateMetadata(props: {
   params: Promise<{ locale: string }>;

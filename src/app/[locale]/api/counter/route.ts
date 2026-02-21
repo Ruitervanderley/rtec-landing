@@ -15,8 +15,6 @@ export const PUT = async (request: Request) => {
     return NextResponse.json(z.treeifyError(parse.error), { status: 422 });
   }
 
-  // `x-e2e-random-id` is used for end-to-end testing to make isolated requests
-  // The default value is 0 when there is no `x-e2e-random-id` header
   const id = Number((await headers()).get('x-e2e-random-id')) || 0;
 
   const count = await db
