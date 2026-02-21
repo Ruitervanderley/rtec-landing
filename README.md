@@ -86,6 +86,17 @@ O deploy na Cloudflare Pages usa **static export**: o build gera a pasta `out` c
 
 O `build:pages` ativa o static export do Next.js, troca temporariamente rotas/componentes que usam API ou auth por versões estáticas e gera a pasta `out`. Para outros hosts (Vercel, Node, etc.), continue usando `npm run build` e `npm run start`.
 
+## Commits
+
+O projeto usa **commitlint** (Conventional Commits). A mensagem deve começar com um **tipo** e descrição em minúsculas:
+
+- `docs: texto da alteração` — documentação (README, comentários)
+- `feat: nova funcionalidade`
+- `fix: correção de bug`
+- `chore: tarefa de manutenção`
+
+Exemplo: `git commit -m "docs: readme subdominios portfolio menu e redirects"`
+
 ## Scripts principais
 
 | Comando | Descrição |
