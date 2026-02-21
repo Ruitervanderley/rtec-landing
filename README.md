@@ -61,23 +61,26 @@ Inclui ainda: botão flutuante WhatsApp, botão voltar ao topo, link do sitemap 
 
 ## Deploy na Cloudflare Pages
 
-O build (`npm run build`) já roda sem banco na Cloudflare. O erro **"Missing entry-point to Worker script or to assets directory"** aparece quando está configurado um **Deploy command** (ex.: `npx wrangler deploy`) que não combina com um app Next.js comum.
+O deploy na Cloudflare Pages usa **static export**: o build gera a pasta `out` com HTML/CSS/JS estáticos. Use o script dedicado; o build normal (`npm run build`) não gera `out`.
 
-**Ajuste no painel:**
+**No repositório:** envie o código para o GitHub (ex.: `git push`) para que a Cloudflare clone o commit que contém o script `build:pages`.
+
+**No painel da Cloudflare Pages:**
 
 1. **Workers & Pages** → seu projeto → **Settings** → **Builds & deployments**.
-2. **Deploy command**: deixe **em branco** (remova `npx wrangler deploy` se estiver preenchido).
-3. **Build command**: mantenha `npm run build`.
-4. **Build output directory**: use o valor indicado pelo preset. Se estiver em **Framework preset: None**, troque para **Next.js** para a Cloudflare usar o fluxo correto de build e deploy do Next.js.
+2. **Build command:** `npm run build:pages`
+3. **Build output directory:** `out`
+4. **Deploy command:** deixe em branco (a Pages publica o conteúdo de `out` automaticamente).
 
-Sem um deploy command customizado, a Cloudflare passa a publicar o resultado do build conforme o preset (Next.js), em vez de chamar o Wrangler sem configuração.
+O `build:pages` ativa o static export do Next.js, troca temporariamente rotas/componentes que usam API ou auth por versões estáticas e gera a pasta `out`. Para outros hosts (Vercel, Node, etc.), continue usando `npm run build` e `npm run start`.
 
 ## Scripts principais
 
 | Comando | Descrição |
 |---------|-----------|
 | `npm run dev` | Sobe PGLite, migrações, Next (porta 5000) e Spotlight |
-| `npm run build` | Migrações + build de produção |
+| `npm run build` | Migrações + build de produção (servidor/outros hosts) |
+| `npm run build:pages` | Build com static export para Cloudflare Pages (gera pasta `out`) |
 | `npm run start` | Sobe o app em modo produção |
 | `npm run lint` | ESLint |
 | `npm run check:types` | Verificação TypeScript |
