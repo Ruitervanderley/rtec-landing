@@ -1,0 +1,11 @@
+# Optional file when using named tunnel without run token command
+# Place your tunnel UUID and credentials file path.
+tunnel: YOUR_TUNNEL_UUID
+credentials-file: /etc/cloudflared/YOUR_TUNNEL_UUID.json
+
+ingress:
+  - hostname: painel.rtectecnologia.com.br
+    service: http://painel-web:3001
+  - hostname: api.rtectecnologia.com.br
+    service: http://ops-api:4000
+  - service: http_status:404

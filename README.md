@@ -47,6 +47,8 @@ No `.env` (e em produção no seu provedor):
 
 As demais variáveis seguem o [Next.js Boilerplate](https://github.com/ixartz/Next-js-Boilerplate).
 
+O repositório inclui também o backend **NOC API** (MVP NOC-as-a-Service) em `noc-api/`: API em Node.js + Drizzle que recebe eventos de rede, correlação por janela de tempo e geração automática de incidentes. Ver `noc-api/README.md`.
+
 ## Estrutura da landing
 
 - **Hero** – Título, subtítulo e CTA principal (WhatsApp)
@@ -112,3 +114,11 @@ Exemplo: `git commit -m "docs: readme subdominios portfolio menu e redirects"`
 ## Licença
 
 MIT. Projeto gerado a partir do [Next.js Boilerplate](https://github.com/ixartz/Next-js-Boilerplate).
+
+## Operacao do painel administrativo
+
+Para deploy do painel operacional (painel/api/cloudflared) na Oracle VPS:
+
+- veja `deploy/ops/README.md`
+- use `deploy/ops/docker-compose.yml`
+- configure `painel.rtectecnologia.com.br` e `api.rtectecnologia.com.br`

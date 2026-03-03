@@ -1,0 +1,21 @@
+{
+  "node": {
+    "409f91dcaa2b3d65f7778bc08da70d61642df66c91": {
+      "workers": {
+        "app/devices/page": {
+          "moduleId": 32097,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "noc-app/src/app/devices/page.tsx"
+        }
+      },
+      "layer": {
+        "app/devices/page": "rsc"
+      },
+      "filename": "noc-app/src/app/devices/page.tsx",
+      "exportedName": "$$RSC_SERVER_ACTION_0"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "aDD0l7Lsf1A3XP+BPrc/jK+gSs8ElXgkbKF036shcTE="
+}

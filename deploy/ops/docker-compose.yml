@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  ops-api:
+    build:
+      context: ../../noc-api
+      dockerfile: Dockerfile
+    container_name: rtec-ops-api
+    env_file:
+      - .env
+    restart: unless-stopped
+    environment:
+      - PORT=4000
+    expose:
+      - '4000'
+
+  painel-web:
+    build:
+      context: ../../noc-app
+      dockerfile: Dockerfile
+    container_name: rtec-ops-panel
+    env_file:
+      - .env
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+    expose:
+      - '3001'
+    depends_on:
+      - ops-api
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: rtec-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - painel-web
+      - ops-api
