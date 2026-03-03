@@ -137,17 +137,17 @@ export async function getOverview(): Promise<OpsOverview> {
 
 export async function getTenants(): Promise<TenantRow[]> {
   const response = await fetchAdmin<{ tenants: TenantRow[] }>('/admin/tenants');
-  return response.tenants;
+  return response.tenants ?? [];
 }
 
 export async function getDevices(limit = 300): Promise<DeviceRow[]> {
   const response = await fetchAdmin<{ devices: DeviceRow[] }>(`/admin/devices?limit=${limit}`);
-  return response.devices;
+  return response.devices ?? [];
 }
 
 export async function getBackups(limit = 300): Promise<BackupRow[]> {
   const response = await fetchAdmin<{ backups: BackupRow[] }>(`/admin/backups?limit=${limit}`);
-  return response.backups;
+  return response.backups ?? [];
 }
 
 export async function revokeDevice(devicePk: string): Promise<void> {

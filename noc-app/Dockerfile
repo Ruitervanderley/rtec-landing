@@ -23,4 +23,4 @@ COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY --from=build /app/next-env.d.ts ./next-env.d.ts
 
 EXPOSE 3001
-CMD ["npm", "run", "start"]
+CMD ["node", ".next/standalone/server.js"]
