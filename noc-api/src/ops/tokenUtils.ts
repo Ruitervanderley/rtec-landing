@@ -1,4 +1,4 @@
-﻿import crypto from 'node:crypto';
+import crypto from 'node:crypto';
 
 export const DEVICE_TOKEN_TTL_DAYS = 30;
 

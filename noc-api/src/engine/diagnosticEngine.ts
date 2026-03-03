@@ -1,12 +1,12 @@
+import type { NewIncident } from './types.js';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import {
-  incidents,
   incidentDevices,
+  incidents,
 } from '../db/schema.js';
 import { buildDiagnosticContext } from './buildContext.js';
 import { allRules } from './rules.js';
-import type { NewIncident } from './types.js';
 
 /**
  * Motor de diagnóstico orientado a impacto operacional.
@@ -15,7 +15,9 @@ import type { NewIncident } from './types.js';
  */
 export async function runDiagnosticEngine(): Promise<void> {
   const ctx = await buildDiagnosticContext();
-  if (!ctx) return;
+  if (!ctx) {
+    return;
+  }
 
   const candidates: NewIncident[] = [];
   for (const rule of allRules) {
@@ -25,7 +27,9 @@ export async function runDiagnosticEngine(): Promise<void> {
 
   for (const inc of candidates) {
     const alreadyOpen = await hasOpenIncidentForDevices(inc.deviceIds);
-    if (alreadyOpen) continue;
+    if (alreadyOpen) {
+      continue;
+    }
     await createIncident(inc);
   }
 }
@@ -43,7 +47,9 @@ async function hasOpenIncidentForDevices(deviceIds: string[]): Promise<boolean> 
         ),
       )
       .limit(1);
-    if (open.length > 0) return true;
+    if (open.length > 0) {
+      return true;
+    }
   }
   return false;
 }
@@ -65,7 +71,9 @@ async function createIncident(inc: NewIncident): Promise<void> {
     })
     .returning({ id: incidents.id });
 
-  if (!incident) return;
+  if (!incident) {
+    return;
+  }
 
   for (const deviceId of inc.deviceIds) {
     await db.insert(incidentDevices).values({

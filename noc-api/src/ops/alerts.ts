@@ -1,7 +1,7 @@
-﻿import { and, desc, eq, gt, sql } from 'drizzle-orm';
+import type { OpsConfig } from './config.js';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { opsAlerts } from '../db/schema.js';
-import type { OpsConfig } from './config.js';
 
 export type AlertPayload = Record<string, unknown>;
 

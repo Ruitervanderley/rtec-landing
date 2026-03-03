@@ -1,14 +1,14 @@
 import express from 'express';
-import ingestRoutes from './routes/ingest.js';
-import incidentsRoutes from './routes/incidents.js';
+import { OpsAlertService } from './ops/alerts.js';
+import { loadOpsConfig } from './ops/config.js';
+import { OpsJobRunner } from './ops/jobs.js';
+import { R2Service } from './ops/r2Service.js';
 import devicesRoutes from './routes/devices.js';
 import devicesCreateRoutes from './routes/devicesCreate.js';
-import servicesRoutes from './routes/services.js';
+import incidentsRoutes from './routes/incidents.js';
+import ingestRoutes from './routes/ingest.js';
 import { createOpsV1Router, getOpsHealth } from './routes/opsV1.js';
-import { loadOpsConfig } from './ops/config.js';
-import { R2Service } from './ops/r2Service.js';
-import { OpsAlertService } from './ops/alerts.js';
-import { OpsJobRunner } from './ops/jobs.js';
+import servicesRoutes from './routes/services.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;

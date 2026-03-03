@@ -1,6 +1,12 @@
-﻿import crypto from 'node:crypto';
-import { Router, type Request, type Response } from 'express';
+import type { Request, Response } from 'express';
+import type { OpsAlertService } from '../ops/alerts.js';
+import type { OpsRequest } from '../ops/auth.js';
+import type { OpsConfig } from '../ops/config.js';
+import type { OpsJobRunner } from '../ops/jobs.js';
+import type { R2Service } from '../ops/r2Service.js';
+import crypto from 'node:crypto';
 import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { Router } from 'express';
 import { db } from '../db/index.js';
 import {
   deviceApiTokens,
@@ -8,11 +14,13 @@ import {
   deviceHeartbeats,
   tenantDevices,
 } from '../db/schema.js';
-import { OpsAlertService } from '../ops/alerts.js';
-import type { OpsConfig } from '../ops/config.js';
+import { requireAdminToken, requireDeviceToken } from '../ops/auth.js';
 import { isR2Configured } from '../ops/config.js';
-import { requireAdminToken, requireDeviceToken, type OpsRequest } from '../ops/auth.js';
-import { R2Service } from '../ops/r2Service.js';
+import {
+  getProfileAccessInfo,
+  getSupabaseIdentity,
+  isAccessAllowed,
+} from '../ops/supabaseIdentity.js';
 import {
   DEVICE_TOKEN_TTL_DAYS,
   generateOpaqueToken,
@@ -20,12 +28,6 @@ import {
   nowPlusDays,
   sanitizeObjectPathSegment,
 } from '../ops/tokenUtils.js';
-import {
-  getProfileAccessInfo,
-  getSupabaseIdentity,
-  isAccessAllowed,
-} from '../ops/supabaseIdentity.js';
-import type { OpsJobRunner } from '../ops/jobs.js';
 
 const VALID_BACKUP_TYPES = new Set(['POST_SESSION', 'DAILY']);
 

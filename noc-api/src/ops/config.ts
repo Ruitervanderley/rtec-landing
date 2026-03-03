@@ -1,4 +1,4 @@
-﻿export type OpsConfig = {
+export type OpsConfig = {
   supabaseUrl: string;
   supabaseAnonKey: string;
   adminServiceToken: string;

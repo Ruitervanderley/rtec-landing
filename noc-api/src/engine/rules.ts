@@ -1,5 +1,4 @@
-import type { DiagnosticContext } from './types.js';
-import type { NewIncident } from './types.js';
+import type { DiagnosticContext, NewIncident } from './types.js';
 
 const MIN_CAMERAS_SAME_SERVICE = 2;
 const MIN_DEVICES_SAME_AREA = 2;
@@ -11,14 +10,19 @@ const CONFIDENCE_MEDIUM = 0.7;
  * Objetivo: impacto operacional, não falha de dispositivo. Menos alertas, mais explicações.
  */
 
-/** Várias câmeras (ou dispositivos) do mesmo serviço pararam → serviço indisponível. */
+/**
+ * Várias câmeras (ou dispositivos) do mesmo serviço pararam → serviço indisponível.
+ * @param ctx
+ */
 export function ruleServiceDown(ctx: DiagnosticContext): NewIncident[] {
   const out: NewIncident[] = [];
   for (const [, data] of ctx.offlineByService) {
-    if (data.deviceIds.length < MIN_CAMERAS_SAME_SERVICE) continue;
-    const serviceLabel =
-      data.serviceNome.toLowerCase().includes('vigilância') ||
-      data.serviceNome.toLowerCase().includes('camera')
+    if (data.deviceIds.length < MIN_CAMERAS_SAME_SERVICE) {
+      continue;
+    }
+    const serviceLabel
+      = data.serviceNome.toLowerCase().includes('vigilância')
+        || data.serviceNome.toLowerCase().includes('camera')
         ? 'Vigilância'
         : data.serviceNome;
     out.push({
@@ -37,11 +41,16 @@ export function ruleServiceDown(ctx: DiagnosticContext): NewIncident[] {
   return out;
 }
 
-/** Gateway (router) offline + vários dispositivos no mesmo site/área → queda geral de conectividade. */
+/**
+ * Gateway (router) offline + vários dispositivos no mesmo site/área → queda geral de conectividade.
+ * @param ctx
+ */
 export function ruleSiteConnectivityDown(ctx: DiagnosticContext): NewIncident[] {
   const out: NewIncident[] = [];
   for (const site of ctx.gatewayOfflineSites) {
-    if (site.offlineDeviceIds.length < MIN_DEVICES_SAME_AREA) continue;
+    if (site.offlineDeviceIds.length < MIN_DEVICES_SAME_AREA) {
+      continue;
+    }
     out.push({
       titulo: 'Queda geral de conectividade',
       descricao: `O gateway e outros dispositivos no site "${site.siteNome}" estão offline. Indica queda geral de conectividade no local.`,
@@ -58,12 +67,15 @@ export function ruleSiteConnectivityDown(ctx: DiagnosticContext): NewIncident[] 
   return out;
 }
 
-/** Latência alta sem queda → degradação perceptível ao usuário. */
+/**
+ * Latência alta sem queda → degradação perceptível ao usuário.
+ * @param ctx
+ */
 export function ruleUserPerceptibleDegradation(ctx: DiagnosticContext): NewIncident[] {
   const out: NewIncident[] = [];
   for (const dev of ctx.highLatencyOnly) {
-    const serviceLabel =
-      dev.serviceNomes.length > 0
+    const serviceLabel
+      = dev.serviceNomes.length > 0
         ? dev.serviceNomes.join(', ')
         : 'Conectividade';
     out.push({
@@ -82,11 +94,16 @@ export function ruleUserPerceptibleDegradation(ctx: DiagnosticContext): NewIncid
   return out;
 }
 
-/** Múltiplos dispositivos offline na mesma área (sem necessariamente ser gateway) → possível queda de energia/uplink. */
+/**
+ * Múltiplos dispositivos offline na mesma área (sem necessariamente ser gateway) → possível queda de energia/uplink.
+ * @param ctx
+ */
 export function ruleAreaOutage(ctx: DiagnosticContext): NewIncident[] {
   const out: NewIncident[] = [];
   for (const [, data] of ctx.offlineByArea) {
-    if (data.deviceIds.length < MIN_DEVICES_SAME_AREA) continue;
+    if (data.deviceIds.length < MIN_DEVICES_SAME_AREA) {
+      continue;
+    }
     out.push({
       titulo: 'Queda provável de energia ou uplink',
       descricao: `Vários dispositivos na área "${data.areaNome}" estão offline no mesmo período. Possível queda de energia ou falha no uplink do local.`,

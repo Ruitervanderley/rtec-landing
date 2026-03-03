@@ -1,14 +1,14 @@
+import type { DiagnosticContext } from './types.js';
 import { eq, gte, inArray } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import {
   areas,
   devices,
   events,
-  services,
   serviceDevices,
+  services,
   sites,
 } from '../db/schema.js';
-import type { DiagnosticContext } from './types.js';
 
 const WINDOW_MINUTES = 5;
 
@@ -42,9 +42,11 @@ export async function buildDiagnosticContext(): Promise<DiagnosticContext | null
     .where(gte(events.timestamp, windowStart))
     .orderBy(events.timestamp);
 
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    return null;
+  }
 
-  const deviceIds = [...new Set(rows.map((r) => r.deviceId))];
+  const deviceIds = [...new Set(rows.map(r => r.deviceId))];
   const serviceLinks = await db
     .select({
       deviceId: serviceDevices.deviceId,
@@ -80,8 +82,8 @@ export async function buildDiagnosticContext(): Promise<DiagnosticContext | null
         siteNome: r.siteNome,
         cliente: r.cliente,
       },
-      serviceIds: svc.map((x) => x.id),
-      serviceNomes: svc.map((x) => x.nome),
+      serviceIds: svc.map(x => x.id),
+      serviceNomes: svc.map(x => x.nome),
     };
   });
 
@@ -128,13 +130,15 @@ export async function buildDiagnosticContext(): Promise<DiagnosticContext | null
         });
       }
     }
-    if (e.tipo === 'high_latency') deviceHasHighLatency.add(e.deviceId);
+    if (e.tipo === 'high_latency') {
+      deviceHasHighLatency.add(e.deviceId);
+    }
   }
 
   const highLatencyOnly: DiagnosticContext['highLatencyOnly'] = [];
   for (const e of eventsWithMeta) {
     if (e.tipo === 'high_latency' && !deviceHasOffline.has(e.deviceId)) {
-      if (!highLatencyOnly.some((x) => x.deviceId === e.deviceId)) {
+      if (!highLatencyOnly.some(x => x.deviceId === e.deviceId)) {
         highLatencyOnly.push({
           deviceId: e.deviceId,
           deviceNome: e.device.nome,
@@ -150,7 +154,9 @@ export async function buildDiagnosticContext(): Promise<DiagnosticContext | null
     { siteNome: string; deviceIds: Set<string>; hasGateway: boolean }
   >();
   for (const e of eventsWithMeta) {
-    if (!offlineTypes.has(e.tipo)) continue;
+    if (!offlineTypes.has(e.tipo)) {
+      continue;
+    }
     const siteId = e.device.areaId ? `area-${e.device.areaId}` : e.device.local;
     const cur = siteOfflineDevices.get(siteId);
     if (!cur) {
@@ -161,12 +167,16 @@ export async function buildDiagnosticContext(): Promise<DiagnosticContext | null
       });
     } else {
       cur.deviceIds.add(e.deviceId);
-      if (e.device.tipo === 'router') cur.hasGateway = true;
+      if (e.device.tipo === 'router') {
+        cur.hasGateway = true;
+      }
     }
   }
 
   for (const [areaKey, off] of siteOfflineDevices) {
-    if (!off.hasGateway || off.deviceIds.size === 0) continue;
+    if (!off.hasGateway || off.deviceIds.size === 0) {
+      continue;
+    }
     gatewayOfflineSites.push({
       siteId: areaKey,
       siteNome: off.siteNome,

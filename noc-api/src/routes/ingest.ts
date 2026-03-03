@@ -1,8 +1,9 @@
-import { Router, type Request, type Response } from 'express';
+import type { Request, Response } from 'express';
+import type { EventType } from '../engine/types.js';
+import { Router } from 'express';
 import { db } from '../db/index.js';
 import { events } from '../db/schema.js';
 import { runDiagnosticEngine } from '../engine/diagnosticEngine.js';
-import type { EventType } from '../engine/types.js';
 
 const router = Router();
 
@@ -35,9 +36,9 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     if (
-      !tipo ||
-      typeof tipo !== 'string' ||
-      !EVENT_TYPES.includes(tipo as EventType)
+      !tipo
+      || typeof tipo !== 'string'
+      || !EVENT_TYPES.includes(tipo as EventType)
     ) {
       res.status(400).json({
         error: `tipo must be one of: ${EVENT_TYPES.join(', ')}`,

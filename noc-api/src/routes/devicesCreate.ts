@@ -1,4 +1,5 @@
-import { Router, type Request, type Response } from 'express';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import { db } from '../db/index.js';
 import { devices } from '../db/schema.js';
 
@@ -26,9 +27,9 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
     if (
-      !tipo ||
-      typeof tipo !== 'string' ||
-      !DEVICE_TYPES.includes(tipo as (typeof DEVICE_TYPES)[number])
+      !tipo
+      || typeof tipo !== 'string'
+      || !DEVICE_TYPES.includes(tipo as (typeof DEVICE_TYPES)[number])
     ) {
       res.status(400).json({
         error: `tipo must be one of: ${DEVICE_TYPES.join(', ')}`,

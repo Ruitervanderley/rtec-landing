@@ -1,5 +1,5 @@
-﻿import { pool } from '../db/index.js';
 import type { OpsConfig } from './config.js';
+import { pool } from '../db/index.js';
 
 export type SupabaseIdentity = {
   userId: string;

@@ -1,8 +1,8 @@
-﻿import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import type { OpsConfig } from './config.js';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { deviceApiTokens, tenantDevices } from '../db/schema.js';
-import type { OpsConfig } from './config.js';
 import { hashOpaqueToken } from './tokenUtils.js';
 
 export type DeviceAuthContext = {

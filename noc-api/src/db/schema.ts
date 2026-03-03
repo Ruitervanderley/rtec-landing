@@ -1,19 +1,19 @@
+import { relations } from 'drizzle-orm';
 import {
   bigint,
   boolean,
   index,
   integer,
   jsonb,
+  pgEnum,
   pgTable,
+  primaryKey,
+  real,
   serial,
-  uuid,
   text,
   timestamp,
-  real,
-  pgEnum,
-  primaryKey,
+  uuid,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
 
 export const deviceTypeEnum = pgEnum('device_type', [
   'router',
@@ -91,7 +91,7 @@ export const serviceDevices = pgTable(
       .notNull()
       .references(() => devices.id, { onDelete: 'cascade' }),
   },
-  (t) => [primaryKey({ columns: [t.serviceId, t.deviceId] })],
+  t => [primaryKey({ columns: [t.serviceId, t.deviceId] })],
 );
 
 export const events = pgTable('events', {
@@ -131,7 +131,7 @@ export const incidentDevices = pgTable(
       .notNull()
       .references(() => devices.id, { onDelete: 'cascade' }),
   },
-  (t) => [primaryKey({ columns: [t.incidentId, t.deviceId] })],
+  t => [primaryKey({ columns: [t.incidentId, t.deviceId] })],
 );
 
 export const tenantDevices = pgTable(
@@ -149,7 +149,7 @@ export const tenantDevices = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
+  t => [
     index('idx_tenant_devices_tenant_last_seen').on(t.tenantId, t.lastSeenAt),
   ],
 );
@@ -178,7 +178,7 @@ export const deviceHeartbeats = pgTable(
     appVersion: text('app_version'),
     meta: jsonb('meta').$type<Record<string, unknown> | null>(),
   },
-  (t) => [
+  t => [
     index('idx_device_heartbeats_device_at').on(t.deviceFk, t.heartbeatAt),
   ],
 );
@@ -203,7 +203,7 @@ export const deviceBackups = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },
-  (t) => [
+  t => [
     index('idx_device_backups_tenant_created_status').on(t.tenantId, t.createdAt, t.status),
   ],
 );
@@ -221,7 +221,7 @@ export const opsAlerts = pgTable(
     delivered: boolean('delivered').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
+  t => [
     index('idx_ops_alerts_dedup_sent').on(t.dedupKey, t.sentAt),
   ],
 );

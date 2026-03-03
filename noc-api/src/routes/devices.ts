@@ -1,5 +1,6 @@
-import { Router, type Request, type Response } from 'express';
+import type { Request, Response } from 'express';
 import { and, desc, eq } from 'drizzle-orm';
+import { Router } from 'express';
 import { db } from '../db/index.js';
 import { devices, events, incidentDevices, incidents } from '../db/schema.js';
 
@@ -52,14 +53,14 @@ router.get('/:id/status', async (req: Request, res: Response) => {
         ),
       );
 
-    const hasRecentOffline =
-      lastEvents.some(
-        (e) =>
+    const hasRecentOffline
+      = lastEvents.some(
+        e =>
           e.tipo === 'offline' || e.tipo === 'ping_fail',
       );
     const lastEvent = lastEvents[0];
-    const interpreted =
-      openIncidents.length > 0
+    const interpreted
+      = openIncidents.length > 0
         ? 'incident'
         : hasRecentOffline
           ? 'degraded'
@@ -78,7 +79,7 @@ router.get('/:id/status', async (req: Request, res: Response) => {
       status: {
         interpreted,
         lastEvents: lastEvents.slice(0, 10),
-        openIncidents: openIncidents.map((i) => ({
+        openIncidents: openIncidents.map(i => ({
           id: i.id,
           titulo: i.titulo,
           severidade: i.severidade,

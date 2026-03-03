@@ -1,9 +1,9 @@
-﻿import { and, inArray, isNull, lt } from 'drizzle-orm';
+import type { OpsAlertService } from './alerts.js';
+import type { R2Service } from './r2Service.js';
+import { and, inArray, isNull, lt } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { deviceBackups, tenantDevices } from '../db/schema.js';
-import { OpsAlertService } from './alerts.js';
 import { buildDedupWindowKey } from './tokenUtils.js';
-import { R2Service } from './r2Service.js';
 
 export type OpsRuntimeState = {
   startedAtUtc: Date;
@@ -149,7 +149,7 @@ export class OpsJobRunner {
         }
       }
 
-      const ids = oldBackups.map((backup) => backup.id);
+      const ids = oldBackups.map(backup => backup.id);
       if (ids.length > 0) {
         await db.delete(deviceBackups).where(inArray(deviceBackups.id, ids));
         deletedCount = ids.length;
