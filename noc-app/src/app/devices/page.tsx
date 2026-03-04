@@ -1,4 +1,4 @@
-﻿import { revalidatePath } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { getDevices, revokeDevice } from '@/lib/ops-api';
 import { formatDateTime } from '@/lib/format';
 
@@ -51,7 +51,7 @@ export default async function DevicesPage() {
             </tr>
           </thead>
           <tbody>
-            {devices.map((device) => (
+            {(Array.isArray(devices) ? devices : []).map((device) => (
               <tr key={device.id} style={{ background: device.is_online ? '#f8fafc' : '#fff7ed' }}>
                 <td style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid #e2e8f0' }}>{device.tenant_name}</td>
                 <td style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid #e2e8f0', fontFamily: 'Consolas, monospace', fontSize: 12 }}>{device.device_id}</td>

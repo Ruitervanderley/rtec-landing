@@ -38,7 +38,7 @@ export default async function BackupsPage() {
             </tr>
           </thead>
           <tbody>
-            {backups.map((backup) => (
+            {(Array.isArray(backups) ? backups : []).map((backup) => (
               <tr key={backup.id} style={{ background: backup.status === 'FAILED' ? '#fff1f2' : '#f8fafc' }}>
                 <td style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid #e2e8f0' }}>{formatDateTime(backup.created_at)}</td>
                 <td style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid #e2e8f0' }}>{backup.tenant_name}</td>

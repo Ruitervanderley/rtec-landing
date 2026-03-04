@@ -1,4 +1,4 @@
-﻿import { getTenants } from '@/lib/ops-api';
+import { getTenants } from '@/lib/ops-api';
 import { formatDate, formatDateTime } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -42,7 +42,7 @@ export default async function TenantsPage() {
             </tr>
           </thead>
           <tbody>
-            {tenants.map((tenant) => (
+            {(Array.isArray(tenants) ? tenants : []).map((tenant) => (
               <tr key={tenant.id} style={{ background: getRowBg(tenant.is_active) }}>
                 <td style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid #e2e8f0', fontWeight: 600 }}>{tenant.name}</td>
                 <td style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid #e2e8f0', fontFamily: 'Consolas, monospace', fontSize: 12 }}>{tenant.license_key}</td>
