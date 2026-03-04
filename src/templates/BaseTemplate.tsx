@@ -113,7 +113,7 @@ export const BaseTemplate = (props: {
               </h4>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/" className="text-slate-500 transition-colors hover:text-emerald-400">Início</Link></li>
-                <li><Link href="/portfolio" className="text-slate-500 transition-colors hover:text-emerald-400">Portfolio</Link></li>
+                <li><Link prefetch={false} href="/portfolio" className="text-slate-500 transition-colors hover:text-emerald-400">Portfolio</Link></li>
                 <li><Link href="/#cta" className="text-slate-500 transition-colors hover:text-emerald-400">Contato</Link></li>
               </ul>
             </div>
