@@ -1,7 +1,0 @@
-{
-  "/(protected)/dashboard/page": "app/(protected)/dashboard/page.js",
-  "/(protected)/tenants/page": "app/(protected)/tenants/page.js",
-  "/portal/[slug]/page": "app/portal/[slug]/page.js",
-  "/portal/[slug]/relatorios/page": "app/portal/[slug]/relatorios/page.js",
-  "/(protected)/devices/page": "app/(protected)/devices/page.js"
-}
