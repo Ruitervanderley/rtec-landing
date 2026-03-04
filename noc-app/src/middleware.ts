@@ -1,6 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { Buffer } from 'node:buffer';
-import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 const ADMIN_HOSTS = ['painel', 'www', 'localhost'];
@@ -28,7 +26,7 @@ function extractSubdomain(host: string): string | null {
 }
 
 // ─── Lightweight JWT verification in Edge Runtime ───
-function verifyTokenInMiddleware(token: string): boolean {
+async function verifyTokenInMiddleware(token: string): Promise<boolean> {
   try {
     const secret = process.env.NOC_SESSION_SECRET ?? 'rtec-dev-secret-change-in-production-2026';
     const parts = token.split('.');
@@ -37,18 +35,31 @@ function verifyTokenInMiddleware(token: string): boolean {
     }
 
     const [header, body, signature] = parts;
-    const expectedSig = crypto
-      .createHmac('sha256', secret)
-      .update(`${header}.${body}`)
-      .digest('base64url');
+    const encoder = new TextEncoder();
+
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    );
+
+    const expectedSigBuffer = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(`${header}.${body}`));
+
+    // Convert ArrayBuffer to base64url string
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(expectedSigBuffer)));
+    const expectedSig = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
     // Compare signatures
     if (signature !== expectedSig) {
       return false;
     }
 
-    // Check expiration
-    const payload = JSON.parse(Buffer.from(body!, 'base64url').toString());
+    // Check expiration using standard JS base64 decode to avoid node:buffer
+    const decodedBody = atob(body!.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(decodedBody);
+
     if (payload.exp && Date.now() > payload.exp) {
       return false;
     }
@@ -59,7 +70,7 @@ function verifyTokenInMiddleware(token: string): boolean {
   }
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const currentPath = request.nextUrl.pathname;
   const host = request.headers.get('host') ?? 'localhost';
   const subdomain = extractSubdomain(host);
@@ -89,7 +100,7 @@ export function middleware(request: NextRequest) {
   // ─── Validate signed session token ───
   const sessionCookie = request.cookies.get('rtec_noc_session');
 
-  if (!sessionCookie || !verifyTokenInMiddleware(sessionCookie.value)) {
+  if (!sessionCookie || !(await verifyTokenInMiddleware(sessionCookie.value))) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('from', currentPath);
     return NextResponse.redirect(loginUrl);
