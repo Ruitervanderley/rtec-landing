@@ -1,0 +1,186 @@
+:root {
+  /* Brand Colors Extracted from R.TEC Logo */
+  --brand-blue: #2d82cc;
+  --brand-cyan: #4db8ff;
+  --brand-gradient: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-cyan) 100%);
+
+  /* Core Colors */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --sidebar-bg: #0b1121;
+  --sidebar-hover: rgba(77, 184, 255, 0.1);
+
+  /* Accents */
+  --accent-primary: var(--brand-blue);
+  --accent-hover: var(--brand-cyan);
+  --accent-light: #e0f2fe;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* Borders & Styling */
+  --border-color: rgba(226, 232, 240, 0.6); /* Very faint borders when needed */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+
+  /* Premium Soft Shadows (Apple-like) */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 32px rgba(45, 130, 204, 0.08); /* Brand tinted hover shadow */
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.03);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  /* The layout wrapper sets the font family */
+}
+
+/* Base Utility Classes */
+.card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: none;
+  padding: 2rem; /* More breathing room */
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: none;
+}
+
+.base-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.base-table th {
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  padding: 1.2rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #f1f5f9;
+}
+
+.base-table td {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+.base-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.base-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.825rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.badge-success {
+  background-color: #dcfce7;
+  color: #166534;
+  border: none;
+}
+
+.badge-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.badge-warning {
+  background-color: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fef08a;
+}
+
+.badge-neutral {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: #cbd5e1;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-link:hover {
+  background-color: var(--sidebar-hover);
+  color: #fff;
+  transform: translateX(4px);
+}
+
+.sidebar-link.active {
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(77, 184, 255, 0.2);
+}
+
+/* Action Buttons */
+.btn-revoke {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #fecaca;
+  background-color: #fff1f2;
+  color: #9f1239;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-revoke:hover {
+  background-color: #fecdd3;
+}

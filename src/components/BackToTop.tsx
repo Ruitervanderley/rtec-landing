@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Back-to-top button that appears after scrolling down. Fades in/out for a smoother UX.
+ * Back-to-top button — dark mode variant.
  */
 export function BackToTop() {
   const [visible, setVisible] = useState(false);
@@ -23,10 +23,11 @@ export function BackToTop() {
     <button
       type="button"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="fixed bottom-6 left-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-400 bg-slate-100/95 text-slate-600 shadow-md backdrop-blur-sm transition-[transform,opacity,box-shadow] duration-300 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none md:bottom-8 md:left-8"
+      className="fixed bottom-6 left-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 shadow-lg backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none md:bottom-8 md:left-8"
       style={{
         opacity: visible ? 1 : 0,
         pointerEvents: visible ? 'auto' : 'none',
+        transform: visible ? 'translateY(0)' : 'translateY(16px)',
       }}
       aria-label="Voltar ao topo"
       aria-hidden={!visible}

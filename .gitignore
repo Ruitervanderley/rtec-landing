@@ -60,3 +60,6 @@ build-archive.log
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# NOC App secrets
+noc-app/.env.local

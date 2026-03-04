@@ -28,9 +28,9 @@ export default async function Layout(props: {
               <Image
                 src="/rtec-logo.png"
                 alt="Rtec Tecnologia - Soluções Tecnológicas"
-                width={200}
-                height={57}
-                className="h-12 w-auto object-contain sm:h-14"
+                width={160}
+                height={45}
+                className="h-10 w-auto object-contain brightness-110 sm:h-12"
                 priority
               />
             </Link>
@@ -38,7 +38,7 @@ export default async function Layout(props: {
           <li>
             <Link
               href="/"
-              className="rounded text-slate-600 transition-colors hover:text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none"
+              className="rounded text-slate-400 transition-colors hover:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
               {tRoot('home_link')}
             </Link>
@@ -46,7 +46,7 @@ export default async function Layout(props: {
           <li>
             <Link
               href="/portfolio"
-              className="rounded text-slate-600 transition-colors hover:text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none"
+              className="rounded text-slate-400 transition-colors hover:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
               {tRoot('portfolio_link')}
             </Link>
@@ -57,7 +57,7 @@ export default async function Layout(props: {
         <li>
           <Link
             href="/#cta"
-            className="rounded-xl border border-zinc-400 bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm transition-all duration-200 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 hover:shadow focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none"
+            className="rounded-xl border border-emerald-500/30 bg-emerald-600/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 shadow-sm transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-600 hover:text-white hover:shadow-emerald-500/20 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
           >
             {tIndex('header_cta')}
           </Link>

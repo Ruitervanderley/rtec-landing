@@ -1,11 +1,7 @@
 {
-  "/_global-error/page": "app/_global-error/page.js",
-  "/_not-found/page": "app/_not-found/page.js",
-  "/backups/page": "app/backups/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/devices/page": "app/devices/page.js",
-  "/page": "app/page.js",
-  "/servicos/[id]/page": "app/servicos/[id]/page.js",
-  "/servicos/page": "app/servicos/page.js",
-  "/tenants/page": "app/tenants/page.js"
+  "/(protected)/dashboard/page": "app/(protected)/dashboard/page.js",
+  "/(protected)/tenants/page": "app/(protected)/tenants/page.js",
+  "/portal/[slug]/page": "app/portal/[slug]/page.js",
+  "/portal/[slug]/relatorios/page": "app/portal/[slug]/relatorios/page.js",
+  "/(protected)/devices/page": "app/(protected)/devices/page.js"
 }

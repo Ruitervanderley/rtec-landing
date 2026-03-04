@@ -13,26 +13,26 @@ export function FaqAccordion(props: { items: FaqItem[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="mt-12 space-y-2 sm:mt-16">
+    <div className="mt-12 space-y-3 sm:mt-16">
       {props.items.map((item, i) => {
         const isOpen = openIndex === i;
         return (
           <div
             key={item.q}
-            className="animate-on-visible overflow-hidden rounded-xl border border-zinc-300/80 bg-slate-50/95 shadow-sm transition-all duration-200 hover:border-zinc-400"
+            className="animate-on-visible overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all duration-300 hover:border-white/[0.1]"
             style={{ animationDelay: `${i * 75}ms` }}
           >
             <button
               type="button"
               onClick={() => setOpenIndex(isOpen ? null : i)}
-              className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none focus:ring-inset"
+              className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left font-semibold text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none focus:ring-inset"
               aria-expanded={isOpen}
               aria-controls={`faq-answer-${i}`}
               id={`faq-question-${i}`}
             >
               <span>{item.q}</span>
               <span
-                className={`shrink-0 text-emerald-600 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180' : ''}`}
+                className={`shrink-0 text-emerald-500 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180' : ''}`}
                 aria-hidden
               >
                 <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +49,7 @@ export function FaqAccordion(props: { items: FaqItem[] }) {
             >
               <div className="overflow-hidden">
                 <p
-                  className={`border-t border-zinc-200 px-5 py-4 leading-relaxed text-slate-600 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+                  className={`border-t border-white/[0.06] px-6 py-5 leading-relaxed text-slate-400 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
                 >
                   {item.a}
                 </p>
