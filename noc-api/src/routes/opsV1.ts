@@ -545,7 +545,7 @@ export function createOpsV1Router(options: {
 
   router.post('/admin/tenants/provision', requireAdminToken(options.config), async (req: Request, res: Response) => {
     try {
-      const { name, cnpj, subdomain, tenantType, adminEmail, adminPassword } = req.body;
+      const { name, subdomain, tenantType, adminEmail, adminPassword } = req.body;
 
       if (!name || !adminEmail || !adminPassword) {
         res.status(400).json({ error: 'Missing required provision fields' });
