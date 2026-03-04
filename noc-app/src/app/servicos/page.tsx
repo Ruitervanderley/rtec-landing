@@ -4,9 +4,13 @@ import { CadastrarServico } from '../CadastrarServico';
 const API_URL = process.env.NEXT_PUBLIC_NOC_API_URL ?? 'http://localhost:4000';
 
 async function getServices() {
-  const res = await fetch(`${API_URL}/services`, {
+  const token = process.env.OPS_ADMIN_SERVICE_TOKEN ?? '';
+  const res = await fetch(`${API_URL}/v1/services`, {
     cache: 'no-store',
-    headers: { Accept: 'application/json' },
+    headers: { 
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`
+    },
   });
   if (!res.ok) throw new Error('Falha ao carregar serviÃ§os');
   const data = (await res.json()) as { services: Array<{ id: string; nome: string; criticidade: string }> };
