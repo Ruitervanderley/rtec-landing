@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
-import { Router } from 'express';
+import { createClient } from '@supabase/supabase-js';
 import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { Router } from 'express';
 import { db } from '../db/index.js';
 import { deviceApiTokens, deviceBackups, deviceHeartbeats, tenantDevices, } from '../db/schema.js';
-import { isR2Configured } from '../ops/config.js';
 import { requireAdminToken, requireDeviceToken } from '../ops/auth.js';
-import { DEVICE_TOKEN_TTL_DAYS, generateOpaqueToken, hashOpaqueToken, nowPlusDays, sanitizeObjectPathSegment, } from '../ops/tokenUtils.js';
+import { isR2Configured } from '../ops/config.js';
 import { getProfileAccessInfo, getSupabaseIdentity, isAccessAllowed, } from '../ops/supabaseIdentity.js';
+import { DEVICE_TOKEN_TTL_DAYS, generateOpaqueToken, hashOpaqueToken, nowPlusDays, sanitizeObjectPathSegment, } from '../ops/tokenUtils.js';
 const VALID_BACKUP_TYPES = new Set(['POST_SESSION', 'DAILY']);
 class InMemoryRateLimiter {
     buckets = new Map();
@@ -423,6 +424,99 @@ export function createOpsV1Router(options) {
             res.status(500).json({ error: 'ADMIN_TENANTS_ERROR' });
         }
     });
+    router.post('/admin/tenants/provision', requireAdminToken(options.config), async (req, res) => {
+        try {
+            const { name, subdomain, tenantType, adminEmail, adminPassword } = req.body;
+            if (!name || !adminEmail || !adminPassword) {
+                res.status(400).json({ error: 'Missing required provision fields' });
+                return;
+            }
+            const supabaseUrl = process.env.SUPABASE_URL;
+            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            if (!supabaseUrl || !supabaseServiceKey) {
+                throw new Error('Supabase admin credentials not configured on noc-api server');
+            }
+            const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+                auth: { autoRefreshToken: false, persistSession: false },
+            });
+            // 1. Create Tenant Record in public.tenants
+            const licenseKey = crypto.randomUUID().toUpperCase();
+            const { data: tenant, error: tenantErr } = await supabaseAdmin
+                .from('tenants')
+                .insert({
+                name: name.trim(),
+                license_key: licenseKey,
+                is_active: true,
+                type: tenantType || 'empresa_ti',
+            })
+                .select('id')
+                .single();
+            if (tenantErr || !tenant) {
+                throw new Error(`Failed to create tenant: ${tenantErr?.message}`);
+            }
+            const tenantId = tenant.id;
+            // 2. Provision Admin User in Supabase Auth
+            const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+                email: adminEmail.trim(),
+                password: adminPassword,
+                email_confirm: true,
+                user_metadata: {
+                    tenant_id: tenantId,
+                    role: 'admin',
+                },
+            });
+            if (authErr) {
+                // Rollback tenant
+                await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
+                throw new Error(`Failed to create admin user: ${authErr.message}`);
+            }
+            // 3. Provision Subdomain via Cloudflare API
+            const cfToken = process.env.CLOUDFLARE_API_TOKEN;
+            const cfZoneId = process.env.CLOUDFLARE_ZONE_ID;
+            const saasTargetIp = process.env.SAAS_TARGET_IP || '1.1.1.1'; // Example fallback
+            let cloudflareSuccess = false;
+            let cloudflareError = null;
+            if (cfToken && cfZoneId && subdomain && subdomain.trim().length > 0) {
+                try {
+                    const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/dns_records`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${cfToken}`,
+                        },
+                        body: JSON.stringify({
+                            type: 'A',
+                            name: subdomain.toLowerCase().trim(),
+                            content: saasTargetIp,
+                            ttl: 1,
+                            proxied: true,
+                        }),
+                    });
+                    if (!cfRes.ok) {
+                        const errData = await cfRes.json().catch(() => ({}));
+                        cloudflareError = errData.errors?.[0]?.message || 'Unknown CF error';
+                    }
+                    else {
+                        cloudflareSuccess = true;
+                    }
+                }
+                catch (err) {
+                    cloudflareError = err instanceof Error ? err.message : 'CF fetch error';
+                }
+            }
+            res.json({
+                ok: true,
+                tenantId,
+                userId: authData.user.id,
+                subdomainStatus: cloudflareSuccess ? 'created' : 'skipped_or_failed',
+                cloudflareError,
+            });
+        }
+        catch (error) {
+            console.error('POST /v1/admin/tenants/provision error:', error);
+            res.status(500).json({ error: error instanceof Error ? error.message : 'PROVISION_ERROR' });
+        }
+    });
     router.post('/admin/devices/:id/revoke', requireAdminToken(options.config), async (req, res) => {
         try {
             const devicePk = (req.params.id ?? '').trim();
@@ -443,6 +537,55 @@ export function createOpsV1Router(options) {
         catch (error) {
             console.error('POST /v1/admin/devices/:id/revoke error:', error);
             res.status(500).json({ error: 'ADMIN_REVOKE_DEVICE_ERROR' });
+        }
+    });
+    // ─── Public Portal Route (no auth required) ───
+    router.get('/portal/:slug', async (req, res) => {
+        try {
+            const slug = (req.params.slug ?? '').trim().toLowerCase();
+            if (!slug) {
+                res.status(400).json({ error: 'SLUG_REQUIRED' });
+                return;
+            }
+            // Look up tenant by name/slug match
+            const rows = await db.execute(sql `
+        select
+          t.id,
+          t.name,
+          t.is_active,
+          t.type,
+          coalesce(
+            (select count(*)::int from public.tenant_devices td
+             where td.tenant_id = t.id and td.revoked_at is null), 0
+          ) as device_count,
+          coalesce(
+            (select count(*)::int from public.tenant_devices td
+             where td.tenant_id = t.id
+               and td.revoked_at is null
+               and td.last_seen_at > now() - interval '10 minutes'), 0
+          ) as online_devices
+        from public.tenants t
+        where lower(replace(t.name, ' ', '-')) like ${`%${slug}%`}
+          or lower(t.name) like ${`%${slug}%`}
+        limit 1
+      `);
+            const tenant = rows.rows?.[0] ?? rows[0];
+            if (!tenant) {
+                res.status(404).json({ error: 'TENANT_NOT_FOUND' });
+                return;
+            }
+            res.json({
+                name: tenant.name,
+                type: tenant.type || 'empresa_ti',
+                isActive: tenant.is_active,
+                isOnline: (tenant.online_devices ?? 0) > 0 || tenant.is_active,
+                deviceCount: tenant.device_count ?? 0,
+                onlineDevices: tenant.online_devices ?? 0,
+            });
+        }
+        catch (error) {
+            console.error('GET /v1/portal/:slug error:', error);
+            res.status(500).json({ error: 'PORTAL_ERROR' });
         }
     });
     return router;

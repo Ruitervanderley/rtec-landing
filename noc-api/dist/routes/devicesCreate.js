@@ -15,9 +15,9 @@ router.post('/', async (req, res) => {
             res.status(400).json({ error: 'nome is required' });
             return;
         }
-        if (!tipo ||
-            typeof tipo !== 'string' ||
-            !DEVICE_TYPES.includes(tipo)) {
+        if (!tipo
+            || typeof tipo !== 'string'
+            || !DEVICE_TYPES.includes(tipo)) {
             res.status(400).json({
                 error: `tipo must be one of: ${DEVICE_TYPES.join(', ')}`,
             });

@@ -24,9 +24,9 @@ router.post('/', async (req, res) => {
             });
             return;
         }
-        if (!tipo ||
-            typeof tipo !== 'string' ||
-            !EVENT_TYPES.includes(tipo)) {
+        if (!tipo
+            || typeof tipo !== 'string'
+            || !EVENT_TYPES.includes(tipo)) {
             res.status(400).json({
                 error: `tipo must be one of: ${EVENT_TYPES.join(', ')}`,
             });

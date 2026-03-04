@@ -6,14 +6,18 @@ const CONFIDENCE_MEDIUM = 0.7;
  * Regras retornam zero ou mais incidentes. Sem side-effect; apenas interpretam o contexto.
  * Objetivo: impacto operacional, não falha de dispositivo. Menos alertas, mais explicações.
  */
-/** Várias câmeras (ou dispositivos) do mesmo serviço pararam → serviço indisponível. */
+/**
+ * Várias câmeras (ou dispositivos) do mesmo serviço pararam → serviço indisponível.
+ * @param ctx
+ */
 export function ruleServiceDown(ctx) {
     const out = [];
     for (const [, data] of ctx.offlineByService) {
-        if (data.deviceIds.length < MIN_CAMERAS_SAME_SERVICE)
+        if (data.deviceIds.length < MIN_CAMERAS_SAME_SERVICE) {
             continue;
-        const serviceLabel = data.serviceNome.toLowerCase().includes('vigilância') ||
-            data.serviceNome.toLowerCase().includes('camera')
+        }
+        const serviceLabel = data.serviceNome.toLowerCase().includes('vigilância')
+            || data.serviceNome.toLowerCase().includes('camera')
             ? 'Vigilância'
             : data.serviceNome;
         out.push({
@@ -31,12 +35,16 @@ export function ruleServiceDown(ctx) {
     }
     return out;
 }
-/** Gateway (router) offline + vários dispositivos no mesmo site/área → queda geral de conectividade. */
+/**
+ * Gateway (router) offline + vários dispositivos no mesmo site/área → queda geral de conectividade.
+ * @param ctx
+ */
 export function ruleSiteConnectivityDown(ctx) {
     const out = [];
     for (const site of ctx.gatewayOfflineSites) {
-        if (site.offlineDeviceIds.length < MIN_DEVICES_SAME_AREA)
+        if (site.offlineDeviceIds.length < MIN_DEVICES_SAME_AREA) {
             continue;
+        }
         out.push({
             titulo: 'Queda geral de conectividade',
             descricao: `O gateway e outros dispositivos no site "${site.siteNome}" estão offline. Indica queda geral de conectividade no local.`,
@@ -52,7 +60,10 @@ export function ruleSiteConnectivityDown(ctx) {
     }
     return out;
 }
-/** Latência alta sem queda → degradação perceptível ao usuário. */
+/**
+ * Latência alta sem queda → degradação perceptível ao usuário.
+ * @param ctx
+ */
 export function ruleUserPerceptibleDegradation(ctx) {
     const out = [];
     for (const dev of ctx.highLatencyOnly) {
@@ -74,12 +85,16 @@ export function ruleUserPerceptibleDegradation(ctx) {
     }
     return out;
 }
-/** Múltiplos dispositivos offline na mesma área (sem necessariamente ser gateway) → possível queda de energia/uplink. */
+/**
+ * Múltiplos dispositivos offline na mesma área (sem necessariamente ser gateway) → possível queda de energia/uplink.
+ * @param ctx
+ */
 export function ruleAreaOutage(ctx) {
     const out = [];
     for (const [, data] of ctx.offlineByArea) {
-        if (data.deviceIds.length < MIN_DEVICES_SAME_AREA)
+        if (data.deviceIds.length < MIN_DEVICES_SAME_AREA) {
             continue;
+        }
         out.push({
             titulo: 'Queda provável de energia ou uplink',
             descricao: `Vários dispositivos na área "${data.areaNome}" estão offline no mesmo período. Possível queda de energia ou falha no uplink do local.`,

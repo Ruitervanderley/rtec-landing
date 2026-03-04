@@ -1,5 +1,5 @@
-import { bigint, boolean, index, integer, jsonb, pgTable, serial, uuid, text, timestamp, real, pgEnum, primaryKey, } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { bigint, boolean, index, integer, jsonb, pgEnum, pgTable, primaryKey, real, serial, text, timestamp, uuid, } from 'drizzle-orm/pg-core';
 export const deviceTypeEnum = pgEnum('device_type', [
     'router',
     'camera',
@@ -63,7 +63,7 @@ export const serviceDevices = pgTable('service_devices', {
     deviceId: uuid('device_id')
         .notNull()
         .references(() => devices.id, { onDelete: 'cascade' }),
-}, (t) => [primaryKey({ columns: [t.serviceId, t.deviceId] })]);
+}, t => [primaryKey({ columns: [t.serviceId, t.deviceId] })]);
 export const events = pgTable('events', {
     id: uuid('id').primaryKey().defaultRandom(),
     deviceId: uuid('device_id')
@@ -96,7 +96,7 @@ export const incidentDevices = pgTable('incident_devices', {
     deviceId: uuid('device_id')
         .notNull()
         .references(() => devices.id, { onDelete: 'cascade' }),
-}, (t) => [primaryKey({ columns: [t.incidentId, t.deviceId] })]);
+}, t => [primaryKey({ columns: [t.incidentId, t.deviceId] })]);
 export const tenantDevices = pgTable('tenant_devices', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').notNull(),
@@ -109,7 +109,7 @@ export const tenantDevices = pgTable('tenant_devices', {
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [
+}, t => [
     index('idx_tenant_devices_tenant_last_seen').on(t.tenantId, t.lastSeenAt),
 ]);
 export const deviceApiTokens = pgTable('device_api_tokens', {
@@ -132,7 +132,7 @@ export const deviceHeartbeats = pgTable('device_heartbeats', {
     sessionGuid: text('session_guid'),
     appVersion: text('app_version'),
     meta: jsonb('meta').$type(),
-}, (t) => [
+}, t => [
     index('idx_device_heartbeats_device_at').on(t.deviceFk, t.heartbeatAt),
 ]);
 export const deviceBackups = pgTable('device_backups', {
@@ -152,7 +152,7 @@ export const deviceBackups = pgTable('device_backups', {
     retryCount: integer('retry_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
-}, (t) => [
+}, t => [
     index('idx_device_backups_tenant_created_status').on(t.tenantId, t.createdAt, t.status),
 ]);
 export const opsAlerts = pgTable('ops_alerts', {
@@ -165,7 +165,7 @@ export const opsAlerts = pgTable('ops_alerts', {
     sentAt: timestamp('sent_at', { withTimezone: true }),
     delivered: boolean('delivered').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [
+}, t => [
     index('idx_ops_alerts_dedup_sent').on(t.dedupKey, t.sentAt),
 ]);
 // Relations

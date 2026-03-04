@@ -1,5 +1,5 @@
-import { OpsAlertService } from './alerts.js';
-import { R2Service } from './r2Service.js';
+import type { OpsAlertService } from './alerts.js';
+import type { R2Service } from './r2Service.js';
 export type OpsRuntimeState = {
     startedAtUtc: Date;
     lastOfflineScanAtUtc: Date | null;

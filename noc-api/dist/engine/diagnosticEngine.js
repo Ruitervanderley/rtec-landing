@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { incidents, incidentDevices, } from '../db/schema.js';
+import { incidentDevices, incidents, } from '../db/schema.js';
 import { buildDiagnosticContext } from './buildContext.js';
 import { allRules } from './rules.js';
 /**
@@ -10,8 +10,9 @@ import { allRules } from './rules.js';
  */
 export async function runDiagnosticEngine() {
     const ctx = await buildDiagnosticContext();
-    if (!ctx)
+    if (!ctx) {
         return;
+    }
     const candidates = [];
     for (const rule of allRules) {
         const incidentsFromRule = rule(ctx);
@@ -19,8 +20,9 @@ export async function runDiagnosticEngine() {
     }
     for (const inc of candidates) {
         const alreadyOpen = await hasOpenIncidentForDevices(inc.deviceIds);
-        if (alreadyOpen)
+        if (alreadyOpen) {
             continue;
+        }
         await createIncident(inc);
     }
 }
@@ -32,8 +34,9 @@ async function hasOpenIncidentForDevices(deviceIds) {
             .innerJoin(incidentDevices, eq(incidents.id, incidentDevices.incidentId))
             .where(and(eq(incidents.status, 'open'), eq(incidentDevices.deviceId, deviceId)))
             .limit(1);
-        if (open.length > 0)
+        if (open.length > 0) {
             return true;
+        }
     }
     return false;
 }
@@ -53,8 +56,9 @@ async function createIncident(inc) {
         confiancaDiagnostico: inc.confiancaDiagnostico,
     })
         .returning({ id: incidents.id });
-    if (!incident)
+    if (!incident) {
         return;
+    }
     for (const deviceId of inc.deviceIds) {
         await db.insert(incidentDevices).values({
             incidentId: incident.id,

@@ -46,6 +46,7 @@ export default async function Layout(props: {
           <li>
             <Link
               href="/portfolio"
+              prefetch={false}
               className="rounded text-slate-400 transition-colors hover:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
               {tRoot('portfolio_link')}

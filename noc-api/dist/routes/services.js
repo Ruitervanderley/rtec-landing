@@ -1,5 +1,5 @@
-import { Router } from 'express';
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import { Router } from 'express';
 import { db } from '../db/index.js';
 import { devices, incidentDevices, incidents, serviceDevices, services, } from '../db/schema.js';
 const router = Router();
@@ -25,9 +25,9 @@ router.post('/', async (req, res) => {
             res.status(400).json({ error: 'nome is required' });
             return;
         }
-        if (!criticidade ||
-            typeof criticidade !== 'string' ||
-            !CRITICIDADES.includes(criticidade)) {
+        if (!criticidade
+            || typeof criticidade !== 'string'
+            || !CRITICIDADES.includes(criticidade)) {
             res.status(400).json({
                 error: `criticidade must be one of: ${CRITICIDADES.join(', ')}`,
             });
@@ -62,7 +62,7 @@ router.get('/:id', async (req, res) => {
             .select({ deviceId: serviceDevices.deviceId })
             .from(serviceDevices)
             .where(eq(serviceDevices.serviceId, id));
-        const deviceIds = links.map((l) => l.deviceId);
+        const deviceIds = links.map(l => l.deviceId);
         const flatDevices = deviceIds.length > 0
             ? await db.select().from(devices).where(inArray(devices.id, deviceIds))
             : [];
@@ -81,21 +81,21 @@ router.get('/:id', async (req, res) => {
             .where(eq(incidents.status, 'open'))
             .orderBy(desc(incidents.startedAt))
             .limit(10);
-        const incidentIds = [...new Set(openIncidents.map((i) => i.id))];
+        const incidentIds = [...new Set(openIncidents.map(i => i.id))];
         const incidentDeviceIds = new Map();
         for (const incId of incidentIds) {
             const devs = await db
                 .select({ deviceId: incidentDevices.deviceId })
                 .from(incidentDevices)
                 .where(eq(incidentDevices.incidentId, incId));
-            incidentDeviceIds.set(incId, devs.map((d) => d.deviceId));
+            incidentDeviceIds.set(incId, devs.map(d => d.deviceId));
         }
         const incidentsWithDevices = openIncidents
             .filter((i) => {
             const devs = incidentDeviceIds.get(i.id) ?? [];
-            return devs.some((d) => deviceIds.includes(d));
+            return devs.some(d => deviceIds.includes(d));
         })
-            .map((i) => ({
+            .map(i => ({
             ...i,
             deviceIds: incidentDeviceIds.get(i.id) ?? [],
         }));

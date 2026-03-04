@@ -2,7 +2,7 @@ export type EventType = 'ping_fail' | 'high_latency' | 'packet_loss' | 'offline'
 export type Severity = 'info' | 'warning' | 'critical';
 export type IncidentStatus = 'open' | 'investigating' | 'resolved';
 export type ServiceCriticidade = 'baixa' | 'media' | 'alta' | 'critica';
-export interface NewIncident {
+export type NewIncident = {
     titulo: string;
     descricao: string;
     severidade: Severity;
@@ -13,9 +13,9 @@ export interface NewIncident {
     acaoRecomendada: string;
     confiancaDiagnostico: number;
     deviceIds: string[];
-}
+};
 /** Contexto enriquecido para regras: eventos recentes + dispositivos + áreas + sites + serviços. */
-export interface DiagnosticContext {
+export type DiagnosticContext = {
     windowStart: Date;
     events: Array<{
         id: string;
@@ -60,5 +60,5 @@ export interface DiagnosticContext {
         offlineDeviceIds: string[];
         totalDevicesInSite: number;
     }>;
-}
+};
 //# sourceMappingURL=types.d.ts.map

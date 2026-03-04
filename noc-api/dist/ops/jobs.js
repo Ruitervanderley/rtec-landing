@@ -114,7 +114,7 @@ export class OpsJobRunner {
                     }
                 }
             }
-            const ids = oldBackups.map((backup) => backup.id);
+            const ids = oldBackups.map(backup => backup.id);
             if (ids.length > 0) {
                 await db.delete(deviceBackups).where(inArray(deviceBackups.id, ids));
                 deletedCount = ids.length;

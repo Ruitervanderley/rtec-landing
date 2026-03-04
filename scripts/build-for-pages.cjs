@@ -23,6 +23,11 @@ const counterPagePath = path.join(root, 'src', 'app', '[locale]', '(marketing)',
 const counterPagePagesPath = path.join(root, 'src', 'app', '[locale]', '(marketing)', 'counter', 'page-pages.tsx');
 const counterPageBackupPath = path.join(root, 'src', 'app', '[locale]', '(marketing)', 'counter', 'page.tsx.bak');
 
+const sitemapPath = path.join(root, 'src', 'app', 'sitemap.ts');
+const sitemapBackupPath = path.join(root, 'src', 'app', 'sitemap.ts.bak');
+const robotsPath = path.join(root, 'src', 'app', 'robots.ts');
+const robotsBackupPath = path.join(root, 'src', 'app', 'robots.ts.bak');
+
 if (!fs.existsSync(proxyStaticPath)) {
   console.error('src/proxy-static.ts not found');
   process.exit(1);
@@ -61,6 +66,19 @@ if (fs.existsSync(nextDir)) {
   fs.rmSync(nextDir, { recursive: true });
 }
 
+// Rename sitemap and robots to hide from static build
+let sitemapRestored = false;
+if (fs.existsSync(sitemapPath)) {
+  fs.renameSync(sitemapPath, sitemapBackupPath);
+  sitemapRestored = true;
+}
+
+let robotsRestored = false;
+if (fs.existsSync(robotsPath)) {
+  fs.renameSync(robotsPath, robotsBackupPath);
+  robotsRestored = true;
+}
+
 try {
   const env = { ...process.env, NEXT_PUBLIC_STATIC_EXPORT: 'true' };
   const nextBin = path.join(root, 'node_modules', '.bin', 'next');
@@ -82,5 +100,11 @@ try {
   fs.unlinkSync(currentCountBackupPath);
   if (apiRouteRestore) {
     fs.renameSync(apiCounterBackup, apiCounterRoute);
+  }
+  if (sitemapRestored) {
+    fs.renameSync(sitemapBackupPath, sitemapPath);
+  }
+  if (robotsRestored) {
+    fs.renameSync(robotsBackupPath, robotsPath);
   }
 }

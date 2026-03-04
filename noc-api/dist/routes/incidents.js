@@ -1,5 +1,5 @@
-import { Router } from 'express';
 import { desc, eq } from 'drizzle-orm';
+import { Router } from 'express';
 import { db } from '../db/index.js';
 import { incidentDevices, incidents } from '../db/schema.js';
 const router = Router();
@@ -12,9 +12,9 @@ router.get('/', async (req, res) => {
     try {
         const status = req.query.status;
         const limit = Math.min(Math.max(1, Number(req.query.limit) || 50), 100);
-        const list = status === 'open' ||
-            status === 'investigating' ||
-            status === 'resolved'
+        const list = status === 'open'
+            || status === 'investigating'
+            || status === 'resolved'
             ? await db
                 .select()
                 .from(incidents)
@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
                 .where(eq(incidentDevices.incidentId, inc.id));
             return {
                 ...inc,
-                deviceIds: links.map((l) => l.deviceId),
+                deviceIds: links.map(l => l.deviceId),
             };
         }));
         res.json({ incidents: withDevices });

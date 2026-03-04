@@ -1,6 +1,6 @@
 import { eq, gte, inArray } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { areas, devices, events, services, serviceDevices, sites, } from '../db/schema.js';
+import { areas, devices, events, serviceDevices, services, sites, } from '../db/schema.js';
 const WINDOW_MINUTES = 5;
 /**
  * Carrega eventos recentes e monta o contexto operacional (dispositivos, áreas, sites, serviços).
@@ -30,9 +30,10 @@ export async function buildDiagnosticContext() {
         .leftJoin(sites, eq(areas.siteId, sites.id))
         .where(gte(events.timestamp, windowStart))
         .orderBy(events.timestamp);
-    if (rows.length === 0)
+    if (rows.length === 0) {
         return null;
-    const deviceIds = [...new Set(rows.map((r) => r.deviceId))];
+    }
+    const deviceIds = [...new Set(rows.map(r => r.deviceId))];
     const serviceLinks = await db
         .select({
         deviceId: serviceDevices.deviceId,
@@ -66,8 +67,8 @@ export async function buildDiagnosticContext() {
                 siteNome: r.siteNome,
                 cliente: r.cliente,
             },
-            serviceIds: svc.map((x) => x.id),
-            serviceNomes: svc.map((x) => x.nome),
+            serviceIds: svc.map(x => x.id),
+            serviceNomes: svc.map(x => x.nome),
         };
     });
     const offlineTypes = new Set(['ping_fail', 'offline']);
@@ -108,13 +109,14 @@ export async function buildDiagnosticContext() {
                 });
             }
         }
-        if (e.tipo === 'high_latency')
+        if (e.tipo === 'high_latency') {
             deviceHasHighLatency.add(e.deviceId);
+        }
     }
     const highLatencyOnly = [];
     for (const e of eventsWithMeta) {
         if (e.tipo === 'high_latency' && !deviceHasOffline.has(e.deviceId)) {
-            if (!highLatencyOnly.some((x) => x.deviceId === e.deviceId)) {
+            if (!highLatencyOnly.some(x => x.deviceId === e.deviceId)) {
                 highLatencyOnly.push({
                     deviceId: e.deviceId,
                     deviceNome: e.device.nome,
@@ -126,8 +128,9 @@ export async function buildDiagnosticContext() {
     const gatewayOfflineSites = [];
     const siteOfflineDevices = new Map();
     for (const e of eventsWithMeta) {
-        if (!offlineTypes.has(e.tipo))
+        if (!offlineTypes.has(e.tipo)) {
             continue;
+        }
         const siteId = e.device.areaId ? `area-${e.device.areaId}` : e.device.local;
         const cur = siteOfflineDevices.get(siteId);
         if (!cur) {
@@ -139,13 +142,15 @@ export async function buildDiagnosticContext() {
         }
         else {
             cur.deviceIds.add(e.deviceId);
-            if (e.device.tipo === 'router')
+            if (e.device.tipo === 'router') {
                 cur.hasGateway = true;
+            }
         }
     }
     for (const [areaKey, off] of siteOfflineDevices) {
-        if (!off.hasGateway || off.deviceIds.size === 0)
+        if (!off.hasGateway || off.deviceIds.size === 0) {
             continue;
+        }
         gatewayOfflineSites.push({
             siteId: areaKey,
             siteNome: off.siteNome,
