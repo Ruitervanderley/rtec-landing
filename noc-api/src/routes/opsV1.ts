@@ -472,7 +472,7 @@ export function createOpsV1Router(options: {
         limit ${limit}
       `);
 
-      res.json({ devices: rows });
+      res.json({ devices: rows.rows });
     } catch (error) {
       console.error('GET /v1/admin/devices error:', error);
       res.status(500).json({ error: 'ADMIN_DEVICES_ERROR' });
@@ -509,7 +509,7 @@ export function createOpsV1Router(options: {
         limit ${limit}
       `);
 
-      res.json({ backups: rows });
+      res.json({ backups: rows.rows });
     } catch (error) {
       console.error('GET /v1/admin/backups error:', error);
       res.status(500).json({ error: 'ADMIN_BACKUPS_ERROR' });
@@ -536,7 +536,7 @@ export function createOpsV1Router(options: {
         order by t.name asc
       `);
 
-      res.json({ tenants: rows });
+      res.json({ tenants: rows.rows });
     } catch (error) {
       console.error('GET /v1/admin/tenants error:', error);
       res.status(500).json({ error: 'ADMIN_TENANTS_ERROR' });
