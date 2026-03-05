@@ -1,7 +1,8 @@
 import { AlertCircle, Building2 } from 'lucide-react';
+import { CadastrarTenant } from '@/components/CadastrarTenant';
+import { EditTenantModal } from '@/components/EditTenantModal';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { getTenants } from '@/lib/ops-api';
-import { CadastrarTenant } from '@/components/CadastrarTenant';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,7 @@ export default async function TenantsPage() {
         <table className="base-table" style={{ minWidth: 1000 }}>
           <thead>
             <tr>
-              {['Tenant', 'Licença', 'Situação', 'Validade', 'Notebooks', 'Online', 'Último Heartbeat', 'Último Backup'].map(header => (
+              {['Tenant', 'Licença', 'Situação', 'Validade', 'Notebooks', 'Online', 'Último Heartbeat', 'Último Backup', 'Ações'].map(header => (
                 <th key={header}>{header}</th>
               ))}
             </tr>
@@ -71,11 +72,14 @@ export default async function TenantsPage() {
                 </td>
                 <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{formatDateTime(tenant.last_seen_at)}</td>
                 <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{formatDateTime(tenant.last_backup_at)}</td>
+                <td>
+                  <EditTenantModal tenant={tenant} />
+                </td>
               </tr>
             ))}
             {!error && tenants.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   Nenhum Tenant encontrado no banco de dados ainda.
                 </td>
               </tr>

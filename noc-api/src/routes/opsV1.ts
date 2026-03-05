@@ -543,6 +543,55 @@ export function createOpsV1Router(options: {
     }
   });
 
+  router.patch('/admin/tenants/:id', requireAdminToken(options.config), async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { subdomain, is_active, valid_until } = req.body as {
+        subdomain?: string;
+        is_active?: boolean;
+        valid_until?: string;
+      };
+
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error('Supabase admin credentials not configured on noc-api server');
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      const updates: Record<string, unknown> = {};
+      if (subdomain !== undefined) {
+        updates.subdomain = subdomain || null;
+      }
+      if (is_active !== undefined) {
+        updates.is_active = is_active;
+      }
+      if (valid_until !== undefined) {
+        updates.valid_until = valid_until || null;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        res.status(400).json({ error: 'No fields to update' });
+        return;
+      }
+
+      const { error } = await supabaseAdmin.from('tenants').update(updates).eq('id', id);
+      if (error) {
+        throw new Error(`Failed to update tenant: ${error.message}`);
+      }
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('PATCH /v1/admin/tenants/:id error:', error);
+      res.status(500).json({ error: 'ADMIN_TENANT_UPDATE_ERROR' });
+    }
+  });
+
   router.post('/admin/tenants/provision', requireAdminToken(options.config), async (req: Request, res: Response) => {
     try {
       const { name, subdomain, tenantType, adminEmail, adminPassword } = req.body;
