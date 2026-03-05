@@ -42,7 +42,18 @@ export default async function TenantsPage() {
         <table className="base-table" style={{ minWidth: 1000 }}>
           <thead>
             <tr>
-              {['Tenant', 'Licença', 'Situação', 'Validade', 'Notebooks', 'Online', 'Último Heartbeat', 'Último Backup', 'Ações'].map(header => (
+              {[
+                'Tenant',
+                'Licença',
+                'Portal',
+                'Situação',
+                'Validade',
+                'Notebooks',
+                'Online',
+                'Último Heartbeat',
+                'Último Backup',
+                'Ações',
+              ].map(header => (
                 <th key={header}>{header}</th>
               ))}
             </tr>
@@ -52,6 +63,35 @@ export default async function TenantsPage() {
               <tr key={tenant.id}>
                 <td style={{ fontWeight: 600 }}>{tenant.name}</td>
                 <td style={{ fontFamily: 'Consolas, monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tenant.license_key}</td>
+                <td>
+                  {tenant.subdomain
+                    ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <a
+                            href={`https://${tenant.subdomain}.rtectecnologia.com.br/`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', textDecoration: 'none' }}
+                          >
+                            {tenant.subdomain}
+                            .rtectecnologia.com.br
+                          </a>
+                          <a
+                            href={`https://${tenant.subdomain}.rtectecnologia.com.br/relatorios`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textDecoration: 'none' }}
+                          >
+                            Relatórios
+                          </a>
+                        </div>
+                      )
+                    : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          — sem portal —
+                        </span>
+                      )}
+                </td>
                 <td>
                   <span className={`badge ${tenant.is_active ? 'badge-success' : 'badge-error'}`}>
                     {tenant.is_active ? 'ATIVO' : 'INATIVO'}

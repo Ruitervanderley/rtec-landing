@@ -525,6 +525,7 @@ export function createOpsV1Router(options: {
           t.license_key,
           t.is_active,
           t.valid_until,
+          t.subdomain,
           count(td.id)::int as total_devices,
           count(case when td.last_seen_at >= now() - interval '15 minutes' then 1 end)::int as online_devices,
           max(td.last_seen_at) as last_seen_at,
@@ -532,7 +533,7 @@ export function createOpsV1Router(options: {
         from public.tenants t
         left join public.tenant_devices td on td.tenant_id = t.id and td.revoked_at is null
         left join public.device_backups b on b.tenant_id = t.id
-        group by t.id, t.name, t.license_key, t.is_active, t.valid_until
+        group by t.id, t.name, t.license_key, t.is_active, t.valid_until, t.subdomain
         order by t.name asc
       `);
 

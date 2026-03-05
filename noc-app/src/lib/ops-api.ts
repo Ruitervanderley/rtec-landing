@@ -1,4 +1,4 @@
-﻿import 'server-only';
+import 'server-only';
 
 export type OpsOverview = {
   counts: {
@@ -25,6 +25,7 @@ export type TenantRow = {
   license_key: string;
   is_active: boolean;
   valid_until: string | null;
+  subdomain?: string | null;
   total_devices: number;
   online_devices: number;
   last_seen_at: string | null;
@@ -116,9 +117,9 @@ async function postAdmin<T>(path: string, body: Record<string, unknown>): Promis
     method: 'POST',
     cache: 'no-store',
     headers: {
-      Accept: 'application/json',
+      'Accept': 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
