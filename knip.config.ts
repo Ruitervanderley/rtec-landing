@@ -5,6 +5,8 @@ const config: KnipConfig = {
   ignore: [
     '.storybook/**/*',
     'checkly.config.ts',
+    'noc-api/**/*',
+    'noc-app/**/*',
     'scripts/run-db-migrate.cjs',
     'scripts/build-for-pages.cjs',
     'src/components/DemoBadge.tsx',
@@ -24,6 +26,7 @@ const config: KnipConfig = {
   ignoreDependencies: [
     '@commitlint/types',
     '@clerk/types',
+    '@types/express',
     'conventional-changelog-conventionalcommits',
     'vite',
   ],
