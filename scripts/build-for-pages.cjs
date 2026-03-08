@@ -89,6 +89,21 @@ try {
     cwd: root,
     env,
   });
+
+  // Copy default locale out/pt-BR to out/ so it serves at the root
+  const outDir = path.join(root, 'out');
+  const defaultLocaleDir = path.join(outDir, 'pt-BR');
+  if (fs.existsSync(defaultLocaleDir)) {
+    console.log(`Copying static files from ${defaultLocaleDir} to ${outDir}`);
+    fs.cpSync(defaultLocaleDir, outDir, { recursive: true });
+  }
+
+  const ptBrHtml = path.join(outDir, 'pt-BR.html');
+  const indexHtml = path.join(outDir, 'index.html');
+  if (fs.existsSync(ptBrHtml)) {
+    console.log(`Copying ${ptBrHtml} to ${indexHtml}`);
+    fs.copyFileSync(ptBrHtml, indexHtml);
+  }
 } finally {
   fs.copyFileSync(proxyBackupPath, proxyPath);
   fs.unlinkSync(proxyBackupPath);
