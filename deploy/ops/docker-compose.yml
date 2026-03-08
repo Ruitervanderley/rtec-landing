@@ -2,9 +2,7 @@ version: '3.9'
 
 services:
   ops-api:
-    build:
-      context: ../../noc-api
-      dockerfile: Dockerfile
+    image: ghcr.io/ruitervanderley/rtec-landing-ops-api:main
     container_name: rtec-ops-api
     env_file:
       - .env
@@ -15,9 +13,7 @@ services:
       - '4000'
 
   painel-web:
-    build:
-      context: ../../noc-app
-      dockerfile: Dockerfile
+    image: ghcr.io/ruitervanderley/rtec-landing-painel-web:main
     container_name: rtec-ops-panel
     env_file:
       - .env

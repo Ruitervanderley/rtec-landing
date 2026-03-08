@@ -9,9 +9,8 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-echo "[INFO] Pull/build containers..."
-docker compose pull || true
-docker compose build --pull
+echo "[INFO] Pulling containers from GHCR..."
+docker compose pull
 
 echo "[INFO] Starting stack..."
 docker compose up -d
