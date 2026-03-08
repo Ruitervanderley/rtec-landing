@@ -58,7 +58,7 @@ export function CadastrarServico() {
           <input
             type="text"
             value={nome}
-            onChange={(e) => setNome(e.target.value)}
+            onChange={e => setNome(e.target.value)}
             placeholder="ex: Vigilância, Internet"
             required
             style={{
@@ -73,14 +73,14 @@ export function CadastrarServico() {
           <span style={{ fontSize: 14, color: '#475569' }}>Criticidade</span>
           <select
             value={criticidade}
-            onChange={(e) => setCriticidade(e.target.value as (typeof CRITICIDADES)[number])}
+            onChange={e => setCriticidade(e.target.value as (typeof CRITICIDADES)[number])}
             style={{
               padding: '8px 12px',
               border: '1px solid #cbd5e1',
               borderRadius: 6,
             }}
           >
-            {CRITICIDADES.map((c) => (
+            {CRITICIDADES.map(c => (
               <option key={c} value={c}>
                 {c}
               </option>

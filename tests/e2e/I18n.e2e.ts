@@ -1,29 +1,37 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('I18n', () => {
-  test.describe('Language Switching', () => {
-    test('should switch language from English to French using dropdown and verify text on the homepage', async ({ page }) => {
+  test.describe('Marketing pages', () => {
+    test('should render Portuguese copy on the homepage by default', async ({ page }) => {
       await page.goto('/');
 
       await expect(
-        page.getByRole('heading', { name: 'Boilerplate Code for Your Next.js Project with Tailwind CSS' }),
+        page.getByRole('heading', { name: /Automatizamos suas operações/i }),
       ).toBeVisible();
 
-      await page.getByLabel('Change language').selectOption('fr');
-
       await expect(
-        page.getByRole('heading', { name: 'Code de démarrage pour Next.js avec Tailwind CSS' }),
+        page.getByRole('link', { name: 'Falar com um especialista' }).first(),
       ).toBeVisible();
     });
 
-    test('should switch language from English to French using URL and verify text on the sign-in page', async ({ page }) => {
-      await page.goto('/sign-in');
+    test('should render French copy on the homepage', async ({ page }) => {
+      await page.goto('/fr');
 
-      await expect(page.getByText('Email address')).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /Nous automatisons vos opérations/i }),
+      ).toBeVisible();
 
-      await page.goto('/fr/sign-in');
+      await expect(
+        page.getByRole('link', { name: 'Parler à un expert' }).first(),
+      ).toBeVisible();
+    });
 
-      await expect(page.getByText('Adresse e-mail')).toBeVisible();
+    test('should render French copy on the about page', async ({ page }) => {
+      await page.goto('/fr/about');
+
+      await expect(
+        page.getByRole('heading', { name: /Une base technique solide avec une vision tournée vers l'avenir/i }),
+      ).toBeVisible();
     });
   });
 });

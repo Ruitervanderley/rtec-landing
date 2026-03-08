@@ -22,6 +22,7 @@ export type OpsOverview = {
 export type TenantRow = {
   id: string;
   name: string;
+  type: string;
   license_key: string;
   is_active: boolean;
   valid_until: string | null;
@@ -63,6 +64,94 @@ export type BackupRow = {
   error_message: string | null;
   created_at: string;
   completed_at: string | null;
+};
+
+export type TenantInfrastructureAsset = {
+  category: string;
+  host: string | null;
+  id: string;
+  ipAddress: string | null;
+  notes: string | null;
+  platform: string | null;
+  port: string | null;
+  role: string;
+  status: 'active' | 'maintenance' | 'planned';
+  title: string;
+};
+
+export type TenantInfrastructureDoc = {
+  label: string;
+  url: string;
+};
+
+export type TenantInfrastructureProfile = {
+  assets: TenantInfrastructureAsset[];
+  docs: TenantInfrastructureDoc[];
+  monitoring: {
+    improvements: string[];
+    stack: string[];
+    summary: string;
+  };
+  network: {
+    firewallLanIp: string;
+    firewallName: string;
+    gatewayIp: string;
+    gatewayName: string;
+    lanSubnet: string;
+    switchName: string;
+    topology: string[];
+    wanSource: string;
+  };
+  notes: string;
+  overview: string;
+  responsibilities: string[];
+  vpn: {
+    derpDomain: string;
+    domain: string;
+    headscaleDomain: string;
+    nodes: string[];
+    provider: string;
+    subnetRouting: boolean;
+    tailnetIp: string;
+  };
+};
+
+export type TenantDetail = {
+  infrastructure: TenantInfrastructureProfile;
+  infrastructureIsDefault: boolean;
+  license: {
+    isActive: boolean;
+    licensedUsers: number;
+    tenantValidUntil: string | null;
+  };
+  tenant: {
+    adminUsers: number;
+    deviceCount: number;
+    isActive: boolean;
+    lastBackupAt: string | null;
+    lastSeenAt: string | null;
+    licenseKey: string;
+    licensedUsers: number;
+    name: string;
+    onlineDevices: number;
+    portalUrl: string | null;
+    redirectSource: string | null;
+    redirectTarget: string | null;
+    subdomain: string | null;
+    tenantId: string;
+    type: string;
+    userCount: number;
+    validUntil: string | null;
+  };
+  users: Array<{
+    accessStatus: 'active' | 'tenant_expired' | 'tenant_inactive' | 'user_expired';
+    displayName: string;
+    email: string;
+    isAdmin: boolean;
+    isBlocked: boolean;
+    userId: string;
+    validUntil: string | null;
+  }>;
 };
 
 function getApiBaseUrl(): string {
@@ -139,6 +228,10 @@ export async function getOverview(): Promise<OpsOverview> {
 export async function getTenants(): Promise<TenantRow[]> {
   const response = await fetchAdmin<{ tenants: TenantRow[] }>('/admin/tenants');
   return response.tenants ?? [];
+}
+
+export async function getTenantDetail(tenantId: string): Promise<TenantDetail> {
+  return fetchAdmin<TenantDetail>(`/admin/tenants/${tenantId}/detail`);
 }
 
 export async function getDevices(limit = 300): Promise<DeviceRow[]> {

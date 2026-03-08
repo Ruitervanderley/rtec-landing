@@ -1,105 +1,112 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
-export function DashboardCharts({ 
-  online, 
-  offline, 
-  backupsSuccess, 
-  backupsFailed 
-}: { 
-  online: number; 
-  offline: number; 
-  backupsSuccess: number; 
-  backupsFailed: number; 
+const DEVICE_COLORS = {
+  Offline: '#f43f5e',
+  Online: '#10b981',
+};
+
+const BACKUP_COLORS = {
+  Falha: '#f59e0b',
+  Sucesso: '#3b82f6',
+};
+
+export function DashboardCharts(props: {
+  backupsFailed: number;
+  backupsSuccess: number;
+  offline: number;
+  online: number;
 }) {
   const deviceData = [
-    { name: 'Online', value: online },
-    { name: 'Offline', value: offline },
+    { name: 'Online', value: props.online },
+    { name: 'Offline', value: props.offline },
   ];
-
   const backupData = [
-    { name: 'Sucesso', value: backupsSuccess },
-    { name: 'Falha', value: backupsFailed },
+    { name: 'Sucesso', value: props.backupsSuccess },
+    { name: 'Falha', value: props.backupsFailed },
   ];
-
-  const DEVICE_COLORS = ['#10b981', '#f43f5e'];
-  const BACKUP_COLORS = ['#3b82f6', '#f59e0b'];
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ background: '#fff', padding: '0.75rem 1rem', border: 'none', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', fontWeight: 600 }}>
-          <p style={{ margin: 0, color: payload[0].payload.fill }}>
-            {`${payload[0].name} : ${payload[0].value}`}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-      
-      {/* Chart 1: Devices */}
+    <div
+      style={{
+        display: 'grid',
+        gap: '1.25rem',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        marginBottom: '2rem',
+      }}
+    >
       <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '320px', padding: '1.5rem' }}>
-        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', letterSpacing: '-0.02em' }}>
-          Saúde dos Dispositivos
+        <div
+          style={{
+            color: 'var(--text-primary)',
+            fontSize: '1.05rem',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            marginBottom: '1rem',
+          }}
+        >
+          Saude dos dispositivos
         </div>
         <div style={{ flex: 1, position: 'relative' }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer height="100%" width="100%">
             <PieChart>
               <Pie
+                cx="50%"
+                cy="50%"
                 data={deviceData}
-                cx="50%"
-                cy="50%"
+                dataKey="value"
                 innerRadius={65}
                 outerRadius={90}
                 paddingAngle={4}
-                dataKey="value"
                 stroke="none"
               >
-                {deviceData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={DEVICE_COLORS[index % DEVICE_COLORS.length]} />
+                {deviceData.map(entry => (
+                  <Cell key={entry.name} fill={DEVICE_COLORS[entry.name as keyof typeof DEVICE_COLORS]} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" />
+              <Tooltip />
+              <Legend height={36} iconType="circle" verticalAlign="bottom" />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Chart 2: Backups */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '320px', padding: '1.5rem' }}>
-        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', letterSpacing: '-0.02em' }}>
-          Performance de Backups (24h)
+        <div
+          style={{
+            color: 'var(--text-primary)',
+            fontSize: '1.05rem',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            marginBottom: '1rem',
+          }}
+        >
+          Performance de backups (24h)
         </div>
         <div style={{ flex: 1, position: 'relative' }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer height="100%" width="100%">
             <PieChart>
               <Pie
-                data={backupData}
                 cx="50%"
                 cy="50%"
+                data={backupData}
+                dataKey="value"
                 innerRadius={65}
                 outerRadius={90}
                 paddingAngle={4}
-                dataKey="value"
                 stroke="none"
               >
-                {backupData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={BACKUP_COLORS[index % BACKUP_COLORS.length]} />
+                {backupData.map(entry => (
+                  <Cell key={entry.name} fill={BACKUP_COLORS[entry.name as keyof typeof BACKUP_COLORS]} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" />
+              <Tooltip />
+              <Legend height={36} iconType="circle" verticalAlign="bottom" />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
-
     </div>
   );
 }

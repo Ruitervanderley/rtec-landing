@@ -1,4 +1,4 @@
-﻿import { AlertCircle, DatabaseBackup } from 'lucide-react';
+import { AlertCircle, DatabaseBackup } from 'lucide-react';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { getBackups } from '@/lib/ops-api';
 

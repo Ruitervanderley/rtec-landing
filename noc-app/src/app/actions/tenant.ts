@@ -1,111 +1,151 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { Env } from '@/lib/Env';
 
-function getApiBaseUrl(): string {
-  const base = process.env.OPS_API_URL ?? process.env.NEXT_PUBLIC_NOC_API_URL ?? '';
-  return base.trim().replace(/\/$/, '');
+export type ProvisionTenantSuccess = {
+  cloudflareStatus: 'manual_redirect_required' | 'not_applicable';
+  portalUrl: string | null;
+  redirectSource: string | null;
+  redirectTarget: string | null;
+  subdomain: string | null;
+  success: true;
+  tenantId: string;
+  userId: string;
+};
+
+type ActionError = {
+  error: string;
+};
+
+function sanitizeSubdomain(value: string) {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+
+  return normalized;
 }
 
-function getAdminToken(): string {
-  return (process.env.OPS_ADMIN_SERVICE_TOKEN ?? '').trim();
-}
-
-export async function provisionTenantAction(formData: FormData) {
-  const name = formData.get('name') as string;
-  const cnpj = formData.get('cnpj') as string;
-  const subdomain = formData.get('subdomain') as string;
-  const tenantType = formData.get('tenantType') as string;
-  const adminEmail = formData.get('adminEmail') as string;
-  const adminPassword = formData.get('adminPassword') as string;
+export async function provisionTenantAction(formData: FormData): Promise<ActionError | ProvisionTenantSuccess> {
+  const name = String(formData.get('name') ?? '').trim();
+  const cnpj = String(formData.get('cnpj') ?? '').trim();
+  const subdomain = sanitizeSubdomain(String(formData.get('subdomain') ?? ''));
+  const tenantType = String(formData.get('tenantType') ?? '').trim();
+  const adminEmail = String(formData.get('adminEmail') ?? '').trim();
+  const adminPassword = String(formData.get('adminPassword') ?? '');
 
   if (!name || !adminEmail || !adminPassword) {
-    return { error: 'Preencha todos os campos obrigatórios.' };
-  }
-
-  const baseUrl = getApiBaseUrl();
-  const token = getAdminToken();
-
-  if (!baseUrl || !token) {
-    return { error: 'Configuração de API NOC ausente no servidor.' };
+    return { error: 'Preencha todos os campos obrigatorios.' };
   }
 
   try {
-    const payload = {
-      name,
-      cnpj: cnpj || undefined,
-      subdomain: subdomain ? subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '') : undefined,
-      tenantType: tenantType || 'empresa_ti',
-      adminEmail,
-      adminPassword,
-    };
-
-    const response = await fetch(`${baseUrl}/v1/admin/tenants/provision`, {
+    const response = await fetch(`${Env.opsApiBaseUrl}/v1/admin/tenants/provision`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${Env.opsAdminServiceToken}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        adminEmail,
+        adminPassword,
+        cnpj: cnpj || undefined,
+        name,
+        subdomain: subdomain || undefined,
+        tenantType: tenantType || 'empresa_ti',
+      }),
     });
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
       return { error: data.error || `Falha na API: ${response.status}` };
     }
 
+    const payload = (await response.json()) as ProvisionTenantSuccess;
     revalidatePath('/tenants');
-    return { success: true };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Erro de conexão com API NOC' };
+    return payload;
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Erro de conexao com API NOC',
+    };
   }
 }
 
-export async function updateTenantAction(formData: FormData) {
-  const id = formData.get('id') as string;
-  const subdomain = formData.get('subdomain') as string;
+export async function updateTenantAction(formData: FormData): Promise<ActionError | { success: true }> {
+  const id = String(formData.get('id') ?? '').trim();
+  const subdomain = sanitizeSubdomain(String(formData.get('subdomain') ?? ''));
   const isActive = formData.get('is_active') === 'true';
-  const validUntil = formData.get('valid_until') as string;
+  const validUntil = String(formData.get('valid_until') ?? '').trim();
 
   if (!id) {
-    return { error: 'ID do tenant é obrigatório.' };
-  }
-
-  const baseUrl = getApiBaseUrl();
-  const token = getAdminToken();
-
-  if (!baseUrl || !token) {
-    return { error: 'Configuração de API NOC ausente no servidor.' };
+    return { error: 'ID do tenant e obrigatorio.' };
   }
 
   try {
-    const payload: Record<string, unknown> = {
-      is_active: isActive,
-    };
-    if (subdomain) {
-      payload.subdomain = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '');
-    }
-    if (validUntil) {
-      payload.valid_until = validUntil;
-    }
-
-    const response = await fetch(`${baseUrl}/v1/admin/tenants/${id}`, {
+    const response = await fetch(`${Env.opsApiBaseUrl}/v1/admin/tenants/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${Env.opsAdminServiceToken}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        is_active: isActive,
+        subdomain: subdomain || '',
+        valid_until: validUntil || '',
+      }),
     });
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
       return { error: data.error || `Falha na API: ${response.status}` };
     }
 
     revalidatePath('/tenants');
     return { success: true };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Erro de conexão com API NOC' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Erro de conexao com API NOC',
+    };
+  }
+}
+
+export async function updateTenantInfrastructureAction(formData: FormData): Promise<ActionError | { success: true }> {
+  const id = String(formData.get('id') ?? '').trim();
+  const profileRaw = String(formData.get('profile') ?? '').trim();
+
+  if (!id) {
+    return { error: 'ID do tenant e obrigatorio.' };
+  }
+
+  if (!profileRaw) {
+    return { error: 'Perfil de infraestrutura vazio.' };
+  }
+
+  try {
+    const profile = JSON.parse(profileRaw) as Record<string, unknown>;
+
+    const response = await fetch(`${Env.opsApiBaseUrl}/v1/admin/tenants/${id}/infrastructure`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Env.opsAdminServiceToken}`,
+      },
+      body: JSON.stringify({ profile }),
+    });
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      return { error: data.error || `Falha na API: ${response.status}` };
+    }
+
+    revalidatePath('/tenants');
+    revalidatePath(`/tenants/${id}`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Erro ao salvar infraestrutura do tenant',
+    };
   }
 }

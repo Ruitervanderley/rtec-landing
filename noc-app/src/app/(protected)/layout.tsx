@@ -1,47 +1,62 @@
 import { Database, Home, Monitor, Settings, Users } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { LogoutButton } from '@/components/LogoutButton';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/tenants', label: 'Tenants', icon: Users },
-  { href: '/devices', label: 'Dispositivos', icon: Monitor },
-  { href: '/backups', label: 'Backups', icon: Database },
-  { href: '/servicos', label: 'NOC Serviços', icon: Settings },
+  { href: '/dashboard', icon: Home, label: 'Dashboard' },
+  { href: '/tenants', icon: Users, label: 'Tenants' },
+  { href: '/devices', icon: Monitor, label: 'Dispositivos' },
+  { href: '/backups', icon: Database, label: 'Backups' },
+  { href: '/servicos', icon: Settings, label: 'NOC Servicos' },
 ];
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+export default function ProtectedLayout(props: {
+  children: React.ReactNode;
+}) {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
-      {/* Sidebar */}
       <aside
         style={{
-          width: '260px',
           backgroundColor: 'var(--sidebar-bg)',
+          boxShadow: 'var(--shadow-lg)',
           color: 'var(--sidebar-text)',
           display: 'flex',
           flexDirection: 'column',
-          position: 'fixed',
           height: '100vh',
-          top: 0,
           left: 0,
+          position: 'fixed',
+          top: 0,
+          width: '260px',
           zIndex: 40,
-          boxShadow: 'var(--shadow-lg)',
         }}
       >
-        {/* Logo Area */}
-        <div style={{ height: '70px', display: 'flex', alignItems: 'center', padding: '0 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '0 0.5rem', width: '100%' }}>
-            <img src="/logo.png" alt="R.TEC Soluções Tecnológicas" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
-          </div>
+        <div
+          style={{
+            alignItems: 'center',
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            height: '70px',
+            justifyContent: 'center',
+            padding: '0 1.5rem',
+          }}
+        >
+          <Image
+            alt="R.TEC Solucoes Tecnologicas"
+            height={42}
+            priority
+            src="/logo.png"
+            style={{ height: '42px', objectFit: 'contain', width: 'auto' }}
+            width={168}
+          />
         </div>
 
-        {/* Navigation Area */}
-        <nav style={{ flex: 1, padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <nav style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: '0.5rem', padding: '1.5rem 1rem' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
+
             return (
-              <Link key={item.href} href={item.href} className="sidebar-link">
+              <Link key={item.href} className="sidebar-link" href={item.href}>
                 <Icon size={20} strokeWidth={2.5} />
                 {item.label}
               </Link>
@@ -49,49 +64,55 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div style={{ padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div
+          style={{
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+            padding: '1rem',
+          }}
+        >
           <LogoutButton />
-          <div style={{ fontSize: '0.7rem', color: '#475569', textAlign: 'center' }}>
+          <div style={{ color: '#475569', fontSize: '0.7rem', textAlign: 'center' }}>
             R.TEC NOC Panel v2.0
           </div>
         </div>
       </aside>
 
-      {/* Content Wrapper */}
-      <div style={{ flex: 1, marginLeft: '260px', display: 'flex', flexDirection: 'column' }}>
-        {/* Top Header */}
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column', marginLeft: '260px' }}>
         <header
           style={{
-            height: '70px',
-            backgroundColor: 'var(--bg-glass)',
-            backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
+            alignItems: 'center',
+            backdropFilter: 'blur(12px)',
+            backgroundColor: 'var(--bg-glass)',
             borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            height: '70px',
+            justifyContent: 'flex-end',
+            padding: '0 2rem',
             position: 'sticky',
             top: 0,
             zIndex: 30,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: '0 2rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ alignItems: 'center', display: 'flex', gap: '1rem' }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>NOC Admin</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Operations</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>NOC Admin</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Operations</div>
             </div>
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: 'var(--brand-gradient)',
-                display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                background: 'var(--brand-gradient)',
+                borderRadius: '50%',
                 color: '#fff',
+                display: 'flex',
                 fontWeight: 700,
+                height: '36px',
+                justifyContent: 'center',
+                width: '36px',
               }}
             >
               RT
@@ -99,9 +120,8 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Main Page Content */}
-        <main style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
-          {children}
+        <main style={{ margin: '0 auto', maxWidth: '1400px', padding: '2rem', width: '100%' }}>
+          {props.children}
         </main>
       </div>
     </div>

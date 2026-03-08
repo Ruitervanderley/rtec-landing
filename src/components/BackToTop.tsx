@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Back-to-top button — dark mode variant.
+ * Back-to-top button for long pages.
+ * @param props - Component props.
+ * @param props.label - Accessible label for assistive technologies.
  */
-export function BackToTop() {
+export function BackToTop(props: { label: string }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -14,8 +16,10 @@ export function BackToTop() {
         setVisible(window.scrollY > 400);
       });
     };
+
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
+
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -29,7 +33,7 @@ export function BackToTop() {
         pointerEvents: visible ? 'auto' : 'none',
         transform: visible ? 'translateY(0)' : 'translateY(16px)',
       }}
-      aria-label="Voltar ao topo"
+      aria-label={props.label}
       aria-hidden={!visible}
     >
       <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

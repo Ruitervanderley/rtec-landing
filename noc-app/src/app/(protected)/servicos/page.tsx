@@ -1,4 +1,4 @@
-﻿import { Plus, Server, Settings } from 'lucide-react';
+import { Plus, Server, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { CadastrarServico } from '../../CadastrarServico';
 
@@ -48,17 +48,18 @@ export default async function ServicosPage() {
     <section>
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ 
-            fontSize: '1.75rem', 
-            fontWeight: 800, 
+          <h1 style={{
+            fontSize: '1.75rem',
+            fontWeight: 800,
             background: 'var(--brand-gradient)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            marginBottom: '0.5rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem' 
-          }}>
+            marginBottom: '0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+          >
             <Server size={26} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
             Catálogo de Serviços NOC
           </h1>

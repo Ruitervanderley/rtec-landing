@@ -1,4 +1,4 @@
-﻿import { AlertTriangle, ArrowUpCircle, Clock, Users, Wifi, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowUpCircle, Clock, Users, Wifi, XCircle } from 'lucide-react';
 import { DashboardCharts } from '@/components/DashboardCharts';
 import { formatDateTime } from '@/lib/format';
 import { getOverview } from '@/lib/ops-api';

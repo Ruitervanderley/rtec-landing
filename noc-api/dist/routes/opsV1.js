@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { deviceApiTokens, deviceBackups, deviceHeartbeats, tenantDevices, } from '../db/schema.js';
+import { deviceBackups, deviceApiTokens, deviceHeartbeats, opsAlerts, tenantInfraProfiles, tenantDevices, } from '../db/schema.js';
 import { requireAdminToken, requireDeviceToken } from '../ops/auth.js';
 import { isR2Configured } from '../ops/config.js';
 import { getProfileAccessInfo, getSupabaseIdentity, isAccessAllowed, } from '../ops/supabaseIdentity.js';
@@ -29,6 +29,9 @@ class InMemoryRateLimiter {
     }
 }
 const rateLimiter = new InMemoryRateLimiter();
+const PORTAL_PUBLIC_BASE_URL = (process.env.PANEL_PUBLIC_BASE_URL ?? 'https://painel.rtectecnologia.com.br')
+    .trim()
+    .replace(/\/$/, '');
 function parseBearerToken(req) {
     const auth = req.header('authorization') ?? req.header('Authorization');
     if (!auth) {
@@ -53,6 +56,660 @@ function ensureRateLimit(key, limit, windowMs, res) {
         return false;
     }
     return true;
+}
+function sanitizeTenantSubdomain(value) {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/^-+/, '')
+        .replace(/-+$/, '');
+    return normalized.length > 0 ? normalized : null;
+}
+function buildPortalRoutingInfo(subdomain) {
+    if (!subdomain) {
+        return {
+            portalUrl: null,
+            redirectSource: null,
+            redirectTarget: null,
+            cloudflareStatus: 'not_applicable',
+        };
+    }
+    const portalUrl = `${PORTAL_PUBLIC_BASE_URL}/portal/${subdomain}`;
+    return {
+        portalUrl,
+        redirectSource: `https://${subdomain}.rtectecnologia.com.br/*`,
+        redirectTarget: portalUrl,
+        cloudflareStatus: 'manual_redirect_required',
+    };
+}
+function toIsoString(value) {
+    if (!value) {
+        return null;
+    }
+    if (value instanceof Date) {
+        return value.toISOString();
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return value;
+    }
+    return parsed.toISOString();
+}
+function toNumber(value) {
+    return Number(value ?? 0);
+}
+function getTodayIsoDate() {
+    return new Date().toISOString().slice(0, 10);
+}
+function resolveUserAccessStatus(props) {
+    const todayIso = getTodayIsoDate();
+    if (!props.tenantIsActive) {
+        return 'tenant_inactive';
+    }
+    if (props.tenantValidUntil && props.tenantValidUntil < todayIso) {
+        return 'tenant_expired';
+    }
+    if (props.userValidUntil && props.userValidUntil < todayIso) {
+        return 'user_expired';
+    }
+    return 'active';
+}
+function mapTenantUserWithAccess(props) {
+    const accessStatus = resolveUserAccessStatus({
+        tenantIsActive: props.tenant.isActive,
+        tenantValidUntil: props.tenant.validUntil,
+        userValidUntil: props.user.validUntil,
+    });
+    return {
+        ...props.user,
+        accessStatus,
+        isBlocked: accessStatus === 'user_expired',
+    };
+}
+function getSupabaseAdminClient() {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error('Supabase admin credentials not configured on noc-api server');
+    }
+    return createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+    });
+}
+async function getPortalTenantBySlug(slug) {
+    const rows = await db.execute(sql `
+    select
+      t.id::text as tenant_id,
+      t.name,
+      coalesce(t.type, 'empresa_ti') as type,
+      t.subdomain,
+      coalesce(t.is_active, false) as is_active,
+      t.valid_until::text as valid_until,
+      coalesce(
+        (
+          select count(1)::int
+          from public.tenant_devices td
+          where td.tenant_id = t.id
+            and td.revoked_at is null
+        ),
+        0
+      ) as device_count,
+      coalesce(
+        (
+          select count(1)::int
+          from public.tenant_devices td
+          where td.tenant_id = t.id
+            and td.revoked_at is null
+            and td.last_seen_at >= now() - interval '15 minutes'
+        ),
+        0
+      ) as online_devices,
+      (
+        select max(td.last_seen_at)
+        from public.tenant_devices td
+        where td.tenant_id = t.id
+          and td.revoked_at is null
+      ) as last_seen_at,
+      (
+        select max(b.created_at)
+        from public.device_backups b
+        where b.tenant_id = t.id
+      ) as last_backup_at
+      ,
+      coalesce(
+        (
+          select count(1)::int
+          from public.profiles p
+          where p.tenant_id = t.id
+        ),
+        0
+      ) as user_count,
+      coalesce(
+        (
+          select count(1)::int
+          from public.profiles p
+          where p.tenant_id = t.id
+            and (p.valid_until is null or p.valid_until::text >= current_date::text)
+        ),
+        0
+      ) as licensed_users,
+      coalesce(
+        (
+          select count(1)::int
+          from public.profiles p
+          where p.tenant_id = t.id
+            and coalesce(p.is_admin, false) = true
+        ),
+        0
+      ) as admin_users
+    from public.tenants t
+    where lower(coalesce(t.subdomain, '')) = ${slug}
+    limit 1
+  `);
+    const row = (rows.rows[0] ?? null);
+    if (!row) {
+        return null;
+    }
+    return {
+        tenantId: row.tenant_id,
+        name: row.name,
+        type: row.type,
+        subdomain: row.subdomain,
+        isActive: row.is_active,
+        validUntil: row.valid_until,
+        deviceCount: toNumber(row.device_count),
+        onlineDevices: toNumber(row.online_devices),
+        lastSeenAt: toIsoString(row.last_seen_at),
+        lastBackupAt: toIsoString(row.last_backup_at),
+        userCount: toNumber(row.user_count),
+        licensedUsers: toNumber(row.licensed_users),
+        adminUsers: toNumber(row.admin_users),
+    };
+}
+async function getTenantAdminById(tenantId) {
+    const rows = await db.execute(sql `
+    select
+      t.id::text as tenant_id,
+      t.name,
+      coalesce(t.type, 'empresa_ti') as type,
+      coalesce(t.license_key, '') as license_key,
+      t.subdomain,
+      coalesce(t.is_active, false) as is_active,
+      t.valid_until::text as valid_until,
+      coalesce(
+        (
+          select count(1)::int
+          from public.tenant_devices td
+          where td.tenant_id = t.id
+            and td.revoked_at is null
+        ),
+        0
+      ) as device_count,
+      coalesce(
+        (
+          select count(1)::int
+          from public.tenant_devices td
+          where td.tenant_id = t.id
+            and td.revoked_at is null
+            and td.last_seen_at >= now() - interval '15 minutes'
+        ),
+        0
+      ) as online_devices,
+      (
+        select max(td.last_seen_at)
+        from public.tenant_devices td
+        where td.tenant_id = t.id
+          and td.revoked_at is null
+      ) as last_seen_at,
+      (
+        select max(b.created_at)
+        from public.device_backups b
+        where b.tenant_id = t.id
+      ) as last_backup_at,
+      coalesce(
+        (
+          select count(1)::int
+          from public.profiles p
+          where p.tenant_id = t.id
+        ),
+        0
+      ) as user_count,
+      coalesce(
+        (
+          select count(1)::int
+          from public.profiles p
+          where p.tenant_id = t.id
+            and (p.valid_until is null or p.valid_until::text >= current_date::text)
+        ),
+        0
+      ) as licensed_users,
+      coalesce(
+        (
+          select count(1)::int
+          from public.profiles p
+          where p.tenant_id = t.id
+            and coalesce(p.is_admin, false) = true
+        ),
+        0
+      ) as admin_users
+    from public.tenants t
+    where t.id = ${tenantId}::uuid
+    limit 1
+  `);
+    const row = (rows.rows[0] ?? null);
+    if (!row) {
+        return null;
+    }
+    return {
+        adminUsers: toNumber(row.admin_users),
+        deviceCount: toNumber(row.device_count),
+        isActive: row.is_active,
+        lastBackupAt: toIsoString(row.last_backup_at),
+        lastSeenAt: toIsoString(row.last_seen_at),
+        licenseKey: row.license_key,
+        licensedUsers: toNumber(row.licensed_users),
+        name: row.name,
+        onlineDevices: toNumber(row.online_devices),
+        subdomain: row.subdomain,
+        tenantId: row.tenant_id,
+        type: row.type,
+        userCount: toNumber(row.user_count),
+        validUntil: row.valid_until,
+    };
+}
+async function getTenantUsers(tenantId) {
+    const rows = await db.execute(sql `
+    select
+      p.id::text as user_id,
+      coalesce(p.email, '') as email,
+      coalesce(p.display_name, '') as display_name,
+      coalesce(p.is_admin, false) as is_admin,
+      p.valid_until::text as valid_until
+    from public.profiles p
+    where p.tenant_id = ${tenantId}::uuid
+    order by coalesce(p.is_admin, false) desc, coalesce(p.display_name, p.email) asc
+  `);
+    return rows.rows.map(row => ({
+        displayName: String(row.display_name ?? ''),
+        email: String(row.email ?? ''),
+        isAdmin: Boolean(row.is_admin),
+        userId: String(row.user_id ?? ''),
+        validUntil: (row.valid_until ?? null),
+    }));
+}
+function toStringValue(value) {
+    return typeof value === 'string' ? value.trim() : '';
+}
+function toStringArray(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value
+        .map(entry => toStringValue(entry))
+        .filter(Boolean);
+}
+function toBooleanValue(value) {
+    return value === true;
+}
+function sanitizeInfrastructureDocs(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value
+        .map((entry) => {
+        if (!entry || typeof entry !== 'object') {
+            return null;
+        }
+        const label = toStringValue(entry.label);
+        const url = toStringValue(entry.url);
+        if (!label || !url) {
+            return null;
+        }
+        return {
+            label,
+            url,
+        };
+    })
+        .filter((entry) => Boolean(entry));
+}
+function sanitizeInfrastructureAssets(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value
+        .map((entry) => {
+        if (!entry || typeof entry !== 'object') {
+            return null;
+        }
+        const raw = entry;
+        const title = toStringValue(raw.title);
+        const role = toStringValue(raw.role);
+        if (!title || !role) {
+            return null;
+        }
+        const statusValue = toStringValue(raw.status);
+        const status = statusValue === 'maintenance' || statusValue === 'planned'
+            ? statusValue
+            : 'active';
+        return {
+            category: toStringValue(raw.category) || 'asset',
+            host: toStringValue(raw.host) || null,
+            id: toStringValue(raw.id) || crypto.randomUUID(),
+            ipAddress: toStringValue(raw.ipAddress) || null,
+            notes: toStringValue(raw.notes) || null,
+            platform: toStringValue(raw.platform) || null,
+            port: toStringValue(raw.port) || null,
+            role,
+            status,
+            title,
+        };
+    })
+        .filter((entry) => Boolean(entry));
+}
+function sanitizeTenantInfrastructureProfile(value) {
+    const source = value && typeof value === 'object'
+        ? value
+        : {};
+    const networkSource = source.network && typeof source.network === 'object'
+        ? source.network
+        : {};
+    const monitoringSource = source.monitoring && typeof source.monitoring === 'object'
+        ? source.monitoring
+        : {};
+    const vpnSource = source.vpn && typeof source.vpn === 'object'
+        ? source.vpn
+        : {};
+    return {
+        assets: sanitizeInfrastructureAssets(source.assets),
+        docs: sanitizeInfrastructureDocs(source.docs),
+        monitoring: {
+            improvements: toStringArray(monitoringSource.improvements),
+            stack: toStringArray(monitoringSource.stack),
+            summary: toStringValue(monitoringSource.summary),
+        },
+        network: {
+            firewallLanIp: toStringValue(networkSource.firewallLanIp),
+            firewallName: toStringValue(networkSource.firewallName),
+            gatewayIp: toStringValue(networkSource.gatewayIp),
+            gatewayName: toStringValue(networkSource.gatewayName),
+            lanSubnet: toStringValue(networkSource.lanSubnet),
+            switchName: toStringValue(networkSource.switchName),
+            topology: toStringArray(networkSource.topology),
+            wanSource: toStringValue(networkSource.wanSource),
+        },
+        notes: toStringValue(source.notes),
+        overview: toStringValue(source.overview),
+        responsibilities: toStringArray(source.responsibilities),
+        vpn: {
+            derpDomain: toStringValue(vpnSource.derpDomain),
+            domain: toStringValue(vpnSource.domain),
+            headscaleDomain: toStringValue(vpnSource.headscaleDomain),
+            nodes: toStringArray(vpnSource.nodes),
+            provider: toStringValue(vpnSource.provider),
+            subnetRouting: toBooleanValue(vpnSource.subnetRouting),
+            tailnetIp: toStringValue(vpnSource.tailnetIp),
+        },
+    };
+}
+function buildArrudaInfrastructureProfile() {
+    return sanitizeTenantInfrastructureProfile({
+        assets: [
+            {
+                category: 'virtualization',
+                host: 'proxmox-ve',
+                id: 'arruda-proxmox',
+                ipAddress: '192.168.0.7',
+                notes: 'Virtualizacao da infraestrutura principal.',
+                platform: 'Proxmox VE',
+                port: '8006',
+                role: 'Host principal de virtualizacao',
+                status: 'active',
+                title: 'Proxmox VE',
+            },
+            {
+                category: 'firewall',
+                host: 'pfsense-vm',
+                id: 'arruda-pfsense',
+                ipAddress: '192.168.1.1',
+                notes: 'Firewall, roteador, DHCP e acesso remoto com Tailscale.',
+                platform: 'pfSense VM',
+                port: null,
+                role: 'Borda de rede e seguranca',
+                status: 'active',
+                title: 'pfSense',
+            },
+            {
+                category: 'storage',
+                host: 'truenas',
+                id: 'arruda-truenas',
+                ipAddress: null,
+                notes: 'Armazenamento central, SMB e backups.',
+                platform: 'TrueNAS',
+                port: null,
+                role: 'Storage interno',
+                status: 'active',
+                title: 'TrueNAS',
+            },
+            {
+                category: 'server',
+                host: 'ubuntu-server',
+                id: 'arruda-ubuntu',
+                ipAddress: null,
+                notes: 'Scripts, automacao e monitoramento em Python.',
+                platform: 'Ubuntu Server',
+                port: null,
+                role: 'Automacao e monitoramento',
+                status: 'active',
+                title: 'Ubuntu Server',
+            },
+            {
+                category: 'gateway',
+                host: 'modem-parks',
+                id: 'arruda-modem',
+                ipAddress: '192.168.0.1',
+                notes: 'Gateway do provedor de internet.',
+                platform: 'Modem Parks',
+                port: null,
+                role: 'Conexao com internet',
+                status: 'active',
+                title: 'Modem Parks',
+            },
+            {
+                category: 'switch',
+                host: 'switch-24p',
+                id: 'arruda-switch',
+                ipAddress: null,
+                notes: 'Switch central que conecta toda a rede interna.',
+                platform: 'Switch 24 portas',
+                port: null,
+                role: 'Distribuicao da LAN',
+                status: 'active',
+                title: 'Switch 24 portas',
+            },
+            {
+                category: 'vpn',
+                host: 'mycloudfree',
+                id: 'arruda-headscale',
+                ipAddress: null,
+                notes: 'Headscale e DERP proprio em implementacao.',
+                platform: 'Headscale',
+                port: null,
+                role: 'Controle proprio da VPN',
+                status: 'planned',
+                title: 'Headscale',
+            },
+        ],
+        docs: [
+            { label: 'pfSense docs', url: 'https://docs.netgate.com/pfsense/en/latest/' },
+            { label: 'Tailscale docs', url: 'https://tailscale.com/kb' },
+            { label: 'TrueNAS docs', url: 'https://www.truenas.com/docs/' },
+            { label: 'Telegram Bot API', url: 'https://core.telegram.org/bots/api' },
+            { label: 'Tailscale install', url: 'https://tailscale.com/kb/1017/install/' },
+            { label: 'Headscale', url: 'https://github.com/juanfont/headscale' },
+            { label: 'Custom DERP', url: 'https://tailscale.com/kb/1118/custom-derp/' },
+        ],
+        monitoring: {
+            improvements: [
+                'Detectar dispositivo instavel',
+                'Detectar quedas intermitentes',
+                'Criar alertas inteligentes',
+            ],
+            stack: [
+                'Python',
+                'aiohttp',
+                'smbclient',
+                'Telegram Bot API',
+            ],
+            summary: 'Bot proprio de monitoramento para conectividade, checks SMB/ICMP e alertas via Telegram.',
+        },
+        network: {
+            firewallLanIp: '192.168.1.1',
+            firewallName: 'pfSense',
+            gatewayIp: '192.168.0.1',
+            gatewayName: 'Modem Parks',
+            lanSubnet: '192.168.1.0/24',
+            switchName: 'Switch 24 portas',
+            topology: [
+                'Internet',
+                'Modem Parks',
+                'pfSense',
+                'Switch 24 portas',
+                'Computadores / servidores / APs',
+            ],
+            wanSource: 'Rede do modem',
+        },
+        notes: 'Tenant piloto de empresa de TI com foco em infraestrutura, VPN, monitoramento e operacao de servidores.',
+        overview: 'Infraestrutura empresarial baseada em Proxmox com pfSense virtualizado, storage interno, automacao em Ubuntu Server e acesso remoto por Tailscale.',
+        responsibilities: [
+            'Infraestrutura de rede',
+            'Servidores',
+            'Virtualizacao',
+            'VPN',
+            'Monitoramento',
+            'Automacao',
+            'Manutencao',
+        ],
+        vpn: {
+            derpDomain: 'derp.arruda.tech',
+            domain: 'vpn.arruda.tech',
+            headscaleDomain: 'vpn.arruda.tech',
+            nodes: [
+                'pfsense 100.68.93.55',
+                'arr-adm-ntb-01',
+                'arr-adm-ntb-02',
+                'arr-adm-pc-01',
+                'arr-adm-pc-02',
+                'servidorvideo',
+                'omv-server',
+                'mycloudfree',
+            ],
+            provider: 'Tailscale',
+            subnetRouting: true,
+            tailnetIp: '100.68.93.55',
+        },
+    });
+}
+function buildDefaultTenantInfrastructureProfile(tenant) {
+    const tenantIdentity = `${tenant.name} ${tenant.subdomain ?? ''}`.toLowerCase();
+    if (tenantIdentity.includes('arruda')) {
+        return buildArrudaInfrastructureProfile();
+    }
+    if (tenant.type === 'camara') {
+        return sanitizeTenantInfrastructureProfile({
+            monitoring: {
+                improvements: [
+                    'Mapear terminais do plenario',
+                    'Consolidar operacao do LegislativoTimer',
+                ],
+                stack: [
+                    'LegislativoTimer',
+                    'Supabase',
+                    'Backups',
+                    'Alertas operacionais',
+                ],
+                summary: 'Perfil orientado ao ambiente legislativo, usuarios e disponibilidade institucional.',
+            },
+            network: {
+                firewallLanIp: '',
+                firewallName: '',
+                gatewayIp: '',
+                gatewayName: '',
+                lanSubnet: '',
+                switchName: '',
+                topology: [],
+                wanSource: '',
+            },
+            notes: '',
+            overview: 'Tenant institucional com foco em operacao do LegislativoTimer e suporte ao ambiente da camara.',
+            responsibilities: [
+                'Usuarios do LegislativoTimer',
+                'Licencas',
+                'Suporte institucional',
+            ],
+            vpn: {
+                derpDomain: '',
+                domain: '',
+                headscaleDomain: '',
+                nodes: [],
+                provider: '',
+                subnetRouting: false,
+                tailnetIp: '',
+            },
+        });
+    }
+    return sanitizeTenantInfrastructureProfile({
+        monitoring: {
+            improvements: [],
+            stack: [],
+            summary: 'Perfil tecnico para operacao de rede, servidores, VPN e automacao do tenant.',
+        },
+        network: {
+            firewallLanIp: '',
+            firewallName: '',
+            gatewayIp: '',
+            gatewayName: '',
+            lanSubnet: '',
+            switchName: '',
+            topology: [],
+            wanSource: '',
+        },
+        notes: '',
+        overview: 'Tenant empresarial com inventario de infraestrutura, rede, VPN e monitoramento.',
+        responsibilities: [],
+        vpn: {
+            derpDomain: '',
+            domain: '',
+            headscaleDomain: '',
+            nodes: [],
+            provider: '',
+            subnetRouting: false,
+            tailnetIp: '',
+        },
+    });
+}
+async function getTenantInfrastructureProfile(tenant) {
+    const rows = await db
+        .select({
+        profile: tenantInfraProfiles.profile,
+    })
+        .from(tenantInfraProfiles)
+        .where(eq(tenantInfraProfiles.tenantId, tenant.tenantId))
+        .limit(1);
+    const existingProfile = rows[0]?.profile;
+    if (!existingProfile) {
+        return {
+            isDefault: true,
+            profile: buildDefaultTenantInfrastructureProfile(tenant),
+        };
+    }
+    return {
+        isDefault: false,
+        profile: sanitizeTenantInfrastructureProfile(existingProfile),
+    };
 }
 export function createOpsV1Router(options) {
     const router = Router();
@@ -356,7 +1013,7 @@ export function createOpsV1Router(options) {
         order by td.last_seen_at desc nulls last
         limit ${limit}
       `);
-            res.json({ devices: rows });
+            res.json({ devices: rows.rows });
         }
         catch (error) {
             console.error('GET /v1/admin/devices error:', error);
@@ -391,7 +1048,7 @@ export function createOpsV1Router(options) {
         order by b.created_at desc
         limit ${limit}
       `);
-            res.json({ backups: rows });
+            res.json({ backups: rows.rows });
         }
         catch (error) {
             console.error('GET /v1/admin/backups error:', error);
@@ -404,9 +1061,11 @@ export function createOpsV1Router(options) {
         select
           t.id,
           t.name,
+          coalesce(t.type, 'empresa_ti') as type,
           t.license_key,
           t.is_active,
           t.valid_until,
+          t.subdomain,
           count(td.id)::int as total_devices,
           count(case when td.last_seen_at >= now() - interval '15 minutes' then 1 end)::int as online_devices,
           max(td.last_seen_at) as last_seen_at,
@@ -414,14 +1073,120 @@ export function createOpsV1Router(options) {
         from public.tenants t
         left join public.tenant_devices td on td.tenant_id = t.id and td.revoked_at is null
         left join public.device_backups b on b.tenant_id = t.id
-        group by t.id, t.name, t.license_key, t.is_active, t.valid_until
+        group by t.id, t.name, t.type, t.license_key, t.is_active, t.valid_until, t.subdomain
         order by t.name asc
       `);
-            res.json({ tenants: rows });
+            res.json({ tenants: rows.rows });
         }
         catch (error) {
             console.error('GET /v1/admin/tenants error:', error);
             res.status(500).json({ error: 'ADMIN_TENANTS_ERROR' });
+        }
+    });
+    router.get('/admin/tenants/:id/detail', requireAdminToken(options.config), async (req, res) => {
+        try {
+            const tenant = await getTenantAdminById((req.params.id ?? '').trim());
+            if (!tenant) {
+                res.status(404).json({ error: 'TENANT_NOT_FOUND' });
+                return;
+            }
+            const users = (await getTenantUsers(tenant.tenantId)).map(user => mapTenantUserWithAccess({
+                tenant,
+                user,
+            }));
+            const infrastructure = await getTenantInfrastructureProfile(tenant);
+            const routingInfo = buildPortalRoutingInfo(tenant.subdomain);
+            res.json({
+                infrastructure: infrastructure.profile,
+                infrastructureIsDefault: infrastructure.isDefault,
+                license: {
+                    isActive: tenant.isActive,
+                    licensedUsers: tenant.licensedUsers,
+                    tenantValidUntil: tenant.validUntil,
+                },
+                tenant: {
+                    ...tenant,
+                    portalUrl: routingInfo.portalUrl,
+                    redirectSource: routingInfo.redirectSource,
+                    redirectTarget: routingInfo.redirectTarget,
+                },
+                users,
+            });
+        }
+        catch (error) {
+            console.error('GET /v1/admin/tenants/:id/detail error:', error);
+            res.status(500).json({ error: 'ADMIN_TENANT_DETAIL_ERROR' });
+        }
+    });
+    router.patch('/admin/tenants/:id', requireAdminToken(options.config), async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { subdomain, is_active, valid_until } = req.body;
+            const supabaseAdmin = getSupabaseAdminClient();
+            const updates = {};
+            if (subdomain !== undefined) {
+                const normalizedSubdomain = sanitizeTenantSubdomain(subdomain);
+                if (subdomain.trim().length > 0 && !normalizedSubdomain) {
+                    res.status(400).json({ error: 'INVALID_SUBDOMAIN' });
+                    return;
+                }
+                updates.subdomain = normalizedSubdomain;
+            }
+            if (is_active !== undefined) {
+                updates.is_active = is_active;
+            }
+            if (valid_until !== undefined) {
+                updates.valid_until = valid_until || null;
+            }
+            if (Object.keys(updates).length === 0) {
+                res.status(400).json({ error: 'No fields to update' });
+                return;
+            }
+            const { error } = await supabaseAdmin.from('tenants').update(updates).eq('id', id);
+            if (error) {
+                throw new Error(`Failed to update tenant: ${error.message}`);
+            }
+            res.json({ ok: true });
+        }
+        catch (error) {
+            console.error('PATCH /v1/admin/tenants/:id error:', error);
+            res.status(500).json({ error: 'ADMIN_TENANT_UPDATE_ERROR' });
+        }
+    });
+    router.patch('/admin/tenants/:id/infrastructure', requireAdminToken(options.config), async (req, res) => {
+        try {
+            const tenant = await getTenantAdminById((req.params.id ?? '').trim());
+            if (!tenant) {
+                res.status(404).json({ error: 'TENANT_NOT_FOUND' });
+                return;
+            }
+            const profile = sanitizeTenantInfrastructureProfile(req.body.profile);
+            await db.execute(sql `
+        insert into public.tenant_infra_profiles (
+          tenant_id,
+          profile,
+          created_at,
+          updated_at
+        )
+        values (
+          ${tenant.tenantId}::uuid,
+          ${JSON.stringify(profile)}::jsonb,
+          now(),
+          now()
+        )
+        on conflict (tenant_id)
+        do update set
+          profile = excluded.profile,
+          updated_at = now()
+      `);
+            res.json({
+                ok: true,
+                profile,
+            });
+        }
+        catch (error) {
+            console.error('PATCH /v1/admin/tenants/:id/infrastructure error:', error);
+            res.status(500).json({ error: 'ADMIN_TENANT_INFRA_UPDATE_ERROR' });
         }
     });
     router.post('/admin/tenants/provision', requireAdminToken(options.config), async (req, res) => {
@@ -431,15 +1196,12 @@ export function createOpsV1Router(options) {
                 res.status(400).json({ error: 'Missing required provision fields' });
                 return;
             }
-            const supabaseUrl = process.env.SUPABASE_URL;
-            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-            if (!supabaseUrl || !supabaseServiceKey) {
-                throw new Error('Supabase admin credentials not configured on noc-api server');
+            const normalizedSubdomain = sanitizeTenantSubdomain(subdomain);
+            if (typeof subdomain === 'string' && subdomain.trim().length > 0 && !normalizedSubdomain) {
+                res.status(400).json({ error: 'INVALID_SUBDOMAIN' });
+                return;
             }
-            const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-                auth: { autoRefreshToken: false, persistSession: false },
-            });
-            // 1. Create Tenant Record in public.tenants
+            const supabaseAdmin = getSupabaseAdminClient();
             const licenseKey = crypto.randomUUID().toUpperCase();
             const { data: tenant, error: tenantErr } = await supabaseAdmin
                 .from('tenants')
@@ -447,6 +1209,7 @@ export function createOpsV1Router(options) {
                 name: name.trim(),
                 license_key: licenseKey,
                 is_active: true,
+                subdomain: normalizedSubdomain,
                 type: tenantType || 'empresa_ti',
             })
                 .select('id')
@@ -455,7 +1218,6 @@ export function createOpsV1Router(options) {
                 throw new Error(`Failed to create tenant: ${tenantErr?.message}`);
             }
             const tenantId = tenant.id;
-            // 2. Provision Admin User in Supabase Auth
             const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
                 email: adminEmail.trim(),
                 password: adminPassword,
@@ -466,50 +1228,35 @@ export function createOpsV1Router(options) {
                 },
             });
             if (authErr) {
-                // Rollback tenant
                 await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
                 throw new Error(`Failed to create admin user: ${authErr.message}`);
             }
-            // 3. Provision Subdomain via Cloudflare API
-            const cfToken = process.env.CLOUDFLARE_API_TOKEN;
-            const cfZoneId = process.env.CLOUDFLARE_ZONE_ID;
-            const saasTargetIp = process.env.SAAS_TARGET_IP || '1.1.1.1'; // Example fallback
-            let cloudflareSuccess = false;
-            let cloudflareError = null;
-            if (cfToken && cfZoneId && subdomain && subdomain.trim().length > 0) {
-                try {
-                    const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/dns_records`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${cfToken}`,
-                        },
-                        body: JSON.stringify({
-                            type: 'A',
-                            name: subdomain.toLowerCase().trim(),
-                            content: saasTargetIp,
-                            ttl: 1,
-                            proxied: true,
-                        }),
-                    });
-                    if (!cfRes.ok) {
-                        const errData = await cfRes.json().catch(() => ({}));
-                        cloudflareError = errData.errors?.[0]?.message || 'Unknown CF error';
-                    }
-                    else {
-                        cloudflareSuccess = true;
-                    }
-                }
-                catch (err) {
-                    cloudflareError = err instanceof Error ? err.message : 'CF fetch error';
-                }
+            const userId = authData.user.id;
+            const { error: profileErr } = await supabaseAdmin.from('profiles').upsert({
+                id: userId,
+                tenant_id: tenantId,
+                email: adminEmail.trim(),
+                display_name: adminEmail.trim(),
+                is_admin: true,
+                valid_until: null,
+            }, {
+                onConflict: 'id',
+            });
+            if (profileErr) {
+                await supabaseAdmin.auth.admin.deleteUser(userId);
+                await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
+                throw new Error(`Failed to upsert admin profile: ${profileErr.message}`);
             }
+            const routingInfo = buildPortalRoutingInfo(normalizedSubdomain);
             res.json({
                 ok: true,
                 tenantId,
-                userId: authData.user.id,
-                subdomainStatus: cloudflareSuccess ? 'created' : 'skipped_or_failed',
-                cloudflareError,
+                userId,
+                subdomain: normalizedSubdomain,
+                portalUrl: routingInfo.portalUrl,
+                redirectSource: routingInfo.redirectSource,
+                redirectTarget: routingInfo.redirectTarget,
+                cloudflareStatus: routingInfo.cloudflareStatus,
             });
         }
         catch (error) {
@@ -540,6 +1287,195 @@ export function createOpsV1Router(options) {
         }
     });
     // ─── Public Portal Route (no auth required) ───
+    router.get('/portal/:slug/reports', async (req, res) => {
+        try {
+            const slug = (req.params.slug ?? '').trim().toLowerCase();
+            if (!slug) {
+                res.status(400).json({ error: 'SLUG_REQUIRED' });
+                return;
+            }
+            const accessToken = parseBearerToken(req);
+            if (!accessToken) {
+                res.status(401).json({ error: 'MISSING_SUPABASE_TOKEN' });
+                return;
+            }
+            const identity = await getSupabaseIdentity(accessToken, options.config);
+            if (!identity) {
+                res.status(401).json({ error: 'INVALID_SUPABASE_TOKEN' });
+                return;
+            }
+            const profile = await getProfileAccessInfo(identity.userId);
+            if (!profile) {
+                res.status(403).json({ error: 'PROFILE_NOT_FOUND' });
+                return;
+            }
+            const access = isAccessAllowed(profile);
+            if (!access.canAccess) {
+                res.status(403).json({ error: access.reason });
+                return;
+            }
+            if (!profile.isAdmin) {
+                res.status(403).json({ error: 'ADMIN_REQUIRED' });
+                return;
+            }
+            const tenant = await getPortalTenantBySlug(slug);
+            if (!tenant) {
+                res.status(404).json({ error: 'TENANT_NOT_FOUND' });
+                return;
+            }
+            if (tenant.tenantId !== profile.tenantId) {
+                res.status(403).json({ error: 'TENANT_MISMATCH' });
+                return;
+            }
+            const tenantUsers = (await getTenantUsers(tenant.tenantId)).map(user => mapTenantUserWithAccess({
+                tenant,
+                user,
+            }));
+            const infrastructure = await getTenantInfrastructureProfile({
+                name: tenant.name,
+                subdomain: tenant.subdomain,
+                tenantId: tenant.tenantId,
+                type: tenant.type,
+            });
+            const statsResult = await db.execute(sql `
+        select
+          count(1)::int as total_devices,
+          count(case when td.last_seen_at >= now() - interval '15 minutes' then 1 end)::int as online_devices,
+          max(td.last_seen_at) as last_seen_at,
+          (
+            select count(1)::int
+            from public.device_backups b
+            where b.tenant_id = ${tenant.tenantId}::uuid
+              and b.status = 'UPLOADED'
+              and b.created_at >= now() - interval '24 hours'
+          ) as uploaded_backups_24h,
+          (
+            select count(1)::int
+            from public.device_backups b
+            where b.tenant_id = ${tenant.tenantId}::uuid
+              and b.status = 'FAILED'
+              and b.created_at >= now() - interval '24 hours'
+          ) as failed_backups_24h,
+          (
+            select max(b.created_at)
+            from public.device_backups b
+            where b.tenant_id = ${tenant.tenantId}::uuid
+          ) as last_backup_at
+        from public.tenant_devices td
+        where td.tenant_id = ${tenant.tenantId}::uuid
+          and td.revoked_at is null
+      `);
+            const statsRow = (statsResult.rows[0] ?? {});
+            const devices = await db
+                .select({
+                id: tenantDevices.id,
+                deviceId: tenantDevices.deviceId,
+                deviceName: tenantDevices.deviceName,
+                appVersion: tenantDevices.appVersion,
+                lastSeenAt: tenantDevices.lastSeenAt,
+                lastStatus: tenantDevices.lastStatus,
+            })
+                .from(tenantDevices)
+                .where(and(eq(tenantDevices.tenantId, tenant.tenantId), isNull(tenantDevices.revokedAt)))
+                .orderBy(desc(tenantDevices.lastSeenAt))
+                .limit(50);
+            const backups = await db
+                .select({
+                id: deviceBackups.id,
+                fileName: deviceBackups.fileName,
+                backupType: deviceBackups.backupType,
+                status: deviceBackups.status,
+                sizeBytes: deviceBackups.sizeBytes,
+                createdAt: deviceBackups.createdAt,
+                completedAt: deviceBackups.completedAt,
+                errorMessage: deviceBackups.errorMessage,
+            })
+                .from(deviceBackups)
+                .where(eq(deviceBackups.tenantId, tenant.tenantId))
+                .orderBy(desc(deviceBackups.createdAt))
+                .limit(25);
+            const alerts = await db
+                .select({
+                id: opsAlerts.id,
+                alertType: opsAlerts.alertType,
+                delivered: opsAlerts.delivered,
+                createdAt: opsAlerts.createdAt,
+                sentAt: opsAlerts.sentAt,
+            })
+                .from(opsAlerts)
+                .where(eq(opsAlerts.tenantId, tenant.tenantId))
+                .orderBy(desc(opsAlerts.createdAt))
+                .limit(25);
+            const totalDevices = toNumber(statsRow.total_devices);
+            const onlineDevices = toNumber(statsRow.online_devices);
+            const onlineThreshold = Date.now() - 15 * 60 * 1000;
+            res.json({
+                tenant: {
+                    ...tenant,
+                    isOnline: tenant.onlineDevices > 0,
+                },
+                profile: {
+                    email: profile.email,
+                    displayName: profile.displayName,
+                    isAdmin: profile.isAdmin,
+                    validUntil: profile.userValidUntil,
+                },
+                infrastructure: infrastructure.profile,
+                infrastructureIsDefault: infrastructure.isDefault,
+                license: {
+                    accessStatus: resolveUserAccessStatus({
+                        tenantIsActive: tenant.isActive,
+                        tenantValidUntil: tenant.validUntil,
+                        userValidUntil: profile.userValidUntil,
+                    }),
+                    licensedUsers: tenant.licensedUsers,
+                    tenantIsActive: tenant.isActive,
+                    tenantValidUntil: tenant.validUntil,
+                    userValidUntil: profile.userValidUntil,
+                },
+                stats: {
+                    totalDevices,
+                    onlineDevices,
+                    offlineDevices: Math.max(totalDevices - onlineDevices, 0),
+                    uploadedBackups24h: toNumber(statsRow.uploaded_backups_24h),
+                    failedBackups24h: toNumber(statsRow.failed_backups_24h),
+                    lastSeenAt: toIsoString(statsRow.last_seen_at),
+                    lastBackupAt: toIsoString(statsRow.last_backup_at),
+                },
+                devices: devices.map(device => ({
+                    id: device.id,
+                    deviceId: device.deviceId,
+                    deviceName: device.deviceName ?? device.deviceId,
+                    appVersion: device.appVersion ?? '',
+                    lastSeenAt: toIsoString(device.lastSeenAt),
+                    lastStatus: device.lastStatus ?? '',
+                    isOnline: device.lastSeenAt ? device.lastSeenAt.getTime() >= onlineThreshold : false,
+                })),
+                backups: backups.map(backup => ({
+                    id: backup.id,
+                    fileName: backup.fileName,
+                    backupType: backup.backupType,
+                    status: backup.status,
+                    sizeBytes: backup.sizeBytes,
+                    createdAt: backup.createdAt.toISOString(),
+                    completedAt: toIsoString(backup.completedAt),
+                    errorMessage: backup.errorMessage,
+                })),
+                alerts: alerts.map(alert => ({
+                    id: alert.id,
+                    alertType: alert.alertType,
+                    delivered: alert.delivered,
+                    createdAt: alert.createdAt.toISOString(),
+                    sentAt: toIsoString(alert.sentAt),
+                })),
+                users: tenantUsers,
+            });
+        }
+        catch (error) {
+            console.error('GET /v1/portal/:slug/reports error:', error);
+            res.status(500).json({ error: 'PORTAL_REPORTS_ERROR' });
+        }
+    });
     router.get('/portal/:slug', async (req, res) => {
         try {
             const slug = (req.params.slug ?? '').trim().toLowerCase();
@@ -547,40 +1483,22 @@ export function createOpsV1Router(options) {
                 res.status(400).json({ error: 'SLUG_REQUIRED' });
                 return;
             }
-            // Look up tenant by name/slug match
-            const rows = await db.execute(sql `
-        select
-          t.id,
-          t.name,
-          t.is_active,
-          t.type,
-          coalesce(
-            (select count(*)::int from public.tenant_devices td
-             where td.tenant_id = t.id and td.revoked_at is null), 0
-          ) as device_count,
-          coalesce(
-            (select count(*)::int from public.tenant_devices td
-             where td.tenant_id = t.id
-               and td.revoked_at is null
-               and td.last_seen_at > now() - interval '10 minutes'), 0
-          ) as online_devices
-        from public.tenants t
-        where lower(replace(t.name, ' ', '-')) like ${`%${slug}%`}
-          or lower(t.name) like ${`%${slug}%`}
-        limit 1
-      `);
-            const tenant = rows.rows?.[0] ?? rows[0];
+            const tenant = await getPortalTenantBySlug(slug);
             if (!tenant) {
                 res.status(404).json({ error: 'TENANT_NOT_FOUND' });
                 return;
             }
             res.json({
+                tenantId: tenant.tenantId,
                 name: tenant.name,
-                type: tenant.type || 'empresa_ti',
-                isActive: tenant.is_active,
-                isOnline: (tenant.online_devices ?? 0) > 0 || tenant.is_active,
-                deviceCount: tenant.device_count ?? 0,
-                onlineDevices: tenant.online_devices ?? 0,
+                type: tenant.type,
+                subdomain: tenant.subdomain,
+                isActive: tenant.isActive,
+                isOnline: tenant.onlineDevices > 0,
+                deviceCount: tenant.deviceCount,
+                onlineDevices: tenant.onlineDevices,
+                lastSeenAt: tenant.lastSeenAt,
+                lastBackupAt: tenant.lastBackupAt,
             });
         }
         catch (error) {

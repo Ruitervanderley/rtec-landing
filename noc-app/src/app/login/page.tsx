@@ -1,125 +1,178 @@
 'use client';
 
-import { useState } from 'react';
-import { authenticate } from '../actions/auth';
-import { Lock, ArrowRight, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Lock } from 'lucide-react';
+import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { authenticate } from '@/app/actions/auth';
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(formData: FormData) {
     setLoading(true);
     setErrorMsg('');
+
     try {
-      const res = await authenticate(formData);
-      if (res?.error) {
-        setErrorMsg(res.error);
+      const response = await authenticate(formData);
+      if (response?.error) {
+        setErrorMsg(response.error);
         setLoading(false);
       }
-    } catch (e) {
-      // In Next.js Server Actions, 'redirect' throws a specific error we shouldn't catch.
-      // Easiest is to check if it's the NEXT_REDIRECT error.
-      if (e instanceof Error && e.message.includes('NEXT_REDIRECT')) {
-        throw e;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+        throw error;
       }
+
       setErrorMsg('Ocorreu um erro no servidor.');
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0b1121' }}>
-      
-      {/* Visual flair - glowing orb background */}
-      <div style={{ position: 'absolute', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(77, 184, 255, 0.1) 0%, rgba(11, 17, 33, 0) 70%)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
-
-      <div style={{ 
-        width: '100%', 
-        maxWidth: '420px', 
-        padding: '3rem', 
-        backgroundColor: '#ffffff', 
-        borderRadius: '24px', 
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        zIndex: 10,
+    <div
+      style={{
+        alignItems: 'center',
+        backgroundColor: '#0b1121',
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center'
-      }}>
-        
-        <img src="/logo.png" alt="R.TEC Logo" style={{ height: '56px', marginBottom: '2rem' }} />
+        justifyContent: 'center',
+        minHeight: '100vh',
+        padding: '1.5rem',
+        position: 'relative',
+      }}
+    >
+      <div
+        style={{
+          background: 'radial-gradient(circle, rgba(77, 184, 255, 0.1) 0%, rgba(11, 17, 33, 0) 70%)',
+          height: '500px',
+          left: '50%',
+          pointerEvents: 'none',
+          position: 'absolute',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '500px',
+        }}
+      />
 
-        <div style={{ width: '100%', textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.5rem 0' }}>Sessão Protegida</h1>
+      <div
+        style={{
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+          borderRadius: '24px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          maxWidth: '420px',
+          padding: '3rem',
+          width: '100%',
+          zIndex: 1,
+        }}
+      >
+        <Image
+          alt="R.TEC Logo"
+          height={56}
+          priority
+          src="/logo.png"
+          style={{ height: '56px', marginBottom: '2rem', width: 'auto' }}
+          width={180}
+        />
+
+        <div style={{ marginBottom: '2rem', textAlign: 'center', width: '100%' }}>
+          <h1 style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.5rem 0' }}>
+            Sessao protegida
+          </h1>
           <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>RTEC Operations Center</p>
         </div>
 
-        {errorMsg && (
-          <div style={{ width: '100%', padding: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', color: '#991b1b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontWeight: 500 }}>
-            <AlertTriangle size={16} />
-            {errorMsg}
-          </div>
-        )}
+        {errorMsg
+          ? (
+              <div
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '12px',
+                  color: '#991b1b',
+                  display: 'flex',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  gap: '0.5rem',
+                  marginBottom: '1.5rem',
+                  padding: '0.75rem',
+                  width: '100%',
+                }}
+              >
+                <AlertTriangle size={16} />
+                {errorMsg}
+              </div>
+            )
+          : null}
 
-        <form action={handleLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <form action={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+          <input name="from" type="hidden" value={searchParams.get('from') ?? ''} />
+
           <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+            <div style={{ color: '#94a3b8', left: '1rem', position: 'absolute', top: '50%', transform: 'translateY(-50%)' }}>
               <Lock size={18} />
             </div>
-            <input 
+            <input
               name="password"
-              type="password" 
-              placeholder="Senha Mestra" 
+              placeholder="Senha mestra"
               required
               style={{
-                width: '100%',
-                padding: '1rem 1rem 1rem 3rem',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0',
                 backgroundColor: '#f8fafc',
+                border: '2px solid #e2e8f0',
+                borderRadius: '12px',
+                boxSizing: 'border-box',
                 fontSize: '1rem',
                 outline: 'none',
-                transition: 'border-color 0.2s ease',
-                boxSizing: 'border-box'
+                padding: '1rem 1rem 1rem 3rem',
+                width: '100%',
               }}
-              onFocus={(e) => e.target.style.borderColor = '#4db8ff'}
-              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+              type="password"
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
             disabled={loading}
             style={{
-              width: '100%',
-              padding: '1rem',
-              borderRadius: '12px',
+              alignItems: 'center',
               background: 'linear-gradient(135deg, #2d82cc 0%, #4db8ff 100%)',
-              color: '#ffffff',
               border: 'none',
-              fontSize: '1rem',
-              fontWeight: 700,
+              borderRadius: '12px',
+              boxShadow: '0 4px 14px 0 rgba(77, 184, 255, 0.39)',
+              color: '#ffffff',
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontSize: '1rem',
+              fontWeight: 700,
               gap: '0.75rem',
+              justifyContent: 'center',
               opacity: loading ? 0.7 : 1,
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              boxShadow: '0 4px 14px 0 rgba(77, 184, 255, 0.39)',
+              padding: '1rem',
+              width: '100%',
             }}
-            onMouseOver={(e) => !loading && ((e.currentTarget.style.transform = 'translateY(-2px)'), (e.currentTarget.style.boxShadow = '0 6px 20px rgba(77, 184, 255, 0.4)'))}
-            onMouseOut={(e) => !loading && ((e.currentTarget.style.transform = 'translateY(0)'), (e.currentTarget.style.boxShadow = '0 4px 14px 0 rgba(77, 184, 255, 0.39)'))}
+            type="submit"
           >
             {loading ? 'Verificando...' : 'Acessar NOC'}
-            {!loading && <ArrowRight size={18} />}
+            {!loading ? <ArrowRight size={18} /> : null}
           </button>
         </form>
 
-        <p style={{ marginTop: '2rem', fontSize: '0.75rem', color: '#94a3b8' }}>
+        <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '2rem' }}>
           Restrito a operadores autorizados.
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

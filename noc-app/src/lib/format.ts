@@ -1,4 +1,4 @@
-﻿export function formatDateTime(value: string | null): string {
+export function formatDateTime(value: string | null): string {
   if (!value) {
     return '--';
   }

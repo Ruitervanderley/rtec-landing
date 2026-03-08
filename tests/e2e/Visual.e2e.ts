@@ -6,7 +6,7 @@ test.describe('Visual testing', () => {
       await page.goto('/');
 
       await expect(
-        page.getByRole('heading', { name: 'Boilerplate Code for Your Next.js Project with Tailwind CSS' }),
+        page.getByRole('heading', { name: /Automatizamos suas operações/i }),
       ).toBeVisible();
 
       await takeSnapshot(page, testInfo);
@@ -16,7 +16,7 @@ test.describe('Visual testing', () => {
       await page.goto('/portfolio');
 
       await expect(
-        page.getByText('Welcome to my portfolio page!'),
+        page.getByRole('heading', { name: /Nossos casos de sucesso/i }),
       ).toBeVisible();
 
       await takeSnapshot(page, testInfo);
@@ -26,17 +26,7 @@ test.describe('Visual testing', () => {
       await page.goto('/about');
 
       await expect(
-        page.getByText('Welcome to our About page!'),
-      ).toBeVisible();
-
-      await takeSnapshot(page, testInfo);
-    });
-
-    test('should take screenshot of the portfolio details page', async ({ page }, testInfo) => {
-      await page.goto('/portfolio/2');
-
-      await expect(
-        page.getByText('Created a set of promotional'),
+        page.getByRole('heading', { name: /Tecnologia com base sólida e visão de futuro/i }),
       ).toBeVisible();
 
       await takeSnapshot(page, testInfo);
@@ -46,7 +36,7 @@ test.describe('Visual testing', () => {
       await page.goto('/fr');
 
       await expect(
-        page.getByRole('heading', { name: 'Code de démarrage pour Next.js avec Tailwind CSS' }),
+        page.getByRole('heading', { name: /Nous automatisons vos opérations/i }),
       ).toBeVisible();
 
       await takeSnapshot(page, testInfo);

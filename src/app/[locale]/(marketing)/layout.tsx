@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import Image from 'next/image';
 import { BackToTop } from '@/components/BackToTop';
 import { FloatingWhatsApp } from '@/components/FloatingWhatsApp';
+import { Env } from '@/libs/Env';
 import { Link } from '@/libs/I18nNavigation';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { AppConfig } from '@/utils/AppConfig';
@@ -14,6 +15,7 @@ export default async function Layout(props: {
   setRequestLocale(locale);
   const tIndex = await getTranslations({ locale, namespace: 'Index' });
   const tRoot = await getTranslations({ locale, namespace: 'RootLayout' });
+  const tBase = await getTranslations({ locale, namespace: 'BaseTemplate' });
 
   return (
     <BaseTemplate
@@ -27,7 +29,7 @@ export default async function Layout(props: {
             >
               <Image
                 src="/rtec-logo.png"
-                alt="Rtec Tecnologia - Soluções Tecnológicas"
+                alt={tBase('brand_alt')}
                 width={160}
                 height={45}
                 className="h-10 w-auto object-contain brightness-110 sm:h-12"
@@ -66,8 +68,11 @@ export default async function Layout(props: {
       )}
     >
       {props.children}
-      <FloatingWhatsApp />
-      <BackToTop />
+      <FloatingWhatsApp
+        label={tBase('floating_whatsapp_label')}
+        url={Env.NEXT_PUBLIC_WHATSAPP_URL}
+      />
+      <BackToTop label={tBase('back_to_top_label')} />
     </BaseTemplate>
   );
 }

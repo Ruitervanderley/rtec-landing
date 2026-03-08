@@ -1,4 +1,4 @@
-﻿import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Laptop2 } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Laptop2 } from 'lucide-react';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_NOC_API_URL ?? 'http://localhost:4000';

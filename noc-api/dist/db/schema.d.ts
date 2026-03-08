@@ -1556,6 +1556,81 @@ export declare const opsAlerts: import("drizzle-orm/pg-core").PgTableWithColumns
     };
     dialect: "pg";
 }>;
+export declare const tenantInfraProfiles: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "tenant_infra_profiles";
+    schema: undefined;
+    columns: {
+        tenantId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "tenant_id";
+            tableName: "tenant_infra_profiles";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        profile: import("drizzle-orm/pg-core").PgColumn<{
+            name: "profile";
+            tableName: "tenant_infra_profiles";
+            dataType: "json";
+            columnType: "PgJsonb";
+            data: Record<string, unknown>;
+            driverParam: unknown;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        createdAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "created_at";
+            tableName: "tenant_infra_profiles";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        updatedAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "updated_at";
+            tableName: "tenant_infra_profiles";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
 export declare const sitesRelations: import("drizzle-orm").Relations<"sites", {
     areas: import("drizzle-orm").Many<"areas">;
 }>;
@@ -1600,4 +1675,5 @@ export declare const deviceHeartbeatsRelations: import("drizzle-orm").Relations<
 export declare const deviceBackupsRelations: import("drizzle-orm").Relations<"device_backups", {
     device: import("drizzle-orm").One<"tenant_devices", true>;
 }>;
+export declare const tenantInfraProfilesRelations: import("drizzle-orm").Relations<"tenant_infra_profiles", {}>;
 //# sourceMappingURL=schema.d.ts.map

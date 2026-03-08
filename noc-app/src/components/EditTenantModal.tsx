@@ -22,13 +22,14 @@ export function EditTenantModal({ tenant }: Props) {
   async function handleUpdate(formData: FormData) {
     setErrorMsg('');
     setLoading(true);
-    const res = await updateTenantAction(formData);
+    const response = await updateTenantAction(formData);
     setLoading(false);
-    if (res?.error) {
-      setErrorMsg(res.error);
-    } else {
-      setIsOpen(false);
+    if ('error' in response) {
+      setErrorMsg(response.error);
+      return;
     }
+
+    setIsOpen(false);
   }
 
   if (!isOpen) {
@@ -36,6 +37,7 @@ export function EditTenantModal({ tenant }: Props) {
       <button
         onClick={() => setIsOpen(true)}
         title="Editar Tenant"
+        type="button"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -90,7 +92,7 @@ export function EditTenantModal({ tenant }: Props) {
             </h2>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{tenant.name}</p>
           </div>
-          <button onClick={() => !loading && setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: loading ? 'not-allowed' : 'pointer' }}>
+          <button onClick={() => !loading && setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: loading ? 'not-allowed' : 'pointer' }} type="button">
             <X size={22} />
           </button>
         </div>

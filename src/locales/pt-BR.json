@@ -1,0 +1,160 @@
+{
+  "RootLayout": {
+    "home_link": "Início",
+    "portfolio_link": "Portfólio",
+    "contact_link": "Contato"
+  },
+  "BaseTemplate": {
+    "footer_rights": "Todos os direitos reservados.",
+    "skip_to_content": "Pular para o conteúdo principal",
+    "sitemap_link": "Mapa do site",
+    "brand_alt": "Rtec Tecnologia - Soluções tecnológicas",
+    "company_description": "Infraestrutura, segurança e inteligência artificial para empresas que não podem parar. Da concepção ao suporte contínuo.",
+    "company_section_title": "Empresa",
+    "contact_section_title": "Contato",
+    "social_whatsapp_label": "WhatsApp",
+    "social_instagram_label": "Instagram",
+    "contact_email_value": "contato@rtectecnologia.com.br",
+    "contact_phone_value": "(64) 99992-7088",
+    "contact_location_value": "Catalão, GO - Brasil",
+    "floating_whatsapp_label": "Abrir WhatsApp",
+    "back_to_top_label": "Voltar ao topo"
+  },
+  "Index": {
+    "meta_title": "Rtec Tecnologia | Infraestrutura de TI, suporte, NOC e IA para seu negócio",
+    "meta_description": "Especialistas em infraestrutura de TI corporativa, suporte técnico remoto, NOC 24/7 e inteligência artificial. Garantimos que sua empresa não pare.",
+    "organization_slogan": "Infraestrutura, suporte e inteligência aplicada para operações críticas",
+    "hero_brand": "Rtec Tecnologia - soluções tecnológicas",
+    "hero_title": "Automatizamos suas operações com inteligência artificial e construímos a infraestrutura para o seu negócio não parar.",
+    "hero_subtitle": "Soluções corporativas de alto desempenho para empresas que precisam escalar com segurança.",
+    "cta_primary": "Falar com um especialista",
+    "cta_trust": "Resposta em até 24 horas.",
+    "cta_trust_extra": "Primeira conversa gratuita. Sem compromisso.",
+    "header_cta": "Falar com um especialista",
+    "stats_foundation_label": "Fundação",
+    "stats_uptime_label": "Uptime",
+    "stats_monitoring_label": "Monitoramento",
+    "stats_automation_label": "Automação",
+    "about_badge": "Nossa história",
+    "about_title": "Da infraestrutura física à inteligência artificial.",
+    "about_paragraph": "Com raízes firmadas em 2018, a Rtec nasceu solucionando gargalos críticos de infraestrutura física para operações locais. Com a evolução do mercado, expandimos essa base para arquiteturas em nuvem, automação e agentes de inteligência artificial que sustentam operações mais seguras e escaláveis.",
+    "about_pillar_1_title": "Desde 2018",
+    "about_pillar_1_sub": "Experiência prática em operações críticas.",
+    "about_pillar_2_title": "Atuação consultiva",
+    "about_pillar_2_sub": "Diagnóstico técnico com foco em resultado.",
+    "about_pillar_3_title": "Foco em IA",
+    "about_pillar_3_sub": "Automação aplicada a atendimento, suporte e processos.",
+    "about_pillar_4_title": "Arquitetura cloud",
+    "about_pillar_4_sub": "Ambientes robustos, monitorados e preparados para crescer.",
+    "services_badge": "Soluções",
+    "services_title": "Nossa engenharia a favor do seu negócio",
+    "service_1_title": "Agentes de IA e automação",
+    "service_1_desc": "Desenvolvimento de assistentes inteligentes e fluxos automatizados para atendimento, operação e vendas em canais como WhatsApp.",
+    "service_2_title": "Infraestrutura e cloud",
+    "service_2_desc": "Arquitetura, gestão e segurança de servidores, redes e ambientes em nuvem para manter sua operação estável.",
+    "service_3_title": "Integração de sistemas",
+    "service_3_desc": "Conectamos ferramentas, APIs e processos com desenvolvimento sob medida para reduzir retrabalho e acelerar o fluxo da empresa.",
+    "benefits_badge": "Vantagens",
+    "benefits_title": "Por que escolher a Rtec?",
+    "benefit_1_title": "Redução de custos operacionais",
+    "benefit_1_desc": "Eliminamos retrabalho e processos manuais com automação e infraestrutura otimizada. Seu time foca no que importa.",
+    "benefit_2_title": "Escalabilidade imediata",
+    "benefit_2_desc": "Sua operação cresce sem quebrar. Arquitetura em nuvem e integrações que suportam picos e expansão sem dor.",
+    "benefit_3_title": "Segurança de dados",
+    "benefit_3_desc": "Governança, backups e monitoramento contínuo para proteger seus sistemas e a informação dos seus clientes.",
+    "how_badge": "Processo",
+    "how_title": "Como trabalhamos",
+    "how_1_title": "Diagnóstico",
+    "how_1_desc": "Entendemos sua operação, suas dores e seus objetivos antes de desenhar a solução.",
+    "how_2_title": "Proposta",
+    "how_2_desc": "Apresentamos escopo, prazo e investimento com clareza, sem surpresa no caminho.",
+    "how_3_title": "Entrega",
+    "how_3_desc": "Implementamos com foco em resultado, documentação e continuidade da operação.",
+    "how_4_title": "Suporte",
+    "how_4_desc": "Acompanhamos o ambiente e evoluímos a solução conforme a empresa cresce.",
+    "faq_badge": "Dúvidas",
+    "faq_title": "Perguntas frequentes",
+    "faq_1_q": "Quanto tempo leva para começar?",
+    "faq_1_a": "Depois do alinhamento inicial, conseguimos iniciar projetos de automação e integração em 1 a 2 semanas. Projetos de infraestrutura variam conforme o escopo e a janela operacional disponível.",
+    "faq_2_q": "Com que tipos de empresa vocês trabalham?",
+    "faq_2_a": "Atendemos empresas que precisam de automação, infraestrutura em nuvem, suporte especializado ou integração entre sistemas. O foco está na operação e no impacto do projeto.",
+    "faq_3_q": "O suporte é contínuo?",
+    "faq_3_a": "Sim. Depois da entrega, oferecemos acompanhamento, manutenção e evolução contínua para manter a solução aderente ao crescimento da operação.",
+    "faq_4_q": "Como funciona o investimento?",
+    "faq_4_a": "O investimento varia conforme escopo, criticidade e prazo. Na primeira conversa, alinhamos sua necessidade e estruturamos uma proposta objetiva.",
+    "faq_5_q": "Atendem fora do Brasil?",
+    "faq_5_a": "Nossa base está no Brasil, mas podemos apoiar operações em outros países conforme o contexto técnico e comercial do projeto.",
+    "cta_final_title": "Pronto para modernizar sua operação?"
+  },
+  "Counter": {
+    "meta_title": "Contador",
+    "meta_description": "Exemplo de operação com banco de dados",
+    "security_powered_by": "Segurança, detecção de bots e limitação de taxa por"
+  },
+  "CounterForm": {
+    "presentation": "O contador é armazenado no banco de dados e incrementado pelo valor informado.",
+    "label_increment": "Incrementar em",
+    "button_increment": "Incrementar",
+    "error_increment_range": "O valor precisa estar entre 1 e 3"
+  },
+  "CurrentCount": {
+    "count": "Contagem: {count}"
+  },
+  "About": {
+    "meta_title": "Sobre a Rtec Tecnologia",
+    "meta_description": "Conheça a trajetória da Rtec Tecnologia e como estruturamos operações com infraestrutura, cloud, automação e inteligência artificial.",
+    "eyebrow": "Sobre nós",
+    "hero_title": "Tecnologia com base sólida e visão de futuro",
+    "hero_description": "A Rtec combina experiência em infraestrutura, operação e automação para construir ambientes confiáveis e processos mais inteligentes para empresas em crescimento.",
+    "story_title": "Nossa trajetória",
+    "story_paragraph": "Começamos resolvendo desafios de infraestrutura física e suporte técnico em operações locais. Com o tempo, ampliamos a atuação para cloud, monitoramento, integrações e inteligência artificial, mantendo a mesma lógica: entender o ambiente do cliente, priorizar estabilidade e entregar soluções que façam sentido no dia a dia.",
+    "pillars_title": "Como atuamos",
+    "pillar_1_title": "Diagnóstico técnico",
+    "pillar_1_description": "Mapeamos gargalos, riscos e oportunidades antes de propor qualquer mudança.",
+    "pillar_2_title": "Entrega orientada a operação",
+    "pillar_2_description": "Projetos pensados para reduzir impacto, documentar o ambiente e manter a continuidade do negócio.",
+    "pillar_3_title": "Evolução contínua",
+    "pillar_3_description": "Não tratamos tecnologia como entrega isolada. Acompanhamos e refinamos a solução conforme a operação amadurece.",
+    "cta_title": "Vamos conversar sobre a sua operação?",
+    "cta_description": "Se sua empresa precisa estruturar melhor infraestrutura, suporte, cloud ou automação, podemos avaliar o cenário e indicar o melhor caminho.",
+    "cta_button": "Falar com um especialista"
+  },
+  "Portfolio": {
+    "meta_title": "Nossos casos de sucesso | Rtec Tecnologia",
+    "meta_description": "Conheça projetos reais de infraestrutura e automação com IA: rede e câmeras em Catalão e bot de monitoramento para a Arruda.",
+    "page_title": "Nossos casos de sucesso",
+    "page_subtitle": "Projetos que mostram nossa atuação em infraestrutura e automação com inteligência artificial.",
+    "card1_badge": "Infraestrutura",
+    "card1_title": "Modernização de rede e segurança escolar",
+    "card1_description": "Planejamento e execução de infraestrutura de rede de alta performance e sistema de monitoramento por câmeras para uma instituição de ensino em Catalão - GO, garantindo segurança e conectividade contínua.",
+    "card2_badge": "IA e automação",
+    "card2_title": "Agente de monitoramento inteligente",
+    "card2_description": "Desenvolvimento de um bot corporativo em Python integrado ao Telegram para a empresa Arruda, automatizando o fluxo de informações e acelerando a tomada de decisão da equipe.",
+    "cta_button": "Quero um projeto como esses"
+  },
+  "SignIn": {
+    "meta_title": "Entrar",
+    "meta_description": "Acesse sua conta com segurança."
+  },
+  "SignUp": {
+    "meta_title": "Criar conta",
+    "meta_description": "Crie sua conta para acessar a plataforma."
+  },
+  "Dashboard": {
+    "meta_title": "Painel",
+    "hello_message": "Olá {email}!",
+    "alternative_message": "Precisa de recursos avançados? Multi-tenancy e times, papéis e permissões, Shadcn UI, tipagem ponta a ponta com oRPC, pagamento com Stripe e modo claro/escuro. Veja <url></url>.",
+    "max_message": "Ou precisa de uma stack de autenticação self-hosted (Better Auth)? Veja <url></url>."
+  },
+  "UserProfile": {
+    "meta_title": "Perfil do usuário"
+  },
+  "DashboardLayout": {
+    "dashboard_link": "Painel",
+    "user_profile_link": "Gerenciar conta",
+    "sign_out": "Sair"
+  },
+  "LocaleSwitcher": {
+    "change_language": "Mudar idioma"
+  }
+}

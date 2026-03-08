@@ -2,14 +2,14 @@ import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { page } from 'vitest/browser';
-import messages from '@/locales/en.json';
+import messages from '@/locales/pt-BR.json';
 import { BaseTemplate } from './BaseTemplate';
 
 describe('Base template', () => {
   describe('Render method', () => {
     it('should have 3 menu items', async () => {
       await render(
-        <NextIntlClientProvider locale="en" messages={messages}>
+        <NextIntlClientProvider locale="pt-BR" messages={messages}>
           <BaseTemplate
             leftNav={(
               <>
@@ -31,7 +31,7 @@ describe('Base template', () => {
 
     it('renders footer with company name and rights text', async () => {
       await render(
-        <NextIntlClientProvider locale="en" messages={messages}>
+        <NextIntlClientProvider locale="pt-BR" messages={messages}>
           <BaseTemplate leftNav={<li>1</li>}>{null}</BaseTemplate>
         </NextIntlClientProvider>,
       );
@@ -44,7 +44,7 @@ describe('Base template', () => {
       const text = el?.textContent ?? '';
 
       expect(text).toContain('Rtec');
-      expect(text).toContain('All rights reserved');
+      expect(text).toContain('Todos os direitos reservados');
     });
   });
 });

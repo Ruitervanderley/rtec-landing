@@ -1,81 +1,76 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { Env } from '@/lib/Env';
+import { extractTenantSubdomain, getPortalPath } from '@/lib/portalRouting';
+import { ADMIN_SESSION_COOKIE_NAME } from '@/lib/sessionConfig';
 
-const ADMIN_HOSTS = ['painel', 'www', 'localhost'];
-
-function extractSubdomain(host: string): string | null {
-  // ouvidor.rtectecnologia.com.br → "ouvidor"
-  const hostname = host.split(':')[0]!;
-
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return null;
-  }
-
-  const parts = hostname.split('.');
-  // ouvidor.rtectecnologia.com.br = 4 parts → subdomain = ouvidor
-  if (parts.length <= 3) {
-    return null;
-  }
-
-  const sub = parts[0]!.toLowerCase();
-  if (ADMIN_HOSTS.includes(sub)) {
-    return null;
-  }
-
-  return sub;
+function applySecurityHeaders(response: NextResponse) {
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  return response;
 }
 
-// ─── Lightweight JWT verification in Edge Runtime ───
-async function verifyTokenInMiddleware(token: string): Promise<boolean> {
-  try {
-    const secret = process.env.NOC_SESSION_SECRET ?? 'rtec-dev-secret-change-in-production-2026';
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return false;
-    }
+function decodeBase64Url(value: string) {
+  const normalizedValue = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = normalizedValue.length % 4;
+  const paddedValue = padding === 0
+    ? normalizedValue
+    : `${normalizedValue}${'='.repeat(4 - padding)}`;
 
-    const [header, body, signature] = parts;
-    const encoder = new TextEncoder();
+  return atob(paddedValue);
+}
 
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign'],
-    );
-
-    const expectedSigBuffer = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(`${header}.${body}`));
-
-    // Convert ArrayBuffer to base64url string
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(expectedSigBuffer)));
-    const expectedSig = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-    // Compare signatures
-    if (signature !== expectedSig) {
-      return false;
-    }
-
-    // Check expiration using standard JS base64 decode to avoid node:buffer
-    const decodedBody = atob(body!.replace(/-/g, '+').replace(/_/g, '/'));
-    const payload = JSON.parse(decodedBody);
-
-    if (payload.exp && Date.now() > payload.exp) {
-      return false;
-    }
-
-    return true;
-  } catch {
+async function verifyTokenInMiddleware(token: string) {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
     return false;
   }
+
+  const [header, body, signature] = parts;
+  if (!header || !body || !signature) {
+    return false;
+  }
+
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(Env.nocSessionSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+
+  const expectedSignatureBuffer = await crypto.subtle.sign(
+    'HMAC',
+    cryptoKey,
+    encoder.encode(`${header}.${body}`),
+  );
+  const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(expectedSignatureBuffer)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+
+  if (signature !== expectedSignature) {
+    return false;
+  }
+
+  const payload = JSON.parse(decodeBase64Url(body)) as { exp?: number };
+  if (payload.exp && Date.now() > payload.exp) {
+    return false;
+  }
+
+  return true;
 }
 
 export async function middleware(request: NextRequest) {
   const currentPath = request.nextUrl.pathname;
   const host = request.headers.get('host') ?? 'localhost';
-  const subdomain = extractSubdomain(host);
+  const subdomain = extractTenantSubdomain(host);
 
-  // ─── Static / API assets pass through ───
   if (
     currentPath.startsWith('/_next')
     || currentPath.startsWith('/api')
@@ -84,48 +79,46 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ─── TENANT PORTAL MODE (ouvidor.rtectecnologia.com.br) ───
   if (subdomain) {
+    const canonicalPortalRoot = getPortalPath({ slug: subdomain });
+
     if (currentPath === '/' || currentPath === '') {
-      return NextResponse.rewrite(new URL(`/portal/${subdomain}`, request.url));
+      return applySecurityHeaders(
+        NextResponse.rewrite(new URL(canonicalPortalRoot, request.url)),
+      );
     }
-    return NextResponse.rewrite(new URL(`/portal/${subdomain}${currentPath}`, request.url));
+
+    if (currentPath === canonicalPortalRoot || currentPath.startsWith(`${canonicalPortalRoot}/`)) {
+      return applySecurityHeaders(NextResponse.next());
+    }
+
+    if (currentPath.startsWith('/portal/')) {
+      return applySecurityHeaders(
+        NextResponse.redirect(new URL(canonicalPortalRoot, request.url)),
+      );
+    }
+
+    return applySecurityHeaders(
+      NextResponse.rewrite(new URL(`${canonicalPortalRoot}${currentPath}`, request.url)),
+    );
   }
 
-  // ─── ADMIN PANEL MODE ───
   if (currentPath.startsWith('/login') || currentPath.startsWith('/portal')) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
-  // ─── Validate signed session token ───
-  const sessionCookie = request.cookies.get('rtec_noc_session');
-
-  if (!sessionCookie || !(await verifyTokenInMiddleware(sessionCookie.value))) {
+  const sessionCookie = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
+  if (!sessionCookie || !(await verifyTokenInMiddleware(sessionCookie))) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('from', currentPath);
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
   if (currentPath === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return applySecurityHeaders(NextResponse.redirect(new URL('/dashboard', request.url)));
   }
 
-  // ─── Apply security headers ───
-  const response = NextResponse.next();
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set(
-    'Strict-Transport-Security',
-    'max-age=31536000; includeSubDomains',
-  );
-  response.headers.set(
-    'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=()',
-  );
-
-  return response;
+  return applySecurityHeaders(NextResponse.next());
 }
 
 export const config = {

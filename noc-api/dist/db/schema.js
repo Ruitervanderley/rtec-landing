@@ -168,6 +168,12 @@ export const opsAlerts = pgTable('ops_alerts', {
 }, t => [
     index('idx_ops_alerts_dedup_sent').on(t.dedupKey, t.sentAt),
 ]);
+export const tenantInfraProfiles = pgTable('tenant_infra_profiles', {
+    tenantId: uuid('tenant_id').primaryKey(),
+    profile: jsonb('profile').$type().notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
 // Relations
 export const sitesRelations = relations(sites, ({ many }) => ({
     areas: many(areas),
@@ -222,4 +228,5 @@ export const deviceBackupsRelations = relations(deviceBackups, ({ one }) => ({
         references: [tenantDevices.id],
     }),
 }));
+export const tenantInfraProfilesRelations = relations(tenantInfraProfiles, () => ({}));
 //# sourceMappingURL=schema.js.map

@@ -5,39 +5,18 @@ import { AnimateInView } from '@/components/AnimateInView';
 import { FaqAccordion } from '@/components/FaqAccordion';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { Env } from '@/libs/Env';
+import { routing } from '@/libs/I18nRouting';
 import { getBaseUrl, getI18nPath } from '@/utils/Helpers';
 
-type IIndexProps = {
+type IndexPageProps = {
   params: Promise<{ locale: string }>;
 };
 
-export async function generateMetadata(props: IIndexProps): Promise<Metadata> {
-  const { locale } = await props.params;
-  const t = await getTranslations({ locale, namespace: 'Index' });
-  const baseUrl = getBaseUrl();
-  const path = getI18nPath('', locale);
-  const canonicalUrl = path ? `${baseUrl}${path}` : baseUrl;
-  const title = t('meta_title');
-  const description = t('meta_description');
-  const ogImage = `${baseUrl}/rtec-logo.png`;
-  return {
-    title,
-    description,
-    alternates: { canonical: canonicalUrl },
-    openGraph: {
-      title,
-      description,
-      url: canonicalUrl,
-      siteName: 'Rtec Tecnologia',
-      locale: locale === 'fr' ? 'fr_BR' : 'pt_BR',
-      type: 'website',
-      images: [{ url: ogImage, width: 1200, height: 630, alt: 'Rtec Tecnologia' }],
-    },
-    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
-  };
-}
+const openGraphLocaleByLocale: Record<string, string> = {
+  'pt-BR': 'pt_BR',
+  'fr': 'fr_FR',
+};
 
-/* ────────────────────── Inline SVG Icons ────────────────────── */
 function IconBuilding() {
   return (
     <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -45,6 +24,7 @@ function IconBuilding() {
     </svg>
   );
 }
+
 function IconGlobe() {
   return (
     <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -52,6 +32,7 @@ function IconGlobe() {
     </svg>
   );
 }
+
 function IconCpu() {
   return (
     <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -59,6 +40,7 @@ function IconCpu() {
     </svg>
   );
 }
+
 function IconCloud() {
   return (
     <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -66,6 +48,7 @@ function IconCloud() {
     </svg>
   );
 }
+
 function IconBot() {
   return (
     <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -73,6 +56,7 @@ function IconBot() {
     </svg>
   );
 }
+
 function IconServer() {
   return (
     <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -80,6 +64,7 @@ function IconServer() {
     </svg>
   );
 }
+
 function IconLink() {
   return (
     <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -87,6 +72,7 @@ function IconLink() {
     </svg>
   );
 }
+
 function IconTrendingDown() {
   return (
     <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -94,6 +80,7 @@ function IconTrendingDown() {
     </svg>
   );
 }
+
 function IconRocket() {
   return (
     <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -101,6 +88,7 @@ function IconRocket() {
     </svg>
   );
 }
+
 function IconShield() {
   return (
     <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -112,12 +100,88 @@ function IconShield() {
 const ctaButtonClass
   = 'inline-flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 px-7 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:scale-[1.03] hover:bg-emerald-500 hover:shadow-emerald-500/35 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#0b1121]';
 
-export default async function Index(props: IIndexProps) {
+export async function generateMetadata(props: IndexPageProps): Promise<Metadata> {
+  const { locale } = await props.params;
+  const t = await getTranslations({ locale, namespace: 'Index' });
+  const baseUrl = getBaseUrl();
+  const path = getI18nPath('', locale);
+  const canonicalUrl = path ? `${baseUrl}${path}` : baseUrl;
+  const languageAlternates = Object.fromEntries(
+    routing.locales.map(currentLocale => [
+      currentLocale,
+      `${baseUrl}${getI18nPath('', currentLocale)}`,
+    ]),
+  );
+  const title = t('meta_title');
+  const description = t('meta_description');
+  const ogImage = `${baseUrl}/rtec-logo.png`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: languageAlternates,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'Rtec Tecnologia',
+      locale: openGraphLocaleByLocale[locale] ?? 'pt_BR',
+      type: 'website',
+      images: [{ url: ogImage, width: 1200, height: 630, alt: 'Rtec Tecnologia' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
+
+export default async function IndexPage(props: IndexPageProps) {
   const { locale } = await props.params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Index' });
-  const whatsappUrl = Env.NEXT_PUBLIC_WHATSAPP_URL ?? '#cta';
   const baseUrl = getBaseUrl();
+  const whatsappUrl = Env.NEXT_PUBLIC_WHATSAPP_URL ?? '#cta';
+  const primaryCtaHref = whatsappUrl.startsWith('http') ? whatsappUrl : '#cta';
+  const isExternalCta = primaryCtaHref.startsWith('http');
+
+  const stats = [
+    { value: '2018', label: t('stats_foundation_label') },
+    { value: '99.9%', label: t('stats_uptime_label') },
+    { value: '24/7', label: t('stats_monitoring_label') },
+    { value: 'IA', label: t('stats_automation_label') },
+  ];
+
+  const aboutPillars = [
+    { title: t('about_pillar_1_title'), sub: t('about_pillar_1_sub'), icon: <IconBuilding />, color: 'text-emerald-400', glow: 'group-hover:shadow-emerald-500/10' },
+    { title: t('about_pillar_2_title'), sub: t('about_pillar_2_sub'), icon: <IconGlobe />, color: 'text-blue-400', glow: 'group-hover:shadow-blue-500/10' },
+    { title: t('about_pillar_3_title'), sub: t('about_pillar_3_sub'), icon: <IconCpu />, color: 'text-purple-400', glow: 'group-hover:shadow-purple-500/10' },
+    { title: t('about_pillar_4_title'), sub: t('about_pillar_4_sub'), icon: <IconCloud />, color: 'text-cyan-400', glow: 'group-hover:shadow-cyan-500/10' },
+  ];
+
+  const services = [
+    { num: '01', title: t('service_1_title'), desc: t('service_1_desc'), icon: <IconBot />, gradient: 'from-emerald-500/20 to-transparent', border: 'hover:border-emerald-500/30', iconColor: 'text-emerald-400' },
+    { num: '02', title: t('service_2_title'), desc: t('service_2_desc'), icon: <IconServer />, gradient: 'from-blue-500/20 to-transparent', border: 'hover:border-blue-500/30', iconColor: 'text-blue-400' },
+    { num: '03', title: t('service_3_title'), desc: t('service_3_desc'), icon: <IconLink />, gradient: 'from-purple-500/20 to-transparent', border: 'hover:border-purple-500/30', iconColor: 'text-purple-400' },
+  ];
+
+  const benefits = [
+    { title: t('benefit_1_title'), desc: t('benefit_1_desc'), icon: <IconTrendingDown />, color: 'text-emerald-400', border: 'hover:border-emerald-500/30' },
+    { title: t('benefit_2_title'), desc: t('benefit_2_desc'), icon: <IconRocket />, color: 'text-blue-400', border: 'hover:border-blue-500/30' },
+    { title: t('benefit_3_title'), desc: t('benefit_3_desc'), icon: <IconShield />, color: 'text-purple-400', border: 'hover:border-purple-500/30' },
+  ];
+
+  const processSteps = [
+    { step: '01', title: t('how_1_title'), desc: t('how_1_desc') },
+    { step: '02', title: t('how_2_title'), desc: t('how_2_desc') },
+    { step: '03', title: t('how_3_title'), desc: t('how_3_desc') },
+    { step: '04', title: t('how_4_title'), desc: t('how_4_desc') },
+  ];
 
   const organizationJsonLd = {
     '@context': 'https://schema.org',
@@ -126,7 +190,7 @@ export default async function Index(props: IIndexProps) {
     'url': baseUrl,
     'logo': `${baseUrl}/rtec-logo.png`,
     'description': t('meta_description'),
-    'slogan': 'Soluções Tecnológicas',
+    'slogan': t('organization_slogan'),
   };
 
   return (
@@ -136,22 +200,19 @@ export default async function Index(props: IIndexProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
 
-      {/* ══════════════════════ Hero ══════════════════════ */}
       <section
         className="relative w-full overflow-hidden px-4 pt-20 pb-16 sm:px-6 md:pt-28 md:pb-24 lg:pt-36 lg:pb-32"
         aria-labelledby="hero-heading"
       >
-        {/* Grid mesh background */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <div
             className="absolute inset-0 opacity-[0.03]"
             style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+              backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
               backgroundSize: '60px 60px',
             }}
           />
         </div>
-        {/* Glow orbs */}
         <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2" aria-hidden>
           <div className="h-[600px] w-[900px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.12)_0%,transparent_65%)] blur-3xl" />
         </div>
@@ -177,9 +238,9 @@ export default async function Index(props: IIndexProps) {
 
           <div className="animate-fade-in-up animate-delay-3 mt-10 flex flex-col items-center gap-4 opacity-0">
             <Link
-              href={whatsappUrl.startsWith('http') ? whatsappUrl : '#cta'}
-              target={whatsappUrl.startsWith('http') ? '_blank' : undefined}
-              rel={whatsappUrl.startsWith('http') ? 'noreferrer noopener' : undefined}
+              href={primaryCtaHref}
+              target={isExternalCta ? '_blank' : undefined}
+              rel={isExternalCta ? 'noreferrer noopener' : undefined}
               className={`${ctaButtonClass} min-w-[16rem]`}
             >
               <WhatsAppIcon className="size-6 shrink-0" />
@@ -194,15 +255,9 @@ export default async function Index(props: IIndexProps) {
         </div>
       </section>
 
-      {/* ══════════════════════ Stats Bar ══════════════════════ */}
       <section className="w-full border-y border-white/[0.06] bg-white/[0.02] px-4 py-10 sm:px-6">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-8 sm:gap-16">
-          {[
-            { value: '2018', label: 'Fundação' },
-            { value: '99.9%', label: 'Uptime' },
-            { value: '24/7', label: 'Monitoramento' },
-            { value: 'IA', label: 'Automação' },
-          ].map(stat => (
+          {stats.map(stat => (
             <div key={stat.label} className="text-center">
               <div className="text-2xl font-extrabold tracking-tight text-emerald-400 sm:text-3xl">
                 {stat.value}
@@ -213,11 +268,7 @@ export default async function Index(props: IIndexProps) {
         </div>
       </section>
 
-      {/* ══════════════════════ About ══════════════════════ */}
-      <section
-        className="relative w-full px-4 py-24 sm:px-6 md:py-28"
-        aria-labelledby="about-heading"
-      >
+      <section className="relative w-full px-4 py-24 sm:px-6 md:py-28" aria-labelledby="about-heading">
         <AnimateInView className="mx-auto max-w-6xl">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-20">
             <div>
@@ -235,17 +286,12 @@ export default async function Index(props: IIndexProps) {
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {[
-                { title: t('about_pillar_1_title'), sub: t('about_pillar_1_sub'), icon: <IconBuilding />, color: 'text-emerald-400', glow: 'group-hover:shadow-emerald-500/10' },
-                { title: t('about_pillar_2_title'), sub: t('about_pillar_2_sub'), icon: <IconGlobe />, color: 'text-blue-400', glow: 'group-hover:shadow-blue-500/10' },
-                { title: t('about_pillar_3_title'), sub: t('about_pillar_3_sub'), icon: <IconCpu />, color: 'text-purple-400', glow: 'group-hover:shadow-purple-500/10' },
-                { title: t('about_pillar_4_title'), sub: t('about_pillar_4_sub'), icon: <IconCloud />, color: 'text-cyan-400', glow: 'group-hover:shadow-cyan-500/10' },
-              ].map((pillar, i) => (
+              {aboutPillars.map((pillar, index) => (
                 <div
                   key={pillar.title}
-                  className={`animate-on-visible stagger-${i + 1} group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-xl ${pillar.glow}`}
+                  className={`animate-on-visible stagger-${index + 1} group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-xl ${pillar.glow}`}
                 >
-                  <div className={`${pillar.color}`}>
+                  <div className={pillar.color}>
                     {pillar.icon}
                   </div>
                   <h3 className="mt-3 text-lg font-semibold text-white">
@@ -261,27 +307,22 @@ export default async function Index(props: IIndexProps) {
         </AnimateInView>
       </section>
 
-      {/* ══════════════════════ Services ══════════════════════ */}
       <section
         className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28"
         aria-labelledby="services-heading"
       >
         <AnimateInView className="mx-auto max-w-6xl">
           <div className="text-center">
-            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">Soluções</p>
+            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('services_badge')}</p>
             <h2 id="services-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
               {t('services_title')}
             </h2>
           </div>
           <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
-            {[
-              { num: '01', title: t('service_1_title'), desc: t('service_1_desc'), icon: <IconBot />, gradient: 'from-emerald-500/20 to-transparent', border: 'hover:border-emerald-500/30', iconColor: 'text-emerald-400' },
-              { num: '02', title: t('service_2_title'), desc: t('service_2_desc'), icon: <IconServer />, gradient: 'from-blue-500/20 to-transparent', border: 'hover:border-blue-500/30', iconColor: 'text-blue-400' },
-              { num: '03', title: t('service_3_title'), desc: t('service_3_desc'), icon: <IconLink />, gradient: 'from-purple-500/20 to-transparent', border: 'hover:border-purple-500/30', iconColor: 'text-purple-400' },
-            ].map((service, i) => (
+            {services.map((service, index) => (
               <article
                 key={service.num}
-                className={`animate-on-visible stagger-${i + 1} group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${service.border}`}
+                className={`animate-on-visible stagger-${index + 1} group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${service.border}`}
               >
                 <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${service.gradient} opacity-0 transition-opacity duration-500 group-hover:opacity-100`} />
                 <div className="relative">
@@ -300,63 +341,48 @@ export default async function Index(props: IIndexProps) {
         </AnimateInView>
       </section>
 
-      {/* ══════════════════════ Benefits ══════════════════════ */}
-      <section
-        className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28"
-        aria-labelledby="benefits-heading"
-      >
+      <section className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="benefits-heading">
         <AnimateInView className="mx-auto max-w-6xl">
           <div className="text-center">
-            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">Vantagens</p>
+            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('benefits_badge')}</p>
             <h2 id="benefits-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
               {t('benefits_title')}
             </h2>
           </div>
           <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
-            {[
-              { title: t('benefit_1_title'), desc: t('benefit_1_desc'), icon: <IconTrendingDown />, color: 'text-emerald-400', border: 'hover:border-emerald-500/30' },
-              { title: t('benefit_2_title'), desc: t('benefit_2_desc'), icon: <IconRocket />, color: 'text-blue-400', border: 'hover:border-blue-500/30' },
-              { title: t('benefit_3_title'), desc: t('benefit_3_desc'), icon: <IconShield />, color: 'text-purple-400', border: 'hover:border-purple-500/30' },
-            ].map((b, i) => (
+            {benefits.map((benefit, index) => (
               <div
-                key={b.title}
-                className={`animate-on-visible stagger-${i + 1} group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.04] hover:shadow-xl ${b.border}`}
+                key={benefit.title}
+                className={`animate-on-visible stagger-${index + 1} group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.04] hover:shadow-xl ${benefit.border}`}
               >
-                <div className={`inline-flex rounded-xl bg-white/[0.06] p-3 ${b.color}`}>
-                  {b.icon}
+                <div className={`inline-flex rounded-xl bg-white/[0.06] p-3 ${benefit.color}`}>
+                  {benefit.icon}
                 </div>
-                <h3 className={`mt-4 text-lg font-bold ${b.color}`}>{b.title}</h3>
-                <p className="mt-3 flex-1 leading-relaxed text-slate-400">{b.desc}</p>
+                <h3 className={`mt-4 text-lg font-bold ${benefit.color}`}>{benefit.title}</h3>
+                <p className="mt-3 flex-1 leading-relaxed text-slate-400">{benefit.desc}</p>
               </div>
             ))}
           </div>
         </AnimateInView>
       </section>
 
-      {/* ══════════════════════ How We Work ══════════════════════ */}
       <section
         className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28"
         aria-labelledby="how-heading"
       >
         <AnimateInView className="mx-auto max-w-6xl">
           <div className="text-center">
-            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">Processo</p>
+            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('how_badge')}</p>
             <h2 id="how-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
               {t('how_title')}
             </h2>
           </div>
           <div className="relative mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Connection line */}
             <div className="pointer-events-none absolute top-12 right-0 left-0 hidden h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent lg:block" aria-hidden />
-            {[
-              { step: '01', title: t('how_1_title'), desc: t('how_1_desc') },
-              { step: '02', title: t('how_2_title'), desc: t('how_2_desc') },
-              { step: '03', title: t('how_3_title'), desc: t('how_3_desc') },
-              { step: '04', title: t('how_4_title'), desc: t('how_4_desc') },
-            ].map((item, i) => (
+            {processSteps.map((item, index) => (
               <div
                 key={item.step}
-                className={`animate-on-visible stagger-${i + 1} group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm transition-all duration-300 hover:border-emerald-500/30 hover:bg-white/[0.04]`}
+                className={`animate-on-visible stagger-${index + 1} group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm transition-all duration-300 hover:border-emerald-500/30 hover:bg-white/[0.04]`}
               >
                 <div className="flex size-10 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-sm font-bold text-emerald-400">
                   {item.step}
@@ -369,14 +395,10 @@ export default async function Index(props: IIndexProps) {
         </AnimateInView>
       </section>
 
-      {/* ══════════════════════ FAQ ══════════════════════ */}
-      <section
-        className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28"
-        aria-labelledby="faq-heading"
-      >
+      <section className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="faq-heading">
         <AnimateInView className="mx-auto max-w-3xl">
           <div className="text-center">
-            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">Dúvidas</p>
+            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('faq_badge')}</p>
             <h2 id="faq-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               {t('faq_title')}
             </h2>
@@ -393,12 +415,7 @@ export default async function Index(props: IIndexProps) {
         </AnimateInView>
       </section>
 
-      {/* ══════════════════════ CTA Final ══════════════════════ */}
-      <section
-        id="cta"
-        className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-32"
-        aria-labelledby="cta-heading"
-      >
+      <section id="cta" className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-32" aria-labelledby="cta-heading">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
           <div className="absolute bottom-0 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.1)_0%,transparent_55%)] blur-3xl" />
         </div>
@@ -409,9 +426,9 @@ export default async function Index(props: IIndexProps) {
             </h2>
             <div className="animate-on-visible stagger-1 mt-10 flex flex-col items-center gap-4">
               <Link
-                href={whatsappUrl.startsWith('http') ? whatsappUrl : '#'}
-                target={whatsappUrl.startsWith('http') ? '_blank' : undefined}
-                rel={whatsappUrl.startsWith('http') ? 'noreferrer noopener' : undefined}
+                href={primaryCtaHref}
+                target={isExternalCta ? '_blank' : undefined}
+                rel={isExternalCta ? 'noreferrer noopener' : undefined}
                 className={`${ctaButtonClass} min-w-[16rem]`}
               >
                 <WhatsAppIcon className="size-6 shrink-0" />

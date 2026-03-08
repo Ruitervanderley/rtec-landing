@@ -2,172 +2,121 @@
 
 import { Buffer } from 'node:buffer';
 import crypto from 'node:crypto';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { Env } from '@/lib/Env';
+import { createSignedSessionToken } from '@/lib/ServerSession';
+import { ADMIN_SESSION_COOKIE_NAME } from '@/lib/sessionConfig';
 
-// ─── Rate Limiting Store (in-memory, resets on server restart) ───
 const loginAttempts = new Map<string, { count: number; blockedUntil: number }>();
 const MAX_ATTEMPTS = 5;
-const BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-const _ATTEMPT_WINDOW_MS = 60 * 1000; // 1 minute window
+const BLOCK_DURATION_MS = 15 * 60 * 1000;
 
-function getSessionSecret(): string {
-  const secret = process.env.NOC_SESSION_SECRET;
-  if (!secret) {
-    // In development, use a fallback. In production, this MUST be set.
-    console.warn('⚠️  NOC_SESSION_SECRET not set! Using dev fallback. Set this in production!');
-    return 'rtec-dev-secret-change-in-production-2026';
+function getSafeRedirectTarget(value: FormDataEntryValue | null) {
+  if (typeof value !== 'string' || !value.startsWith('/')) {
+    return '/dashboard';
   }
-  return secret;
+
+  return value.startsWith('/login') ? '/dashboard' : value;
 }
 
-function getAdminPassword(): string {
-  const pw = process.env.NOC_ADMIN_PASSWORD;
-  if (!pw) {
-    throw new Error('NOC_ADMIN_PASSWORD environment variable is not set. Cannot authenticate.');
-  }
-  return pw;
+async function getRequestIp() {
+  const headerStore = await headers();
+  const forwardedIp = headerStore.get('cf-connecting-ip')
+    || headerStore.get('x-real-ip')
+    || headerStore.get('x-forwarded-for')?.split(',')[0];
+
+  return forwardedIp?.trim() || 'unknown';
 }
 
-// ─── HMAC Token (lightweight JWT alternative, zero dependencies) ───
-function createSignedToken(payload: Record<string, unknown>): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'RTEC' })).toString('base64url');
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const signature = crypto
-    .createHmac('sha256', getSessionSecret())
-    .update(`${header}.${body}`)
-    .digest('base64url');
-  return `${header}.${body}.${signature}`;
-}
-
-function _verifySignedToken(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return null;
-    }
-    const [header, body, signature] = parts;
-    const expectedSig = crypto
-      .createHmac('sha256', getSessionSecret())
-      .update(`${header}.${body}`)
-      .digest('base64url');
-
-    // Timing-safe comparison to prevent timing attacks
-    if (!crypto.timingSafeEqual(Buffer.from(signature!), Buffer.from(expectedSig))) {
-      return null;
-    }
-
-    const payload = JSON.parse(Buffer.from(body!, 'base64url').toString());
-
-    // Check expiration
-    if (payload.exp && Date.now() > payload.exp) {
-      return null;
-    }
-
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
-// ─── Rate Limit Check ───
-function checkRateLimit(ip: string): { blocked: boolean; remaining: number } {
+function isRateLimited(ip: string) {
   const now = Date.now();
   const record = loginAttempts.get(ip);
-
-  if (record) {
-    // Check if blocked
-    if (record.blockedUntil > now) {
-      const minutesLeft = Math.ceil((record.blockedUntil - now) / 60000);
-      return { blocked: true, remaining: minutesLeft };
-    }
-
-    // Reset if window expired
-    if (record.blockedUntil <= now && record.count >= MAX_ATTEMPTS) {
-      loginAttempts.delete(ip);
-    }
+  if (!record) {
+    return { blocked: false, remaining: MAX_ATTEMPTS };
   }
 
-  return { blocked: false, remaining: MAX_ATTEMPTS - (record?.count ?? 0) };
-}
-
-function recordFailedAttempt(ip: string) {
-  const now = Date.now();
-  const record = loginAttempts.get(ip) ?? { count: 0, blockedUntil: 0 };
-  record.count += 1;
+  if (record.blockedUntil > now) {
+    const minutesLeft = Math.ceil((record.blockedUntil - now) / 60000);
+    return { blocked: true, remaining: minutesLeft };
+  }
 
   if (record.count >= MAX_ATTEMPTS) {
-    record.blockedUntil = now + BLOCK_DURATION_MS;
-    console.warn(`🚫 IP ${ip} bloqueado por ${BLOCK_DURATION_MS / 60000} minutos após ${record.count} tentativas falhas`);
+    loginAttempts.delete(ip);
+    return { blocked: false, remaining: MAX_ATTEMPTS };
   }
 
-  loginAttempts.set(ip, record);
+  return { blocked: false, remaining: Math.max(MAX_ATTEMPTS - record.count, 0) };
+}
 
-  // Auto-cleanup old entries every 100 attempts
-  if (loginAttempts.size > 100) {
-    for (const [key, val] of loginAttempts) {
-      if (val.blockedUntil < now) {
-        loginAttempts.delete(key);
-      }
-    }
-  }
+function registerFailedAttempt(ip: string) {
+  const now = Date.now();
+  const record = loginAttempts.get(ip) ?? { count: 0, blockedUntil: 0 };
+  const nextCount = record.count + 1;
+  loginAttempts.set(ip, {
+    count: nextCount,
+    blockedUntil: nextCount >= MAX_ATTEMPTS ? now + BLOCK_DURATION_MS : 0,
+  });
 }
 
 function clearAttempts(ip: string) {
   loginAttempts.delete(ip);
 }
 
-// ─── Main Auth Action ───
-export async function authenticate(formData: FormData) {
-  const password = formData.get('password') as string;
-  const clientIp = 'server-action'; // Next.js Server Actions don't expose IP easily
-
-  // Rate limit check
-  const rateCheck = checkRateLimit(clientIp);
-  if (rateCheck.blocked) {
-    return { error: `Muitas tentativas falhas. Aguarde ${rateCheck.remaining} minuto(s).` };
+function isValidPassword(inputPassword: string, expectedPassword: string) {
+  const inputBuffer = Buffer.from(inputPassword);
+  const expectedBuffer = Buffer.from(expectedPassword);
+  if (inputBuffer.length !== expectedBuffer.length) {
+    return false;
   }
 
-  let adminPassword: string;
-  try {
-    adminPassword = getAdminPassword();
-  } catch {
-    return { error: 'Erro de configuração do servidor. Contate o administrador.' };
-  }
-
-  if (password === adminPassword) {
-    clearAttempts(clientIp);
-
-    // Create signed token with expiration (7 days)
-    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
-    const token = createSignedToken({
-      role: 'admin',
-      iat: Date.now(),
-      exp: expiresAt,
-      nonce: crypto.randomBytes(8).toString('hex'),
-    });
-
-    const cookieStore = await cookies();
-    cookieStore.set('rtec_noc_session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      expires: new Date(expiresAt),
-      path: '/',
-    });
-
-    redirect('/dashboard');
-  } else {
-    recordFailedAttempt(clientIp);
-    const remaining = MAX_ATTEMPTS - (loginAttempts.get(clientIp)?.count ?? 0);
-    const suffix = remaining > 0 ? ` (${remaining} tentativas restantes)` : '';
-    return { error: `Senha incorreta. Acesso Negado.${suffix}` };
-  }
+  return crypto.timingSafeEqual(inputBuffer, expectedBuffer);
 }
 
-// ─── Logout Action ───
+export async function authenticate(formData: FormData) {
+  const password = String(formData.get('password') ?? '');
+  const adminPassword = Env.nocAdminPassword;
+
+  const clientIp = await getRequestIp();
+  const rateLimitState = isRateLimited(clientIp);
+  if (rateLimitState.blocked) {
+    return { error: `Muitas tentativas falhas. Aguarde ${rateLimitState.remaining} minuto(s).` };
+  }
+
+  if (!isValidPassword(password, adminPassword)) {
+    registerFailedAttempt(clientIp);
+    const remainingAttempts = Math.max(MAX_ATTEMPTS - (loginAttempts.get(clientIp)?.count ?? 0), 0);
+    const suffix = remainingAttempts > 0 ? ` (${remainingAttempts} tentativas restantes)` : '';
+    return { error: `Senha incorreta.${suffix}` };
+  }
+
+  clearAttempts(clientIp);
+
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const token = createSignedSessionToken({
+    payload: {
+      exp: expiresAt,
+      iat: Date.now(),
+      nonce: crypto.randomBytes(8).toString('hex'),
+      role: 'admin',
+    },
+    secret: Env.nocSessionSecret,
+  });
+
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    expires: new Date(expiresAt),
+    path: '/',
+  });
+
+  redirect(getSafeRedirectTarget(formData.get('from')));
+}
+
 export async function logout() {
   const cookieStore = await cookies();
-  cookieStore.delete('rtec_noc_session');
+  cookieStore.delete(ADMIN_SESSION_COOKIE_NAME);
   redirect('/login');
 }

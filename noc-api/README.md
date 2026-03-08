@@ -1,144 +1,166 @@
-# NOC API – MVP NOC-as-a-Service
+# NOC API
 
-Backend orientado a **serviço operacional**: transforma eventos técnicos em **incidentes** com impacto operacional explicado (não só falha de dispositivo).
-Conceito: **Eventos → Correlação → Diagnóstico → Incidente (impacto + ação recomendada + confiança)**.
+API operacional da Rtec para provisionamento, heartbeat, backups, tenants e integracao com Supabase.
+
+## Responsabilidades
+
+- provisionar tenants e usuarios administrativos
+- emitir e revogar tokens de dispositivos
+- receber heartbeats dos notebooks/agentes
+- registrar e acompanhar backups
+- entregar dados administrativos para o `noc-app`
+- expor dados publicos e autenticados do portal por tenant
+- manter o modulo NOC legado de servicos, dispositivos e incidentes
 
 ## Stack
 
-- Node.js + TypeScript
-- PostgreSQL + Drizzle ORM
-- Express (REST)
-- Motor de diagnóstico (correlação em janela de tempo)
-
-## Requisitos
-
 - Node.js 20+
-- PostgreSQL (local ou container)
+- TypeScript
+- Express
+- PostgreSQL
+- Drizzle ORM
+- Supabase
 
-## Configuração
+## Desenvolvimento local
 
-1. Crie um banco PostgreSQL (ex.: `createdb noc`).
-2. Defina `DATABASE_URL` (ex.: `postgresql://localhost:5432/noc`).
-3. Instale dependências e aplique o schema no PostgreSQL:
+1. Defina `DATABASE_URL`.
+2. Instale dependencias:
 
 ```bash
 cd noc-api
 npm install
 ```
 
-Aplique as migrations manualmente (ordem: 0000, 0001):
+3. Aplique as migrations:
 
 ```bash
 psql "$DATABASE_URL" -f src/db/migrations/0000_initial.sql
 psql "$DATABASE_URL" -f src/db/migrations/0001_operational.sql
+psql "$DATABASE_URL" -f src/db/migrations/0002_ops.sql
 ```
 
-4. Inicie a API:
+4. Suba a API:
 
 ```bash
 npm run dev
 ```
 
-A API sobe em **http://localhost:4000** (ou `PORT`).
+A API sobe em `http://localhost:4000`.
 
-## Rotas
+## Variaveis de ambiente
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| POST | `/ingest-event` | Recebe evento do agente (monitorbot). Body: `{ device_id, tipo, valor? }`. Tipos: `ping_fail`, `high_latency`, `packet_loss`, `offline`, `temp_high`. |
-| GET | `/incidents` | Lista incidentes. Query: `?status=open|investigating|resolved`, `?limit=50`. |
-| GET | `/devices/:id/status` | Status atual interpretado do dispositivo (últimos eventos + incidentes abertos). |
-| POST | `/devices` | Cria dispositivo (simulação). Body: `{ nome, tipo, local, ip, cliente_id? }`. Tipos: `router`, `camera`, `switch`, `server`. |
-| GET | `/services` | Lista todos os serviços. |
-| POST | `/services` | Cadastra serviço. Body: `{ nome, criticidade }`. Criticidade: `baixa`, `media`, `alta`, `critica`. |
-| GET | `/services/:id` | Detalhe do serviço com dispositivos vinculados e incidentes abertos. |
-| POST | `/services/:id/devices` | Associa dispositivo ao serviço. Body: `{ device_id }`. |
-| DELETE | `/services/:id/devices/:deviceId` | Remove dispositivo do serviço. |
-| GET | `/health` | Health check. |
+| Variavel | Obrigatoria | Descricao |
+|---|---|---|
+| `DATABASE_URL` | Sim | PostgreSQL da operacao |
+| `SUPABASE_URL` | Sim | URL do projeto Supabase |
+| `SUPABASE_ANON_KEY` | Sim | Chave publica usada em validacoes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sim | Chave administrativa para provisionamento |
+| `OPS_ADMIN_SERVICE_TOKEN` | Sim | Token interno aceito pelos endpoints `/v1/admin/*` |
+| `PANEL_PUBLIC_BASE_URL` | Nao | Base publica do portal. Default: `https://painel.rtectecnologia.com.br` |
+| `R2_ACCOUNT_ID` | Nao | Conta Cloudflare R2 |
+| `R2_ACCESS_KEY_ID` | Nao | Chave do R2 |
+| `R2_SECRET_ACCESS_KEY` | Nao | Segredo do R2 |
+| `R2_BUCKET` | Nao | Bucket dos backups |
+| `R2_PUBLIC_BASE_URL` | Nao | Base publica para objetos, se usada |
+| `TELEGRAM_BOT_TOKEN` | Nao | Bot de alertas |
+| `TELEGRAM_CHAT_ID` | Nao | Destino dos alertas |
+| `CLOUDFLARE_API_TOKEN` | Nao | Opcional. So use se quiser automacao de DNS na API |
+| `CLOUDFLARE_ZONE_ID` | Nao | Opcional. So use com a automacao de DNS |
+| `SAAS_TARGET_IP` | Nao | Opcional. IP alvo para criacao automatica de registro DNS |
 
-## Modelo operacional
+## Supabase como fonte de verdade
 
-- **Site** (id, nome, cliente) → **Area** (id, site_id, nome) → **Device** (opcionalmente area_id).
-- **Service** (id, nome, criticidade: baixa|media|alta|critica) ←→ **Device** via **ServiceDevice** (mapeia dispositivos ao serviço).
+O provisionamento das empresas acontece com base no Supabase:
 
-**Incident** inclui: titulo, descricao, severidade, status, causa_provavel, impacto_cliente, **impacto_operacional**, **usuario_afetado**, **acao_recomendada**, **confianca_diagnostico** (0–1).
-Objetivo: menos alertas, mais explicações.
+- o tenant e criado em `public.tenants`
+- o usuario administrador da empresa e criado no Supabase Auth
+- a API faz upsert explicito em `public.profiles`
+- o `subdomain` passa a ser a chave canonica do portal
 
-## Motor de diagnóstico (impacto operacional)
+Endpoint principal:
 
-O motor é orientado a **serviço**, não só a dispositivo. Regras (janela 5 min):
+- `POST /v1/admin/tenants/provision`
 
-- **Várias câmeras/dispositivos do mesmo Service offline** → "Vigilância indisponível" (ou nome do serviço).
-- **Gateway (router) offline + vários dispositivos no mesmo site** → "Queda geral de conectividade".
-- **Latência alta sem queda** → "Degradação perceptível ao usuário".
-- **Vários dispositivos offline na mesma área** → "Queda provável de energia ou uplink".
+Esse endpoint cria a empresa, o usuario administrador e retorna os valores operacionais usados na configuracao manual do Cloudflare:
 
-Cada incidente traz: impacto operacional, usuário afetado, ação recomendada e confiança do diagnóstico.
-Nenhuma lógica de diagnóstico fica no frontend; tudo roda no backend.
+- `portalUrl`
+- `redirectSource`
+- `redirectTarget`
+- `tenantId`
+- `userId`
 
-## Teste rápido (eventos simulados)
+No fluxo operacional da Rtec, a publicacao do subdominio no Cloudflare continua sendo manual.
 
-```bash
-# 1. Criar um dispositivo
-curl -X POST http://localhost:4000/devices \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"Router Catalão","tipo":"router","local":"Catalão - GO","ip":"192.168.1.1"}'
-# Anote o "id" retornado.
+## Cloudflare no fluxo atual
 
-# 2. Enviar 3 ping_fail (dispara regra "Dispositivo offline")
-curl -X POST http://localhost:4000/ingest-event \
-  -H "Content-Type: application/json" \
-  -d '{"device_id":"<ID>","tipo":"ping_fail"}'
-# Repita 2 vezes (3 eventos no total).
+O cenario em producao hoje e:
 
-# 3. Listar incidentes
-curl http://localhost:4000/incidents
-```
+- `api.rtectecnologia.com.br` aponta para esta API via Cloudflare Tunnel
+- `painel.rtectecnologia.com.br` aponta para o `noc-app` via Cloudflare Tunnel
+- cada subdominio de cliente usa uma **Redirect Rule** para `https://painel.rtectecnologia.com.br/portal/<slug>`
+
+Se `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ZONE_ID` estiverem vazios, a API continua funcionando normalmente no fluxo manual de Cloudflare.
+
+## Endpoints operacionais
+
+### Dispositivos e backups
+
+| Metodo | Rota | Uso |
+|---|---|---|
+| `POST` | `/v1/device/provision` | emite `deviceToken` para um dispositivo autorizado |
+| `POST` | `/v1/device/heartbeat` | recebe heartbeat do dispositivo |
+| `POST` | `/v1/backups/request-upload` | gera upload assinado no R2 |
+| `POST` | `/v1/backups/complete` | conclui backup com status `UPLOADED` ou `FAILED` |
+
+### Administracao
+
+| Metodo | Rota | Uso |
+|---|---|---|
+| `GET` | `/v1/admin/overview` | resumo operacional |
+| `GET` | `/v1/admin/devices` | lista de dispositivos |
+| `GET` | `/v1/admin/backups` | trilha de backups |
+| `GET` | `/v1/admin/tenants` | lista de tenants |
+| `PATCH` | `/v1/admin/tenants/:id` | ajuste de tenant |
+| `POST` | `/v1/admin/tenants/provision` | cria tenant e admin |
+| `POST` | `/v1/admin/devices/:id/revoke` | revoga dispositivo |
+
+### Portal
+
+| Metodo | Rota | Uso |
+|---|---|---|
+| `GET` | `/v1/portal/:slug` | resumo publico da empresa para o portal |
+| `GET` | `/v1/portal/:slug/reports` | dados autenticados do tenant para o portal de relatorios |
+
+O endpoint `/v1/portal/:slug/reports` exige Bearer token do Supabase Auth, valida o perfil em `public.profiles`, exige `is_admin = true` e confere o `tenant_id` contra o slug do portal.
+
+### Modulo NOC legado
+
+| Metodo | Rota | Uso |
+|---|---|---|
+| `POST` | `/ingest-event` | recebe evento tecnico |
+| `GET` | `/incidents` | lista incidentes |
+| `GET` | `/devices/:id/status` | status interpretado do dispositivo |
+| `POST` | `/devices` | cria dispositivo |
+| `GET` | `/services` | lista servicos |
+| `POST` | `/services` | cria servico |
+| `GET` | `/services/:id` | detalhe do servico |
+| `POST` | `/services/:id/devices` | vincula dispositivo ao servico |
+| `DELETE` | `/services/:id/devices/:deviceId` | remove vinculo |
+| `GET` | `/health` | health check |
+
+## Jobs embutidos
+
+Quando a API inicia, ela roda jobs de apoio:
+
+- deteccao de dispositivo offline
+- retencao de backups antigos
+- envio de alertas operacionais
 
 ## Estrutura
 
-- `src/db/` – schema Drizzle (devices, events, incidents, sites, areas, services, service_devices), migrations, client
-- `src/engine/` – **buildContext.ts** (contexto evento+dispositivo+área+serviço), **rules.ts** (regras sem side-effect), **diagnosticEngine.ts** (orquestra contexto → regras → criação de incidentes)
-- `src/routes/` – ingest, incidents, devices
+- `src/db/`: schema e migrations
+- `src/routes/`: rotas REST
+- `src/ops/`: auth, jobs, Supabase, R2 e alertas
+- `src/engine/`: correlacao do modulo NOC legado
 
-Sem autenticação, multi-empresa ou billing neste MVP.
-
-## App do técnico (noc-app)
-
-No repositório há um app Next.js em **`noc-app/`** para o técnico visualizar serviços: lista de serviços e detalhe (dispositivos + incidentes abertos). Consome a NOC API. Ver `noc-app/README.md`.
-
-## Modulo OPS (v1)
-
-Este backend agora tambem expoe endpoints operacionais para o ecossistema LegislativoTimer:
-
-- `POST /v1/device/provision` - emite `device_token` para notebook autorizado.
-- `POST /v1/device/heartbeat` - heartbeat periodico do notebook.
-- `POST /v1/backups/request-upload` - gera URL assinada para upload no R2.
-- `POST /v1/backups/complete` - confirma upload (`UPLOADED`/`FAILED`).
-- `GET /v1/admin/overview` - resumo operacional.
-- `GET /v1/admin/devices` - dispositivos e status online/offline.
-- `GET /v1/admin/backups` - trilha de backups.
-- `GET /v1/admin/tenants` - agregacao por tenant/licenca.
-
-### Variaveis extras (OPS)
-
-| Variavel | Uso |
-|---|---|
-| `OPS_ADMIN_SERVICE_TOKEN` | Token interno usado pelo painel web para endpoints admin. |
-| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` | Assinatura e armazenamento dos backups no Cloudflare R2. |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Alertas operacionais (offline/falha de backup). |
-
-### Migracoes OPS
-
-Aplicar tambem:
-
-```bash
-psql "$DATABASE_URL" -f src/db/migrations/0002_ops.sql
-```
-
-### Jobs embutidos
-
-Quando a API inicia, executa jobs em background:
-
-- varredura de dispositivo offline (>15 min sem heartbeat), com alerta deduplicado;
-- retencao de backups (remove registros antigos; tenta apagar objeto no R2).
+O painel que consome esta API esta em [`noc-app/README.md`](../noc-app/README.md).

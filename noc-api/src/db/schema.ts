@@ -226,6 +226,13 @@ export const opsAlerts = pgTable(
   ],
 );
 
+export const tenantInfraProfiles = pgTable('tenant_infra_profiles', {
+  tenantId: uuid('tenant_id').primaryKey(),
+  profile: jsonb('profile').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Relations
 export const sitesRelations = relations(sites, ({ many }) => ({
   areas: many(areas),
@@ -291,3 +298,5 @@ export const deviceBackupsRelations = relations(deviceBackups, ({ one }) => ({
     references: [tenantDevices.id],
   }),
 }));
+
+export const tenantInfraProfilesRelations = relations(tenantInfraProfiles, () => ({}));
