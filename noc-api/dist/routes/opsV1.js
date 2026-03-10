@@ -698,24 +698,40 @@ function buildDefaultTenantInfrastructureProfile(tenant) {
     });
 }
 async function getTenantInfrastructureProfile(tenant) {
-    const rows = await db
-        .select({
-        profile: tenantInfraProfiles.profile,
-    })
-        .from(tenantInfraProfiles)
-        .where(eq(tenantInfraProfiles.tenantId, tenant.tenantId))
-        .limit(1);
-    const existingProfile = rows[0]?.profile;
-    if (!existingProfile) {
+    try {
+        const rows = await db
+            .select({
+            profile: tenantInfraProfiles.profile,
+        })
+            .from(tenantInfraProfiles)
+            .where(eq(tenantInfraProfiles.tenantId, tenant.tenantId))
+            .limit(1);
+        const existingProfile = rows[0]?.profile;
+        if (!existingProfile) {
+            return {
+                isDefault: true,
+                profile: buildDefaultTenantInfrastructureProfile(tenant),
+            };
+        }
         return {
-            isDefault: true,
-            profile: buildDefaultTenantInfrastructureProfile(tenant),
+            isDefault: false,
+            profile: sanitizeTenantInfrastructureProfile(existingProfile),
         };
     }
-    return {
-        isDefault: false,
-        profile: sanitizeTenantInfrastructureProfile(existingProfile),
-    };
+    catch (error) {
+        // Hard fallback: if the table doesn't exist in the target DB yet, keep the panel usable
+        // and show a default profile. This avoids a 500 on /admin/tenants/:id/detail.
+        const message = error instanceof Error ? error.message : String(error);
+        const code = error && typeof error === 'object' ? String(error.code ?? '') : '';
+        if (code === '42P01' || message.toLowerCase().includes('tenant_infra_profiles')) {
+            console.error('tenant_infra_profiles table missing. Returning default infra profile. Run migrations 0003_tenant_infra_profiles.sql.', message);
+            return {
+                isDefault: true,
+                profile: buildDefaultTenantInfrastructureProfile(tenant),
+            };
+        }
+        throw error;
+    }
 }
 export function createOpsV1Router(options) {
     const router = Router();
