@@ -12,7 +12,7 @@ import {
   PortalApiError,
 } from '@/lib/portalApi';
 import { getPortalPath } from '@/lib/portalRouting';
-import { clearPortalSession, getPortalSession } from '@/lib/portalSession';
+import { getPortalSession, shouldRefreshPortalSession } from '@/lib/portalSession';
 
 type PortalReportsPageProps = {
   params: Promise<{ slug: string }>;
@@ -114,7 +114,6 @@ function getStatusTone(status: string) {
 
 async function handlePortalError(error: unknown, slug: string) {
   if (error instanceof PortalApiError && (error.status === 401 || error.status === 403)) {
-    await clearPortalSession();
     redirect(`/portal/login?slug=${encodeURIComponent(slug)}&error=${encodeURIComponent('Sua sessao expirou ou nao pertence a este tenant.')}`);
   }
 
@@ -129,6 +128,26 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
   const { slug: rawSlug } = await props.params;
   const searchParams = await props.searchParams;
   const slug = rawSlug.trim().toLowerCase();
+
+  const from = typeof searchParams.from === 'string' && searchParams.from.trim() ? searchParams.from.trim() : null;
+  const to = typeof searchParams.to === 'string' && searchParams.to.trim() ? searchParams.to.trim() : null;
+  const status = typeof searchParams.status === 'string' && searchParams.status.trim() ? searchParams.status.trim().toUpperCase() : null;
+  const selectedSessionGuid = typeof searchParams.sessao === 'string' && searchParams.sessao.trim() ? searchParams.sessao.trim() : null;
+  const reportsPath = getPortalPath({ slug, path: '/relatorios' });
+  const returnToQuery = new URLSearchParams();
+  if (from) {
+    returnToQuery.set('from', from);
+  }
+  if (to) {
+    returnToQuery.set('to', to);
+  }
+  if (status) {
+    returnToQuery.set('status', status);
+  }
+  if (selectedSessionGuid) {
+    returnToQuery.set('sessao', selectedSessionGuid);
+  }
+  const returnTo = returnToQuery.size > 0 ? `${reportsPath}?${returnToQuery.toString()}` : reportsPath;
 
   let tenantSummary = null;
   try {
@@ -155,10 +174,13 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
     redirect(`/portal/login?slug=${encodeURIComponent(slug)}`);
   }
 
-  const from = typeof searchParams.from === 'string' && searchParams.from.trim() ? searchParams.from.trim() : null;
-  const to = typeof searchParams.to === 'string' && searchParams.to.trim() ? searchParams.to.trim() : null;
-  const status = typeof searchParams.status === 'string' && searchParams.status.trim() ? searchParams.status.trim().toUpperCase() : null;
-  const selectedSessionGuid = typeof searchParams.sessao === 'string' && searchParams.sessao.trim() ? searchParams.sessao.trim() : null;
+  if (shouldRefreshPortalSession(session)) {
+    if (session.refreshToken) {
+      redirect(`/portal/auth/refresh?slug=${encodeURIComponent(slug)}&returnTo=${encodeURIComponent(returnTo)}`);
+    }
+
+    redirect(`/portal/login?slug=${encodeURIComponent(slug)}&error=${encodeURIComponent('Sua sessao expirou. Entre novamente.')}`);
+  }
 
   let overview: Awaited<ReturnType<typeof getPortalOverview>> | null = null;
   let sessions: Awaited<ReturnType<typeof getPortalSessions>> = [];

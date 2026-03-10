@@ -4,6 +4,7 @@ import { createSignedSessionToken, verifySignedSessionToken } from '@/lib/Server
 import { PORTAL_SESSION_COOKIE_NAME } from '@/lib/sessionConfig';
 
 const PORTAL_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const ACCESS_TOKEN_REFRESH_THRESHOLD_MS = 60 * 1000;
 
 type SupabaseSessionResponse = {
   access_token: string;
@@ -40,6 +41,10 @@ export type PortalSessionPayload = {
   tenantId: string;
   tenantSlug: string;
 };
+
+export function shouldRefreshPortalSession(session: PortalSessionPayload) {
+  return session.accessTokenExpiresAt <= Date.now() + ACCESS_TOKEN_REFRESH_THRESHOLD_MS;
+}
 
 async function requestSupabaseSession(props: {
   email?: string;
@@ -112,6 +117,7 @@ function buildPortalSessionPayload(props: {
 
 /**
  * Clears the current portal session cookie.
+ * Only call this from a Server Action or Route Handler.
  * @returns Promise that resolves when the cookie is deleted.
  */
 export async function clearPortalSession() {
@@ -138,6 +144,7 @@ export async function readPortalSession() {
 
 /**
  * Writes a signed portal session cookie.
+ * Only call this from a Server Action or Route Handler.
  * @param payload - Portal session payload.
  * @returns Promise that resolves when the cookie is stored.
  */
@@ -187,6 +194,37 @@ export async function createPortalSessionFromPassword(props: {
 }
 
 /**
+ * Refreshes the portal session using the refresh token.
+ * This helper does not write cookies (cookie writes must happen in a Server Action or Route Handler).
+ * @param props - Refresh options.
+ * @param props.session - Current portal session payload.
+ * @returns Refreshed portal session payload.
+ */
+export async function refreshPortalSessionPayload(props: {
+  session: PortalSessionPayload;
+}) {
+  if (!props.session.refreshToken) {
+    throw new PortalSessionError({
+      code: 'REFRESH_TOKEN_MISSING',
+      message: 'Refresh token is missing',
+      status: 401,
+    });
+  }
+
+  const refreshedSession = await requestSupabaseSession({
+    grantType: 'refresh_token',
+    refreshToken: props.session.refreshToken,
+  });
+
+  return buildPortalSessionPayload({
+    session: refreshedSession,
+    tenantId: props.session.tenantId,
+    tenantSlug: props.session.tenantSlug,
+    email: props.session.email,
+  });
+}
+
+/**
  * Resolves the current portal session, refreshing the Supabase token when needed.
  * @param props - Session resolution options.
  * @param props.tenantSlug - Tenant slug expected by the current route.
@@ -201,37 +239,8 @@ export async function getPortalSession(props: {
   }
 
   if (currentSession.tenantSlug !== props.tenantSlug) {
-    await clearPortalSession();
     return null;
   }
 
-  const refreshThreshold = Date.now() + 60 * 1000;
-  if (currentSession.accessTokenExpiresAt > refreshThreshold) {
-    return currentSession;
-  }
-
-  if (!currentSession.refreshToken) {
-    await clearPortalSession();
-    return null;
-  }
-
-  try {
-    const refreshedSession = await requestSupabaseSession({
-      grantType: 'refresh_token',
-      refreshToken: currentSession.refreshToken,
-    });
-
-    const nextSession = buildPortalSessionPayload({
-      session: refreshedSession,
-      tenantId: currentSession.tenantId,
-      tenantSlug: currentSession.tenantSlug,
-      email: currentSession.email,
-    });
-
-    await writePortalSession(nextSession);
-    return nextSession;
-  } catch {
-    await clearPortalSession();
-    return null;
-  }
+  return currentSession;
 }

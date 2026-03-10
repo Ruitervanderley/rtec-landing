@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { PortalReportsLoginForm } from '@/components/PortalReportsLoginForm';
 import { getPortalTenantSummary, PortalApiError } from '@/lib/portalApi';
 import { getPortalPath } from '@/lib/portalRouting';
-import { getPortalSession } from '@/lib/portalSession';
+import { getPortalSession, shouldRefreshPortalSession } from '@/lib/portalSession';
 
 type PortalLoginPageProps = {
   searchParams: Promise<{
@@ -23,7 +23,14 @@ export default async function PortalLoginPage(props: PortalLoginPageProps) {
 
   const session = await getPortalSession({ tenantSlug: slug });
   if (session) {
-    redirect(getPortalPath({ slug, path: '/relatorios' }));
+    const reportsPath = getPortalPath({ slug, path: '/relatorios' });
+    if (shouldRefreshPortalSession(session)) {
+      if (session.refreshToken) {
+        redirect(`/portal/auth/refresh?slug=${encodeURIComponent(slug)}&returnTo=${encodeURIComponent(reportsPath)}`);
+      }
+    } else {
+      redirect(reportsPath);
+    }
   }
 
   let tenantName = slug;
