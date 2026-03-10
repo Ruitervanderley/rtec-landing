@@ -236,6 +236,8 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
     return <PortalFailure message="Nao foi possivel carregar o resumo do tenant." slug={slug} />;
   }
 
+  const isCamara = overview.tenant.type === 'camara';
+
   const activeUsers = overview.tenant.licensedUsers;
   const metrics = [
     { label: 'Usuarios ativos', value: String(activeUsers) },
@@ -243,7 +245,7 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
     { label: 'Ultimo heartbeat', value: formatDateTime(overview.tenant.lastSeenAt) },
     { label: 'Ultimo backup', value: formatDateTime(overview.tenant.lastBackupAt) },
     { label: 'Ultimo sync', value: formatDateTime(overview.tenant.lastReportSyncAt) },
-    { label: 'Sessoes no periodo', value: String(sessions.length) },
+    { label: isCamara ? 'Sessoes no periodo' : 'Registros no periodo', value: String(sessions.length) },
   ];
 
   return (
@@ -251,7 +253,9 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
       <div style={{ margin: '0 auto', maxWidth: '1240px' }}>
         <header style={{ alignItems: 'flex-start', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', marginBottom: '2rem' }}>
           <div>
-            <p style={{ color: '#4db8ff', fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.45rem' }}>Portal da camara</p>
+            <p style={{ color: '#4db8ff', fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.45rem' }}>
+              {isCamara ? 'Portal da camara' : 'Portal de TI'}
+            </p>
             <h1 style={{ fontSize: '2.25rem', fontWeight: 900, letterSpacing: '-0.03em', margin: '0 0 0.75rem' }}>{overview.tenant.name}</h1>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '0.6rem' }}>
               <StatusChip label={overview.tenant.isActive ? 'Licenca ativa' : 'Licenca inativa'} tone={overview.tenant.isActive ? 'good' : 'danger'} />
@@ -285,7 +289,7 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
         </section>
 
         <section style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '2fr 1fr', marginBottom: '1.5rem' }}>
-          <SectionCard title="Filtros dos relatorios">
+          <SectionCard title={isCamara ? 'Filtros dos relatorios' : 'Filtros da atividade'}>
             <form method="get" style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <span style={{ color: '#94a3b8', fontSize: '0.84rem' }}>Data inicial</span>
@@ -346,15 +350,21 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
         </section>
 
         <section style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1.6fr 1fr', marginBottom: '1.5rem' }}>
-          <SectionCard title="Sessoes oficiais">
+          <SectionCard title={isCamara ? 'Sessoes oficiais' : 'Registros sincronizados'}>
             {sessions.length === 0
-              ? <p style={{ color: '#94a3b8', margin: 0 }}>Nenhuma sessao oficial encontrada para o filtro atual.</p>
+              ? (
+                  <p style={{ color: '#94a3b8', margin: 0 }}>
+                    {isCamara
+                      ? 'Nenhuma sessao oficial encontrada para o filtro atual.'
+                      : 'Nenhum registro encontrado para o filtro atual.'}
+                  </p>
+                )
               : (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ borderCollapse: 'collapse', minWidth: '100%', width: '100%' }}>
                       <thead>
                         <tr style={{ color: '#94a3b8', textAlign: 'left' }}>
-                          {['Vereador', 'Inicio', 'Fim', 'Planejado', 'Realizado', 'Status', 'Detalhe'].map(header => (
+                          {[isCamara ? 'Vereador' : 'Responsavel', 'Inicio', 'Fim', 'Planejado', 'Realizado', 'Status', 'Detalhe'].map(header => (
                             <th key={header} style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.12)', fontSize: '0.78rem', fontWeight: 700, padding: '0.75rem 0.5rem' }}>{header}</th>
                           ))}
                         </tr>
@@ -391,9 +401,15 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
                 )}
           </SectionCard>
 
-          <SectionCard title="Resumo por vereador">
+          <SectionCard title={isCamara ? 'Resumo por vereador' : 'Resumo por responsavel'}>
             {speakerUsage.length === 0
-              ? <p style={{ color: '#94a3b8', margin: 0 }}>Nenhum resumo encontrado para o periodo atual.</p>
+              ? (
+                  <p style={{ color: '#94a3b8', margin: 0 }}>
+                    {isCamara
+                      ? 'Nenhum resumo encontrado para o periodo atual.'
+                      : 'Nenhum resumo encontrado para o periodo atual.'}
+                  </p>
+                )
               : (
                   <div style={{ display: 'grid', gap: '0.75rem' }}>
                     {speakerUsage.map(item => (
@@ -402,7 +418,7 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
                         <div style={{ color: '#94a3b8', fontSize: '0.84rem', marginTop: '0.35rem' }}>
                           {item.totalSessions}
                           {' '}
-                          sessao(oes)
+                          {isCamara ? 'sessao(oes)' : 'registro(s)'}
                           {' '}
                           |
                           {' '}
@@ -426,7 +442,11 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
         <section style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
           <SectionCard title="Ultimos registros sincronizados">
             {overview.recentSessions.length === 0
-              ? <p style={{ color: '#94a3b8', margin: 0 }}>Nenhuma sessao sincronizada ainda.</p>
+              ? (
+                  <p style={{ color: '#94a3b8', margin: 0 }}>
+                    {isCamara ? 'Nenhuma sessao sincronizada ainda.' : 'Nenhum registro sincronizado ainda.'}
+                  </p>
+                )
               : (
                   <div style={{ display: 'grid', gap: '0.75rem' }}>
                     {overview.recentSessions.slice(0, 6).map(sessionRow => (
@@ -452,11 +472,13 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
                 )}
           </SectionCard>
 
-          <SectionCard title={auditDetail ? 'Log auditavel da sessao' : 'Selecione uma sessao'}>
+          <SectionCard title={auditDetail ? (isCamara ? 'Log auditavel da sessao' : 'Log auditavel do registro') : (isCamara ? 'Selecione uma sessao' : 'Selecione um registro')}>
             {!auditDetail
               ? (
                   <div style={{ color: '#94a3b8', lineHeight: 1.6 }}>
-                    Escolha uma sessao oficial na tabela para visualizar a trilha auditavel com eventos de inicio, pausa, retomada, parada e encerramento.
+                    {isCamara
+                      ? 'Escolha uma sessao oficial na tabela para visualizar a trilha auditavel com eventos de inicio, pausa, retomada, parada e encerramento.'
+                      : 'Escolha um registro na tabela para visualizar a trilha auditavel com eventos de inicio, pausa, retomada, parada e encerramento.'}
                   </div>
                 )
               : (
@@ -469,7 +491,13 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
                     </div>
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                       {auditDetail.logs.length === 0
-                        ? <p style={{ color: '#94a3b8', margin: 0 }}>Nenhum log auditavel sincronizado para esta sessao.</p>
+                        ? (
+                            <p style={{ color: '#94a3b8', margin: 0 }}>
+                              {isCamara
+                                ? 'Nenhum log auditavel sincronizado para esta sessao.'
+                                : 'Nenhum log auditavel sincronizado para este registro.'}
+                            </p>
+                          )
                         : auditDetail.logs.map(log => (
                             <div key={log.id} style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(148, 163, 184, 0.12)', borderRadius: '14px', padding: '0.9rem 1rem' }}>
                               <div style={{ alignItems: 'center', display: 'flex', gap: '0.6rem', justifyContent: 'space-between' }}>
