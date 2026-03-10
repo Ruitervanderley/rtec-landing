@@ -41,3 +41,20 @@ export function formatBytes(value: number | null): string {
   const digits = current < 10 && index > 0 ? 1 : 0;
   return `${current.toFixed(digits)} ${units[index]}`;
 }
+
+export function formatDurationSeconds(value: number | null): string {
+  if (value === null || value < 0) {
+    return '--';
+  }
+
+  const totalSeconds = Math.trunc(value);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}

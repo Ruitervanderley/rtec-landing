@@ -14,6 +14,8 @@ export type ProfileAccessInfo = {
   isAdmin: boolean;
   userValidUntil: string | null;
   tenantName: string;
+  tenantPortalSlug: string;
+  tenantLogoUrl: string | null;
   tenantIsActive: boolean;
   tenantValidUntil: string | null;
 };
@@ -56,6 +58,8 @@ export async function getProfileAccessInfo(userId: string): Promise<ProfileAcces
       coalesce(p.is_admin, false) as is_admin,
       p.valid_until::text as user_valid_until,
       coalesce(t.name, '') as tenant_name,
+      coalesce(t.portal_slug, t.subdomain, '') as tenant_portal_slug,
+      nullif(coalesce(t.logo_url, ''), '') as tenant_logo_url,
       coalesce(t.is_active, false) as tenant_is_active,
       t.valid_until::text as tenant_valid_until
     from public.profiles p
@@ -77,6 +81,8 @@ export async function getProfileAccessInfo(userId: string): Promise<ProfileAcces
     is_admin: boolean;
     user_valid_until: string | null;
     tenant_name: string;
+    tenant_portal_slug: string;
+    tenant_logo_url: string | null;
     tenant_is_active: boolean;
     tenant_valid_until: string | null;
   };
@@ -89,6 +95,8 @@ export async function getProfileAccessInfo(userId: string): Promise<ProfileAcces
     isAdmin: row.is_admin,
     userValidUntil: row.user_valid_until,
     tenantName: row.tenant_name,
+    tenantPortalSlug: row.tenant_portal_slug,
+    tenantLogoUrl: row.tenant_logo_url,
     tenantIsActive: row.tenant_is_active,
     tenantValidUntil: row.tenant_valid_until,
   };

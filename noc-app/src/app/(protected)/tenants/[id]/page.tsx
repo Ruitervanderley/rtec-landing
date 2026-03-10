@@ -145,12 +145,12 @@ export default async function TenantDetailPage(props: {
             Roteamento
           </div>
           <div style={{ color: 'var(--text-primary)', fontSize: '1.2rem', fontWeight: 800 }}>
-            {detail.tenant.subdomain || '--'}
+            {detail.tenant.portalSlug || detail.tenant.subdomain || '--'}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.35rem' }}>
-            Redirect:
+            Portal:
             {' '}
-            {detail.tenant.redirectSource || '--'}
+            {detail.tenant.portalUrl || '--'}
           </div>
         </div>
       </div>

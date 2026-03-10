@@ -4,6 +4,8 @@ export type PortalTenantSummary = {
   adminUsers: number;
   tenantId: string;
   name: string;
+  logoUrl: string | null;
+  portalSlug: string;
   type: string;
   subdomain: string | null;
   isActive: boolean;
@@ -12,9 +14,60 @@ export type PortalTenantSummary = {
   onlineDevices: number;
   lastSeenAt: string | null;
   lastBackupAt: string | null;
+  lastReportSyncAt: string | null;
   licensedUsers: number;
   userCount: number;
   validUntil: string | null;
+};
+
+export type PortalOverviewResponse = {
+  profile: {
+    displayName: string;
+    email: string;
+    isAdmin: boolean;
+    tenantId: string;
+    tenantLogoUrl: string | null;
+    tenantName: string;
+    tenantPortalSlug: string;
+    tenantValidUntil: string | null;
+    userId: string;
+    userValidUntil: string | null;
+  };
+  recentSessions: PortalSessionRow[];
+  tenant: PortalTenantSummary;
+};
+
+export type PortalSessionRow = {
+  createdBy: string;
+  elapsedSeconds: number;
+  endedAtUtc: string | null;
+  finalStatus: string;
+  plannedSeconds: number;
+  sessionGuid: string;
+  speakerName: string;
+  startedAtUtc: string | null;
+  syncedAt: string | null;
+};
+
+export type PortalSpeakerUsageRow = {
+  averageElapsedSeconds: number;
+  speakerName: string;
+  totalElapsedSeconds: number;
+  totalSessions: number;
+};
+
+export type PortalAuditLogRow = {
+  details: string;
+  elapsedSeconds: number;
+  eventAtUtc: string | null;
+  eventType: string;
+  id: number;
+  remainingSeconds: number;
+};
+
+export type PortalAuditLogsResponse = {
+  logs: PortalAuditLogRow[];
+  session: PortalSessionRow;
 };
 
 export type PortalTenantInfrastructureAsset = {
@@ -164,6 +217,150 @@ export async function getPortalTenantSummary(slug: string) {
   }
 
   return (await response.json()) as PortalTenantSummary;
+}
+
+/**
+ * Fetches the authenticated portal overview for the current tenant.
+ * @param props - Authenticated request options.
+ * @param props.accessToken - Supabase access token.
+ * @param props.slug - Tenant portal slug.
+ * @returns Portal overview payload.
+ */
+export async function getPortalOverview(props: {
+  accessToken: string;
+  slug: string;
+}) {
+  const response = await fetch(`${Env.opsApiBaseUrl}/v1/portal/tenants/${props.slug}/overview`, {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${props.accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new PortalApiError(await parseApiError(response), response.status);
+  }
+
+  return (await response.json()) as PortalOverviewResponse;
+}
+
+/**
+ * Fetches official sessions for the authenticated tenant portal.
+ * @param props - Request options.
+ * @param props.accessToken - Supabase access token.
+ * @param props.from - Optional local date filter start.
+ * @param props.limit - Optional result limit.
+ * @param props.slug - Tenant portal slug.
+ * @param props.status - Optional session status filter.
+ * @param props.to - Optional local date filter end.
+ * @returns Session rows ordered by newest first.
+ */
+export async function getPortalSessions(props: {
+  accessToken: string;
+  from?: string | null;
+  limit?: number;
+  slug: string;
+  status?: string | null;
+  to?: string | null;
+}) {
+  const params = new URLSearchParams();
+  if (props.from) {
+    params.set('from', props.from);
+  }
+  if (props.to) {
+    params.set('to', props.to);
+  }
+  if (props.status) {
+    params.set('status', props.status);
+  }
+  if (props.limit) {
+    params.set('limit', String(props.limit));
+  }
+
+  const query = params.toString();
+  const response = await fetch(`${Env.opsApiBaseUrl}/v1/portal/tenants/${props.slug}/sessions${query ? `?${query}` : ''}`, {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${props.accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new PortalApiError(await parseApiError(response), response.status);
+  }
+
+  const payload = (await response.json()) as { sessions: PortalSessionRow[] };
+  return payload.sessions ?? [];
+}
+
+/**
+ * Fetches aggregated usage per speaker for the authenticated tenant portal.
+ * @param props - Request options.
+ * @param props.accessToken - Supabase access token.
+ * @param props.from - Optional local date filter start.
+ * @param props.slug - Tenant portal slug.
+ * @param props.to - Optional local date filter end.
+ * @returns Aggregated rows by speaker.
+ */
+export async function getPortalSpeakerUsage(props: {
+  accessToken: string;
+  from?: string | null;
+  slug: string;
+  to?: string | null;
+}) {
+  const params = new URLSearchParams();
+  if (props.from) {
+    params.set('from', props.from);
+  }
+  if (props.to) {
+    params.set('to', props.to);
+  }
+
+  const query = params.toString();
+  const response = await fetch(`${Env.opsApiBaseUrl}/v1/portal/tenants/${props.slug}/speaker-usage${query ? `?${query}` : ''}`, {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${props.accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new PortalApiError(await parseApiError(response), response.status);
+  }
+
+  const payload = (await response.json()) as { speakers: PortalSpeakerUsageRow[] };
+  return payload.speakers ?? [];
+}
+
+/**
+ * Fetches audit logs for a specific official session.
+ * @param props - Request options.
+ * @param props.accessToken - Supabase access token.
+ * @param props.sessionGuid - Official session guid.
+ * @param props.slug - Tenant portal slug.
+ * @returns Session detail with audit logs.
+ */
+export async function getPortalAuditLogs(props: {
+  accessToken: string;
+  sessionGuid: string;
+  slug: string;
+}) {
+  const response = await fetch(`${Env.opsApiBaseUrl}/v1/portal/tenants/${props.slug}/sessions/${props.sessionGuid}/audit-logs`, {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${props.accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new PortalApiError(await parseApiError(response), response.status);
+  }
+
+  return (await response.json()) as PortalAuditLogsResponse;
 }
 
 /**

@@ -6,6 +6,7 @@ import { Env } from '@/lib/Env';
 export type ProvisionTenantSuccess = {
   cloudflareStatus: 'manual_redirect_required' | 'not_applicable';
   portalUrl: string | null;
+  portalSlug: string | null;
   redirectSource: string | null;
   redirectTarget: string | null;
   subdomain: string | null;
@@ -32,7 +33,7 @@ function sanitizeSubdomain(value: string) {
 export async function provisionTenantAction(formData: FormData): Promise<ActionError | ProvisionTenantSuccess> {
   const name = String(formData.get('name') ?? '').trim();
   const cnpj = String(formData.get('cnpj') ?? '').trim();
-  const subdomain = sanitizeSubdomain(String(formData.get('subdomain') ?? ''));
+  const portalSlug = sanitizeSubdomain(String(formData.get('portal_slug') ?? formData.get('subdomain') ?? ''));
   const tenantType = String(formData.get('tenantType') ?? '').trim();
   const adminEmail = String(formData.get('adminEmail') ?? '').trim();
   const adminPassword = String(formData.get('adminPassword') ?? '');
@@ -53,7 +54,7 @@ export async function provisionTenantAction(formData: FormData): Promise<ActionE
         adminPassword,
         cnpj: cnpj || undefined,
         name,
-        subdomain: subdomain || undefined,
+        portal_slug: portalSlug || undefined,
         tenantType: tenantType || 'empresa_ti',
       }),
     });
@@ -75,9 +76,13 @@ export async function provisionTenantAction(formData: FormData): Promise<ActionE
 
 export async function updateTenantAction(formData: FormData): Promise<ActionError | { success: true }> {
   const id = String(formData.get('id') ?? '').trim();
-  const subdomain = sanitizeSubdomain(String(formData.get('subdomain') ?? ''));
+  const portalSlug = sanitizeSubdomain(String(formData.get('portal_slug') ?? formData.get('subdomain') ?? ''));
   const isActive = formData.get('is_active') === 'true';
   const validUntil = String(formData.get('valid_until') ?? '').trim();
+  const name = String(formData.get('name') ?? '').trim();
+  const type = String(formData.get('type') ?? '').trim();
+  const licenseKey = String(formData.get('license_key') ?? '').trim();
+  const logoUrl = String(formData.get('logo_url') ?? '').trim();
 
   if (!id) {
     return { error: 'ID do tenant e obrigatorio.' };
@@ -92,7 +97,12 @@ export async function updateTenantAction(formData: FormData): Promise<ActionErro
       },
       body: JSON.stringify({
         is_active: isActive,
-        subdomain: subdomain || '',
+        license_key: licenseKey || '',
+        logo_url: logoUrl || '',
+        name: name || undefined,
+        portal_slug: portalSlug || '',
+        subdomain: portalSlug || '',
+        type: type || undefined,
         valid_until: validUntil || '',
       }),
     });

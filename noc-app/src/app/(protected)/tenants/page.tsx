@@ -94,11 +94,12 @@ export default async function TenantsPage() {
           </thead>
           <tbody>
             {(Array.isArray(tenants) ? tenants : []).map((tenant) => {
-              const portalUrl = tenant.subdomain
-                ? getPortalAbsoluteUrl({ slug: tenant.subdomain })
+              const portalSlug = tenant.portal_slug ?? tenant.subdomain ?? null;
+              const portalUrl = portalSlug
+                ? getPortalAbsoluteUrl({ slug: portalSlug })
                 : null;
-              const reportsUrl = tenant.subdomain
-                ? getPortalAbsoluteUrl({ slug: tenant.subdomain, path: '/relatorios' })
+              const reportsUrl = portalSlug
+                ? getPortalAbsoluteUrl({ slug: portalSlug, path: '/relatorios' })
                 : null;
 
               return (
@@ -141,7 +142,7 @@ export default async function TenantsPage() {
                         )}
                   </td>
                   <td style={{ color: 'var(--text-secondary)', fontFamily: 'Consolas, monospace', fontSize: '0.75rem' }}>
-                    {tenant.subdomain || '--'}
+                    {portalSlug || '--'}
                   </td>
                   <td>
                     <span className={`badge ${tenant.is_active ? 'badge-success' : 'badge-error'}`}>

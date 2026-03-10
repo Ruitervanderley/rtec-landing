@@ -11,6 +11,8 @@ export type ProfileAccessInfo = {
     isAdmin: boolean;
     userValidUntil: string | null;
     tenantName: string;
+    tenantPortalSlug: string;
+    tenantLogoUrl: string | null;
     tenantIsActive: boolean;
     tenantValidUntil: string | null;
 };

@@ -8,6 +8,7 @@ import devicesCreateRoutes from './routes/devicesCreate.js';
 import incidentsRoutes from './routes/incidents.js';
 import ingestRoutes from './routes/ingest.js';
 import { createOpsV1Router, getOpsHealth } from './routes/opsV1.js';
+import { createPortalV1Router } from './routes/portalV1.js';
 import servicesRoutes from './routes/services.js';
 
 const app = express();
@@ -25,7 +26,7 @@ app.use(express.json());
 app.use((_req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN ?? '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   if (process.env.CORS_ORIGIN) {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
@@ -52,6 +53,7 @@ app.use('/incidents', incidentsRoutes);
 app.use('/devices', devicesCreateRoutes);
 app.use('/devices', devicesRoutes);
 app.use('/services', servicesRoutes);
+app.use('/v1/portal', createPortalV1Router(opsConfig));
 app.use('/v1', createOpsV1Router({
   config: opsConfig,
   r2Service: opsR2Service,
@@ -61,17 +63,18 @@ app.use('/v1', createOpsV1Router({
 
 app.listen(PORT, () => {
   opsJobRunner.start();
-  console.log(`NOC API listening on http://localhost:${PORT}`);
-  console.log('  POST /ingest-event  - ingest event from monitor agent');
-  console.log('  GET  /incidents      - list incidents');
-  console.log('  GET  /devices/:id/status - device status');
-  console.log('  GET  /services - list services');
-  console.log('  POST /services - create service');
-  console.log('  GET  /services/:id - service detail + devices + incidents');
-  console.log('  POST /services/:id/devices - add device to service');
-  console.log('  POST /v1/device/provision - issue device token');
-  console.log('  POST /v1/device/heartbeat - operational heartbeat');
-  console.log('  POST /v1/backups/request-upload - request R2 signed url');
-  console.log('  POST /v1/backups/complete - mark backup upload result');
-  console.log('  GET  /v1/admin/* - operational admin endpoints');
+  console.warn(`NOC API listening on http://localhost:${PORT}`);
+  console.warn('  POST /ingest-event  - ingest event from monitor agent');
+  console.warn('  GET  /incidents      - list incidents');
+  console.warn('  GET  /devices/:id/status - device status');
+  console.warn('  GET  /services - list services');
+  console.warn('  POST /services - create service');
+  console.warn('  GET  /services/:id - service detail + devices + incidents');
+  console.warn('  POST /services/:id/devices - add device to service');
+  console.warn('  POST /v1/device/provision - issue device token');
+  console.warn('  POST /v1/device/heartbeat - operational heartbeat');
+  console.warn('  POST /v1/backups/request-upload - request R2 signed url');
+  console.warn('  POST /v1/backups/complete - mark backup upload result');
+  console.warn('  GET  /v1/admin/* - operational admin endpoints');
+  console.warn('  GET  /v1/portal/* - customer portal endpoints');
 });

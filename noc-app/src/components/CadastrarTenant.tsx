@@ -151,7 +151,7 @@ export function CadastrarTenant() {
                   <div>
                     <strong>Slug do tenant:</strong>
                     <div style={{ color: 'var(--text-secondary)', fontFamily: 'Consolas, monospace', fontSize: '0.8rem' }}>
-                      {result.subdomain || '--'}
+                      {result.portalSlug || '--'}
                     </div>
                   </div>
                   <div>
@@ -318,7 +318,7 @@ export function CadastrarTenant() {
                       <Globe size={18} />
                     </div>
                     <input
-                      name="subdomain"
+                      name="portal_slug"
                       placeholder="ouvidor"
                       style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderLeft: 'none', borderRight: 'none', color: 'var(--text-primary)', flex: 1, padding: '0.6rem' }}
                       type="text"

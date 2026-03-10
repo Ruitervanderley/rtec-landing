@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { getPortalReports, getPortalTenantSummary, PortalApiError } from '@/lib/portalApi';
+import { getPortalOverview, getPortalTenantSummary, PortalApiError } from '@/lib/portalApi';
 import { getPortalPath } from '@/lib/portalRouting';
 import {
   clearPortalSession,
@@ -41,7 +41,7 @@ export async function loginPortalAction(
       tenantSlug: slug,
     });
 
-    await getPortalReports({
+    await getPortalOverview({
       accessToken: portalSession.accessToken,
       slug,
     });

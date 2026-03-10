@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { and, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { Router } from 'express';
-import { db } from '../db/index.js';
-import { deviceBackups, deviceApiTokens, deviceHeartbeats, opsAlerts, tenantInfraProfiles, tenantDevices, } from '../db/schema.js';
+import { db, pool } from '../db/index.js';
+import { deviceApiTokens, deviceBackups, deviceHeartbeats, opsAlerts, tenantDevices, tenantInfraProfiles, } from '../db/schema.js';
 import { requireAdminToken, requireDeviceToken } from '../ops/auth.js';
 import { isR2Configured } from '../ops/config.js';
 import { getProfileAccessInfo, getSupabaseIdentity, isAccessAllowed, } from '../ops/supabaseIdentity.js';
@@ -69,8 +69,8 @@ function sanitizeTenantSubdomain(value) {
         .replace(/-+$/, '');
     return normalized.length > 0 ? normalized : null;
 }
-function buildPortalRoutingInfo(subdomain) {
-    if (!subdomain) {
+function buildPortalRoutingInfo(portalSlug) {
+    if (!portalSlug) {
         return {
             portalUrl: null,
             redirectSource: null,
@@ -78,12 +78,12 @@ function buildPortalRoutingInfo(subdomain) {
             cloudflareStatus: 'not_applicable',
         };
     }
-    const portalUrl = `${PORTAL_PUBLIC_BASE_URL}/portal/${subdomain}`;
+    const portalUrl = `${PORTAL_PUBLIC_BASE_URL}/portal/${portalSlug}`;
     return {
         portalUrl,
-        redirectSource: `https://${subdomain}.rtectecnologia.com.br/*`,
+        redirectSource: null,
         redirectTarget: portalUrl,
-        cloudflareStatus: 'manual_redirect_required',
+        cloudflareStatus: 'not_applicable',
     };
 }
 function toIsoString(value) {
@@ -146,6 +146,7 @@ async function getPortalTenantBySlug(slug) {
       t.id::text as tenant_id,
       t.name,
       coalesce(t.type, 'empresa_ti') as type,
+      coalesce(t.portal_slug, t.subdomain) as portal_slug,
       t.subdomain,
       coalesce(t.is_active, false) as is_active,
       t.valid_until::text as valid_until,
@@ -207,7 +208,7 @@ async function getPortalTenantBySlug(slug) {
         0
       ) as admin_users
     from public.tenants t
-    where lower(coalesce(t.subdomain, '')) = ${slug}
+    where lower(coalesce(t.portal_slug, t.subdomain, '')) = ${slug}
     limit 1
   `);
     const row = (rows.rows[0] ?? null);
@@ -218,6 +219,7 @@ async function getPortalTenantBySlug(slug) {
         tenantId: row.tenant_id,
         name: row.name,
         type: row.type,
+        portalSlug: row.portal_slug,
         subdomain: row.subdomain,
         isActive: row.is_active,
         validUntil: row.valid_until,
@@ -237,6 +239,8 @@ async function getTenantAdminById(tenantId) {
       t.name,
       coalesce(t.type, 'empresa_ti') as type,
       coalesce(t.license_key, '') as license_key,
+      nullif(coalesce(t.logo_url, ''), '') as logo_url,
+      coalesce(t.portal_slug, t.subdomain) as portal_slug,
       t.subdomain,
       coalesce(t.is_active, false) as is_active,
       t.valid_until::text as valid_until,
@@ -311,9 +315,11 @@ async function getTenantAdminById(tenantId) {
         lastBackupAt: toIsoString(row.last_backup_at),
         lastSeenAt: toIsoString(row.last_seen_at),
         licenseKey: row.license_key,
+        logoUrl: row.logo_url,
         licensedUsers: toNumber(row.licensed_users),
         name: row.name,
         onlineDevices: toNumber(row.online_devices),
+        portalSlug: row.portal_slug,
         subdomain: row.subdomain,
         tenantId: row.tenant_id,
         type: row.type,
@@ -961,6 +967,113 @@ export function createOpsV1Router(options) {
             res.status(500).json({ error: 'BACKUP_COMPLETE_ERROR' });
         }
     });
+    router.post('/device/official-sessions/sync', requireDeviceToken(), async (req, res) => {
+        if (!req.opsDevice) {
+            res.status(401).json({ error: 'UNAUTHORIZED_DEVICE' });
+            return;
+        }
+        if (!ensureRateLimit(`official-sync:${req.opsDevice.deviceId}`, 120, 60_000, res)) {
+            return;
+        }
+        const body = req.body;
+        const session = body.session;
+        if (!session?.sessionGuid || !session.startedAtUtc || !session.speakerName) {
+            res.status(400).json({ error: 'INVALID_OFFICIAL_SESSION_PAYLOAD' });
+            return;
+        }
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`
+          insert into public.official_sessions (
+            session_guid,
+            tenant_id,
+            device_fk,
+            speaker_name,
+            started_at_utc,
+            ended_at_utc,
+            planned_seconds,
+            elapsed_seconds,
+            final_status,
+            created_by,
+            synced_at,
+            created_at,
+            updated_at
+          )
+          values ($1, $2::uuid, $3::uuid, $4, $5::timestamptz, $6::timestamptz, $7, $8, $9, $10, now(), now(), now())
+          on conflict (session_guid)
+          do update set
+            tenant_id = excluded.tenant_id,
+            device_fk = excluded.device_fk,
+            speaker_name = excluded.speaker_name,
+            started_at_utc = excluded.started_at_utc,
+            ended_at_utc = excluded.ended_at_utc,
+            planned_seconds = excluded.planned_seconds,
+            elapsed_seconds = excluded.elapsed_seconds,
+            final_status = excluded.final_status,
+            created_by = excluded.created_by,
+            synced_at = now(),
+            updated_at = now()
+        `, [
+                session.sessionGuid.trim(),
+                req.opsDevice.tenantId,
+                req.opsDevice.devicePk,
+                session.speakerName.trim(),
+                session.startedAtUtc,
+                typeof session.endedAtUtc === 'string' && session.endedAtUtc.trim() ? session.endedAtUtc : null,
+                Number.isFinite(session.plannedSeconds) ? Math.max(0, Math.trunc(session.plannedSeconds ?? 0)) : 0,
+                Number.isFinite(session.elapsedSeconds) ? Math.max(0, Math.trunc(session.elapsedSeconds ?? 0)) : 0,
+                typeof session.finalStatus === 'string' && session.finalStatus.trim() ? session.finalStatus.trim().toUpperCase() : 'FINISHED',
+                typeof session.createdBy === 'string' && session.createdBy.trim() ? session.createdBy.trim() : null,
+            ]);
+            await client.query(`
+          delete from public.official_session_audit_logs
+          where tenant_id = $1::uuid
+            and session_guid = $2
+        `, [req.opsDevice.tenantId, session.sessionGuid.trim()]);
+            const logs = Array.isArray(body.auditLogs) ? body.auditLogs : [];
+            for (const log of logs) {
+                if (!log?.eventType || !log.eventAtUtc) {
+                    continue;
+                }
+                await client.query(`
+            insert into public.official_session_audit_logs (
+              tenant_id,
+              session_guid,
+              event_type,
+              event_at_utc,
+              remaining_seconds,
+              elapsed_seconds,
+              details,
+              created_at
+            )
+            values ($1::uuid, $2, $3, $4::timestamptz, $5, $6, $7, now())
+          `, [
+                    req.opsDevice.tenantId,
+                    session.sessionGuid.trim(),
+                    log.eventType.trim().toUpperCase(),
+                    log.eventAtUtc,
+                    Number.isFinite(log.remainingSeconds) ? Math.max(0, Math.trunc(log.remainingSeconds ?? 0)) : 0,
+                    Number.isFinite(log.elapsedSeconds) ? Math.max(0, Math.trunc(log.elapsedSeconds ?? 0)) : 0,
+                    typeof log.details === 'string' && log.details.trim() ? log.details.trim() : null,
+                ]);
+            }
+            await client.query('COMMIT');
+            res.json({
+                auditLogCount: Array.isArray(body.auditLogs) ? body.auditLogs.length : 0,
+                ok: true,
+                sessionGuid: session.sessionGuid.trim(),
+            });
+        }
+        catch (error) {
+            await client.query('ROLLBACK');
+            console.error('POST /v1/device/official-sessions/sync error:', error);
+            res.status(500).json({ error: 'OFFICIAL_SESSION_SYNC_ERROR' });
+        }
+        finally {
+            client.release();
+        }
+    });
     router.get('/admin/overview', requireAdminToken(options.config), async (_req, res) => {
         try {
             const countsResult = await db.execute(sql `
@@ -1063,6 +1176,8 @@ export function createOpsV1Router(options) {
           t.name,
           coalesce(t.type, 'empresa_ti') as type,
           t.license_key,
+          nullif(coalesce(t.logo_url, ''), '') as logo_url,
+          coalesce(t.portal_slug, t.subdomain) as portal_slug,
           t.is_active,
           t.valid_until,
           t.subdomain,
@@ -1073,7 +1188,7 @@ export function createOpsV1Router(options) {
         from public.tenants t
         left join public.tenant_devices td on td.tenant_id = t.id and td.revoked_at is null
         left join public.device_backups b on b.tenant_id = t.id
-        group by t.id, t.name, t.type, t.license_key, t.is_active, t.valid_until, t.subdomain
+        group by t.id, t.name, t.type, t.license_key, t.logo_url, t.portal_slug, t.is_active, t.valid_until, t.subdomain
         order by t.name asc
       `);
             res.json({ tenants: rows.rows });
@@ -1095,7 +1210,7 @@ export function createOpsV1Router(options) {
                 user,
             }));
             const infrastructure = await getTenantInfrastructureProfile(tenant);
-            const routingInfo = buildPortalRoutingInfo(tenant.subdomain);
+            const routingInfo = buildPortalRoutingInfo(tenant.portalSlug);
             res.json({
                 infrastructure: infrastructure.profile,
                 infrastructureIsDefault: infrastructure.isDefault,
@@ -1121,12 +1236,26 @@ export function createOpsV1Router(options) {
     router.patch('/admin/tenants/:id', requireAdminToken(options.config), async (req, res) => {
         try {
             const { id } = req.params;
-            const { subdomain, is_active, valid_until } = req.body;
+            const { name, type, portal_slug, subdomain, is_active, valid_until, license_key, logo_url } = req.body;
             const supabaseAdmin = getSupabaseAdminClient();
             const updates = {};
+            if (name !== undefined) {
+                updates.name = String(name).trim();
+            }
+            if (type !== undefined) {
+                updates.type = String(type).trim() || 'empresa_ti';
+            }
+            if (portal_slug !== undefined) {
+                const normalizedPortalSlug = sanitizeTenantSubdomain(portal_slug);
+                if (String(portal_slug).trim().length > 0 && !normalizedPortalSlug) {
+                    res.status(400).json({ error: 'INVALID_PORTAL_SLUG' });
+                    return;
+                }
+                updates.portal_slug = normalizedPortalSlug;
+            }
             if (subdomain !== undefined) {
                 const normalizedSubdomain = sanitizeTenantSubdomain(subdomain);
-                if (subdomain.trim().length > 0 && !normalizedSubdomain) {
+                if (String(subdomain).trim().length > 0 && !normalizedSubdomain) {
                     res.status(400).json({ error: 'INVALID_SUBDOMAIN' });
                     return;
                 }
@@ -1137,6 +1266,12 @@ export function createOpsV1Router(options) {
             }
             if (valid_until !== undefined) {
                 updates.valid_until = valid_until || null;
+            }
+            if (license_key !== undefined) {
+                updates.license_key = String(license_key).trim() || null;
+            }
+            if (logo_url !== undefined) {
+                updates.logo_url = String(logo_url).trim() || null;
             }
             if (Object.keys(updates).length === 0) {
                 res.status(400).json({ error: 'No fields to update' });
@@ -1151,6 +1286,43 @@ export function createOpsV1Router(options) {
         catch (error) {
             console.error('PATCH /v1/admin/tenants/:id error:', error);
             res.status(500).json({ error: 'ADMIN_TENANT_UPDATE_ERROR' });
+        }
+    });
+    router.post('/admin/tenants', requireAdminToken(options.config), async (req, res) => {
+        try {
+            const { name, type, portal_slug, is_active, valid_until, license_key, logo_url } = req.body;
+            const normalizedName = String(name ?? '').trim();
+            if (!normalizedName) {
+                res.status(400).json({ error: 'TENANT_NAME_REQUIRED' });
+                return;
+            }
+            const normalizedPortalSlug = sanitizeTenantSubdomain(String(portal_slug ?? ''));
+            if (String(portal_slug ?? '').trim().length > 0 && !normalizedPortalSlug) {
+                res.status(400).json({ error: 'INVALID_PORTAL_SLUG' });
+                return;
+            }
+            const supabaseAdmin = getSupabaseAdminClient();
+            const { data, error } = await supabaseAdmin
+                .from('tenants')
+                .insert({
+                is_active: is_active ?? true,
+                license_key: String(license_key ?? '').trim() || crypto.randomUUID().toUpperCase(),
+                logo_url: String(logo_url ?? '').trim() || null,
+                name: normalizedName,
+                portal_slug: normalizedPortalSlug || null,
+                type: String(type ?? '').trim() || 'empresa_ti',
+                valid_until: String(valid_until ?? '').trim() || null,
+            })
+                .select('id')
+                .single();
+            if (error || !data) {
+                throw new Error(`Failed to create tenant: ${error?.message}`);
+            }
+            res.json({ ok: true, tenantId: data.id });
+        }
+        catch (error) {
+            console.error('POST /v1/admin/tenants error:', error);
+            res.status(500).json({ error: 'ADMIN_TENANT_CREATE_ERROR' });
         }
     });
     router.patch('/admin/tenants/:id/infrastructure', requireAdminToken(options.config), async (req, res) => {
@@ -1191,13 +1363,14 @@ export function createOpsV1Router(options) {
     });
     router.post('/admin/tenants/provision', requireAdminToken(options.config), async (req, res) => {
         try {
-            const { name, subdomain, tenantType, adminEmail, adminPassword } = req.body;
+            const { name, portal_slug, subdomain, tenantType, adminEmail, adminPassword, logo_url } = req.body;
             if (!name || !adminEmail || !adminPassword) {
                 res.status(400).json({ error: 'Missing required provision fields' });
                 return;
             }
-            const normalizedSubdomain = sanitizeTenantSubdomain(subdomain);
-            if (typeof subdomain === 'string' && subdomain.trim().length > 0 && !normalizedSubdomain) {
+            const normalizedPortalSlug = sanitizeTenantSubdomain(portal_slug ?? subdomain);
+            if ((typeof portal_slug === 'string' && portal_slug.trim().length > 0 && !normalizedPortalSlug)
+                || (typeof subdomain === 'string' && subdomain.trim().length > 0 && !normalizedPortalSlug)) {
                 res.status(400).json({ error: 'INVALID_SUBDOMAIN' });
                 return;
             }
@@ -1209,7 +1382,9 @@ export function createOpsV1Router(options) {
                 name: name.trim(),
                 license_key: licenseKey,
                 is_active: true,
-                subdomain: normalizedSubdomain,
+                portal_slug: normalizedPortalSlug,
+                subdomain: normalizedPortalSlug,
+                logo_url: typeof logo_url === 'string' && logo_url.trim().length > 0 ? logo_url.trim() : null,
                 type: tenantType || 'empresa_ti',
             })
                 .select('id')
@@ -1247,12 +1422,13 @@ export function createOpsV1Router(options) {
                 await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
                 throw new Error(`Failed to upsert admin profile: ${profileErr.message}`);
             }
-            const routingInfo = buildPortalRoutingInfo(normalizedSubdomain);
+            const routingInfo = buildPortalRoutingInfo(normalizedPortalSlug);
             res.json({
                 ok: true,
                 tenantId,
                 userId,
-                subdomain: normalizedSubdomain,
+                portalSlug: normalizedPortalSlug,
+                subdomain: normalizedPortalSlug,
                 portalUrl: routingInfo.portalUrl,
                 redirectSource: routingInfo.redirectSource,
                 redirectTarget: routingInfo.redirectTarget,

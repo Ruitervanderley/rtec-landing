@@ -24,6 +24,8 @@ export type TenantRow = {
   name: string;
   type: string;
   license_key: string;
+  logo_url?: string | null;
+  portal_slug: string | null;
   is_active: boolean;
   valid_until: string | null;
   subdomain?: string | null;
@@ -135,6 +137,7 @@ export type TenantDetail = {
     name: string;
     onlineDevices: number;
     portalUrl: string | null;
+    portalSlug: string | null;
     redirectSource: string | null;
     redirectTarget: string | null;
     subdomain: string | null;
@@ -221,6 +224,36 @@ async function postAdmin<T>(path: string, body: Record<string, unknown>): Promis
   return (await response.json()) as T;
 }
 
+async function patchAdmin<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error('OPS_API_URL not configured');
+  }
+
+  const token = getAdminToken();
+  if (!token) {
+    throw new Error('OPS_ADMIN_SERVICE_TOKEN not configured');
+  }
+
+  const response = await fetch(`${baseUrl}/v1${path}`, {
+    method: 'PATCH',
+    cache: 'no-store',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new Error(`Ops API PATCH ${path} failed (${response.status}): ${raw}`);
+  }
+
+  return (await response.json()) as T;
+}
+
 export async function getOverview(): Promise<OpsOverview> {
   return fetchAdmin<OpsOverview>('/admin/overview');
 }
@@ -250,4 +283,47 @@ export async function revokeDevice(devicePk: string): Promise<void> {
   }
 
   await postAdmin<{ ok: boolean }>(`/admin/devices/${devicePk}/revoke`, {});
+}
+
+export async function createTenant(props: {
+  isActive?: boolean;
+  licenseKey?: string;
+  logoUrl?: string | null;
+  name: string;
+  portalSlug?: string | null;
+  type?: string;
+  validUntil?: string | null;
+}) {
+  return postAdmin<{ ok: boolean; tenantId: string }>('/admin/tenants', {
+    is_active: props.isActive ?? true,
+    license_key: props.licenseKey ?? '',
+    logo_url: props.logoUrl ?? null,
+    name: props.name,
+    portal_slug: props.portalSlug ?? '',
+    type: props.type ?? 'empresa_ti',
+    valid_until: props.validUntil ?? null,
+  });
+}
+
+export async function updateTenant(props: {
+  id: string;
+  isActive?: boolean;
+  licenseKey?: string;
+  logoUrl?: string | null;
+  name?: string;
+  portalSlug?: string | null;
+  subdomain?: string | null;
+  type?: string;
+  validUntil?: string | null;
+}) {
+  return patchAdmin<{ ok: boolean }>(`/admin/tenants/${props.id}`, {
+    is_active: props.isActive,
+    license_key: props.licenseKey,
+    logo_url: props.logoUrl,
+    name: props.name,
+    portal_slug: props.portalSlug,
+    subdomain: props.subdomain,
+    type: props.type,
+    valid_until: props.validUntil,
+  });
 }

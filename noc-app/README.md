@@ -33,6 +33,7 @@ Na operacao atual, o subdominio da empresa e apenas uma porta de entrada. O app 
 | `/backups` | historico de backups enviados |
 | `/servicos` | modulo NOC legado |
 | `/portal/[slug]` | pagina publica da empresa |
+| `/portal/login?slug=[slug]` | login do portal do tenant |
 | `/portal/[slug]/relatorios` | area autenticada de relatorios da empresa |
 
 ## Variaveis de ambiente
@@ -63,18 +64,19 @@ O app sobe em `http://localhost:3001`.
 ## Fluxo operacional recomendado
 
 1. Criar a empresa pelo painel em `/tenants`.
-2. Confirmar que o tenant foi criado no Supabase, recebeu um `subdomain` e teve o admin provisionado.
-3. Criar no Cloudflare uma regra de redirect do tipo:
-   `https://<slug>.rtectecnologia.com.br/*` -> `https://painel.rtectecnologia.com.br/portal/<slug>`
-4. Validar o portal pelo host canonico:
+2. Confirmar que o tenant foi criado no Supabase, recebeu um `portal_slug` e teve o admin provisionado.
+3. Validar o portal pelo host canonico:
    `https://painel.rtectecnologia.com.br/portal/<slug>`
+4. Validar o login em:
+   `https://painel.rtectecnologia.com.br/portal/login?slug=<slug>`
 5. Validar a area autenticada usando o mesmo email e senha do admin criado para o tenant.
+6. Encerrar uma sessao oficial no WPF e confirmar o relatorio em `/portal/<slug>/relatorios`.
 
 ## Sessao e autenticacao do portal
 
 - O portal autenticado usa login por email e senha contra o Supabase Auth.
 - O cookie do portal e separado do cookie administrativo do NOC.
-- Quando o access token expira, o app tenta renovar a sessao com `refresh_token` antes de consultar `/v1/portal/:slug/reports`.
+- Quando o access token expira, o app tenta renovar a sessao com `refresh_token` antes de consultar os endpoints `/v1/portal/tenants/:slug/*`.
 - Se a renovacao falhar, o cookie e limpo e o usuario volta para a tela de login do tenant.
 
 ## Deploy

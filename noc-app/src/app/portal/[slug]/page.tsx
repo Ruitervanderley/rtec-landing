@@ -2,7 +2,6 @@ import { AlertTriangle, Building2, FileText, HardDrive, Monitor, Network, Server
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPortalTenantSummary, PortalApiError } from '@/lib/portalApi';
-import { getPortalPath } from '@/lib/portalRouting';
 
 function InfoCard(props: {
   description: string;
@@ -288,7 +287,7 @@ export default async function PortalLandingPage(props: {
             }}
           >
             <Link
-              href={getPortalPath({ slug, path: '/relatorios' })}
+              href={`/portal/login?slug=${encodeURIComponent(slug)}`}
               style={{
                 background: 'linear-gradient(135deg, #2d82cc, #4db8ff)',
                 borderRadius: '12px',
@@ -298,7 +297,7 @@ export default async function PortalLandingPage(props: {
                 textDecoration: 'none',
               }}
             >
-              Acessar relatorios
+              Entrar no portal
             </Link>
             <a
               href="https://wa.me/message/J4U5D52DAZMED1"
@@ -365,9 +364,9 @@ export default async function PortalLandingPage(props: {
               title="Historico de backup"
             />
             <InfoCard
-              description={isCamara ? 'O acesso autenticado exibe usuarios, licencas e a operacao tecnica do tenant.' : 'O acesso autenticado exibe inventario tecnico, operacao, alertas e documentacao do ambiente.'}
+              description={`Ultimo sync de relatorios: ${formatTimestamp(tenant.lastReportSyncAt)}.`}
               icon={<FileText size={22} color="#4db8ff" />}
-              title="Portal autenticado"
+              title="Sync de relatorios"
             />
           </div>
 

@@ -174,6 +174,40 @@ export const tenantInfraProfiles = pgTable('tenant_infra_profiles', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+export const officialSessions = pgTable('official_sessions', {
+    sessionGuid: text('session_guid').primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    deviceFk: uuid('device_fk').references(() => tenantDevices.id, { onDelete: 'set null' }),
+    speakerName: text('speaker_name').notNull(),
+    startedAtUtc: timestamp('started_at_utc', { withTimezone: true }).notNull(),
+    endedAtUtc: timestamp('ended_at_utc', { withTimezone: true }),
+    plannedSeconds: integer('planned_seconds').notNull().default(0),
+    elapsedSeconds: integer('elapsed_seconds').notNull().default(0),
+    finalStatus: text('final_status').notNull().default('FINISHED'),
+    createdBy: text('created_by'),
+    syncedAt: timestamp('synced_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+    index('idx_official_sessions_tenant_started').on(t.tenantId, t.startedAtUtc),
+    index('idx_official_sessions_tenant_speaker').on(t.tenantId, t.speakerName),
+]);
+export const officialSessionAuditLogs = pgTable('official_session_audit_logs', {
+    id: serial('id').primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    sessionGuid: text('session_guid')
+        .notNull()
+        .references(() => officialSessions.sessionGuid, { onDelete: 'cascade' }),
+    eventType: text('event_type').notNull(),
+    eventAtUtc: timestamp('event_at_utc', { withTimezone: true }).notNull(),
+    remainingSeconds: integer('remaining_seconds').notNull().default(0),
+    elapsedSeconds: integer('elapsed_seconds').notNull().default(0),
+    details: text('details'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+    index('idx_official_session_audit_logs_session_event').on(t.sessionGuid, t.eventAtUtc),
+    index('idx_official_session_audit_logs_tenant_event').on(t.tenantId, t.eventAtUtc),
+]);
 // Relations
 export const sitesRelations = relations(sites, ({ many }) => ({
     areas: many(areas),
@@ -229,4 +263,17 @@ export const deviceBackupsRelations = relations(deviceBackups, ({ one }) => ({
     }),
 }));
 export const tenantInfraProfilesRelations = relations(tenantInfraProfiles, () => ({}));
+export const officialSessionsRelations = relations(officialSessions, ({ many, one }) => ({
+    auditLogs: many(officialSessionAuditLogs),
+    device: one(tenantDevices, {
+        fields: [officialSessions.deviceFk],
+        references: [tenantDevices.id],
+    }),
+}));
+export const officialSessionAuditLogsRelations = relations(officialSessionAuditLogs, ({ one }) => ({
+    session: one(officialSessions, {
+        fields: [officialSessionAuditLogs.sessionGuid],
+        references: [officialSessions.sessionGuid],
+    }),
+}));
 //# sourceMappingURL=schema.js.map
