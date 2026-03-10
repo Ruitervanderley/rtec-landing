@@ -195,28 +195,6 @@ function ensureTenantAccess(props) {
 }
 export function createPortalV1Router(config) {
     const router = Router();
-    router.get('/:slug', async (req, res) => {
-        try {
-            const slug = normalizeSlug(req.params.slug ?? '');
-            if (!slug) {
-                res.status(400).json({ error: 'SLUG_REQUIRED' });
-                return;
-            }
-            const tenant = await getTenantBySlug(slug);
-            if (!tenant) {
-                res.status(404).json({ error: 'TENANT_NOT_FOUND' });
-                return;
-            }
-            res.json({
-                ...tenant,
-                isOnline: tenant.onlineDevices > 0,
-            });
-        }
-        catch (error) {
-            console.error('GET /v1/portal/:slug error:', error);
-            res.status(500).json({ error: 'PORTAL_SUMMARY_ERROR' });
-        }
-    });
     router.get('/me', requirePortalUser(config), async (req, res) => {
         const portalUser = req.portalUser;
         if (!portalUser) {
@@ -418,6 +396,28 @@ export function createPortalV1Router(config) {
         catch (error) {
             console.error('GET /v1/portal/tenants/:slug/sessions/:sessionGuid/audit-logs error:', error);
             res.status(500).json({ error: 'PORTAL_AUDIT_LOGS_ERROR' });
+        }
+    });
+    router.get('/:slug', async (req, res) => {
+        try {
+            const slug = normalizeSlug(req.params.slug ?? '');
+            if (!slug) {
+                res.status(400).json({ error: 'SLUG_REQUIRED' });
+                return;
+            }
+            const tenant = await getTenantBySlug(slug);
+            if (!tenant) {
+                res.status(404).json({ error: 'TENANT_NOT_FOUND' });
+                return;
+            }
+            res.json({
+                ...tenant,
+                isOnline: tenant.onlineDevices > 0,
+            });
+        }
+        catch (error) {
+            console.error('GET /v1/portal/:slug error:', error);
+            res.status(500).json({ error: 'PORTAL_SUMMARY_ERROR' });
         }
     });
     return router;

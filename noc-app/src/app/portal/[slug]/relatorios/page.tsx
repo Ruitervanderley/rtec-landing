@@ -1,4 +1,4 @@
-import { Database, FileClock, LockKeyhole, Monitor, Users } from 'lucide-react';
+import { AlertTriangle, Database, FileClock, LockKeyhole, Monitor, Users } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { logoutPortalAction } from '@/app/actions/portal';
@@ -23,6 +23,41 @@ type PortalReportsPageProps = {
     to?: string;
   }>;
 };
+
+function PortalFailure(props: {
+  message: string;
+  slug: string;
+}) {
+  return (
+    <main style={{ alignItems: 'center', background: '#0b1121', color: '#fff', display: 'flex', justifyContent: 'center', minHeight: '100vh', padding: '2rem' }}>
+      <div style={{ background: 'rgba(15, 23, 42, 0.92)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: '24px', maxWidth: '620px', padding: '2rem', width: '100%' }}>
+        <div style={{ alignItems: 'center', background: 'rgba(248, 113, 113, 0.12)', borderRadius: '16px', color: '#fca5a5', display: 'inline-flex', height: '56px', justifyContent: 'center', marginBottom: '1.25rem', width: '56px' }}>
+          <AlertTriangle size={28} />
+        </div>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 900, margin: '0 0 0.75rem' }}>
+          Relatorios temporariamente indisponiveis
+        </h1>
+        <p style={{ color: '#94a3b8', lineHeight: 1.6, margin: '0 0 1.5rem' }}>
+          Nao foi possivel carregar os dados deste tenant no momento.
+        </p>
+        <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 1.5rem' }}>
+          {props.message}
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <Link href={getPortalPath({ slug: props.slug })} style={{ background: 'linear-gradient(135deg, #2d82cc, #4db8ff)', borderRadius: '12px', color: '#fff', fontWeight: 800, padding: '0.85rem 1.15rem', textDecoration: 'none' }}>
+            Voltar ao portal
+          </Link>
+          <Link href={`/portal/login?slug=${encodeURIComponent(props.slug)}`} style={{ border: '1px solid rgba(148, 163, 184, 0.25)', borderRadius: '12px', color: '#cbd5e1', fontWeight: 800, padding: '0.85rem 1.15rem', textDecoration: 'none' }}>
+            Ir para login
+          </Link>
+          <a href="https://wa.me/message/J4U5D52DAZMED1" rel="noreferrer" style={{ border: '1px solid rgba(148, 163, 184, 0.25)', borderRadius: '12px', color: '#cbd5e1', fontWeight: 800, padding: '0.85rem 1.15rem', textDecoration: 'none' }} target="_blank">
+            Falar com o suporte
+          </a>
+        </div>
+      </div>
+    </main>
+  );
+}
 
 function MetricCard(props: {
   label: string;
@@ -103,7 +138,12 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
       notFound();
     }
 
-    throw error;
+    return (
+      <PortalFailure
+        message={error instanceof PortalApiError ? error.message : 'Falha ao carregar o portal.'}
+        slug={slug}
+      />
+    );
   }
 
   if (!tenantSummary) {
@@ -146,6 +186,10 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
       }),
     ]);
   } catch (error) {
+    if (error instanceof PortalApiError && error.status >= 500) {
+      return <PortalFailure message={error.message} slug={slug} />;
+    }
+
     await handlePortalError(error, slug);
   }
 
@@ -158,12 +202,16 @@ export default async function PortalReportsPage(props: PortalReportsPageProps) {
         slug,
       });
     } catch (error) {
-      await handlePortalError(error, slug);
+      if (error instanceof PortalApiError && error.status >= 500) {
+        auditDetail = null;
+      } else {
+        await handlePortalError(error, slug);
+      }
     }
   }
 
   if (!overview) {
-    throw new Error('Portal overview not available');
+    return <PortalFailure message="Nao foi possivel carregar o resumo do tenant." slug={slug} />;
   }
 
   const activeUsers = overview.tenant.licensedUsers;
