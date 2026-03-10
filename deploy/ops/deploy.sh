@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -17,3 +17,4 @@ docker compose up -d
 
 echo "[INFO] Stack status:"
 docker compose ps
+
