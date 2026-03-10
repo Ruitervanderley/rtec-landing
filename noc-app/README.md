@@ -7,6 +7,7 @@ Painel web da operacao da Rtec e portal das empresas atendidas.
 - login administrativo interno do NOC
 - visao operacional em `/dashboard`
 - gestao de tenants em `/tenants`
+- gestao de usuarios por tenant em `/tenants/[id]` (Supabase Auth + `public.profiles`)
 - visao de dispositivos em `/devices`
 - trilha de backups em `/backups`
 - modulo NOC legado em `/servicos`
@@ -29,6 +30,7 @@ Na operacao atual, o subdominio da empresa e apenas uma porta de entrada. O app 
 | `/login` | acesso administrativo do NOC |
 | `/dashboard` | resumo operacional |
 | `/tenants` | cadastro e ajuste das empresas |
+| `/tenants/[id]` | detalhe do tenant, usuarios e infraestrutura |
 | `/devices` | heartbeats e status dos notebooks/agentes |
 | `/backups` | historico de backups enviados |
 | `/servicos` | modulo NOC legado |
@@ -78,6 +80,17 @@ O app sobe em `http://localhost:3001`.
 - O cookie do portal e separado do cookie administrativo do NOC.
 - Quando o access token expira, o app tenta renovar a sessao com `refresh_token` antes de consultar os endpoints `/v1/portal/tenants/:slug/*`.
 - Se a renovacao falhar, o cookie e limpo e o usuario volta para a tela de login do tenant.
+
+## Gestao de usuarios do tenant
+
+No detalhe do tenant (`/tenants/[id]`) existe a area **Usuarios do tenant**:
+
+- criar usuarios (cria no Supabase Auth e faz upsert em `public.profiles`)
+- editar `display_name`, `is_admin` e `valid_until`
+- redefinir senha (minimo 8 caracteres)
+- excluir usuario (remove o perfil e tenta remover o usuario no Auth)
+
+Essas acoes sao administrativas do NOC e nao ficam disponiveis no portal.
 
 ## Deploy
 

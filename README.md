@@ -32,8 +32,9 @@ Fluxo operacional atual:
 
 1. Criar a empresa no painel NOC.
 2. Confirmar o `subdomain`/slug salvo para o tenant.
-3. Criar manualmente a regra no Cloudflare para esse slug.
-4. Validar o acesso no portal pelo caminho `painel.rtectecnologia.com.br/portal/<slug>`.
+3. (Opcional) Criar/editar usuarios do tenant no detalhe do tenant (usuarios ficam no Supabase Auth + `public.profiles`).
+4. Criar manualmente a regra no Cloudflare para esse slug.
+5. Validar o acesso no portal pelo caminho `painel.rtectecnologia.com.br/portal/<slug>`.
 
 ## Cloudflare hoje
 

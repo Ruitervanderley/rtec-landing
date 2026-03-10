@@ -96,3 +96,37 @@ Como o Cloudflare está usando **redirect**, não **rewrite**, o cliente entra p
 Com o formato atual da regra, qualquer caminho extra no subdomínio do cliente é descartado e o acesso vai para a raiz do portal do tenant.
 
 Se a operação evoluir para white-label real por hostname, será necessário outro desenho de roteamento.
+
+## Cloudflare Access
+
+Recomendacao: proteja apenas as rotas internas do NOC e deixe o portal fora do Access.
+
+- proteger: `/dashboard*`, `/tenants*`, `/devices*`, `/backups*`, `/servicos*`
+- nao proteger: `/portal*`
+
+O portal usa autenticacao propria via Supabase Auth dentro do app.
+
+## Troubleshooting
+
+### Ver containers e logs
+
+```bash
+docker compose ps
+docker logs --tail 200 rtec-ops-panel
+docker logs --tail 200 rtec-ops-api
+docker logs --tail 200 rtec-cloudflared
+```
+
+Se o portal exibir “Application error” com `Digest`, o erro real aparece nos logs do `rtec-ops-panel`.
+
+### Rebuild e restart
+
+```bash
+docker compose up -d --build
+```
+
+ou:
+
+```bash
+bash deploy.sh
+```

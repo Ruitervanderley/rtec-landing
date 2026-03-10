@@ -120,18 +120,36 @@ Se `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ZONE_ID` estiverem vazios, a API continu
 | `GET` | `/v1/admin/devices` | lista de dispositivos |
 | `GET` | `/v1/admin/backups` | trilha de backups |
 | `GET` | `/v1/admin/tenants` | lista de tenants |
+| `GET` | `/v1/admin/tenants/:id/detail` | detalhe operacional do tenant (inclui usuarios e infraestrutura) |
 | `PATCH` | `/v1/admin/tenants/:id` | ajuste de tenant |
 | `POST` | `/v1/admin/tenants/provision` | cria tenant e admin |
+| `POST` | `/v1/admin/tenants/:id/users` | cria usuario do tenant (Supabase Auth + `public.profiles`) |
+| `PATCH` | `/v1/admin/tenants/:id/users/:userId` | edita `display_name`, `is_admin` e `valid_until` do usuario |
+| `POST` | `/v1/admin/tenants/:id/users/:userId/reset-password` | redefine senha do usuario no Supabase Auth |
+| `DELETE` | `/v1/admin/tenants/:id/users/:userId` | remove usuario (apaga `public.profiles` e tenta apagar no Auth) |
 | `POST` | `/v1/admin/devices/:id/revoke` | revoga dispositivo |
 
 ### Portal
 
+#### Publico
+
 | Metodo | Rota | Uso |
 |---|---|---|
-| `GET` | `/v1/portal/:slug` | resumo publico da empresa para o portal |
-| `GET` | `/v1/portal/:slug/reports` | dados autenticados do tenant para o portal de relatorios |
+| `GET` | `/v1/portal/:slug` | resumo publico do tenant (sem autenticacao) |
 
-O endpoint `/v1/portal/:slug/reports` exige Bearer token do Supabase Auth, valida o perfil em `public.profiles`, exige `is_admin = true` e confere o `tenant_id` contra o slug do portal.
+#### Autenticado (Supabase Auth)
+
+Esses endpoints exigem `Authorization: Bearer <access_token>` do Supabase Auth.
+
+| Metodo | Rota | Uso |
+|---|---|---|
+| `GET` | `/v1/portal/me` | retorna o perfil do usuario autenticado e o tenant associado |
+| `GET` | `/v1/portal/tenants/:slug/overview` | dados do portal + ultimas sessoes |
+| `GET` | `/v1/portal/tenants/:slug/sessions` | lista sessoes (filtros: `from`, `to`, `status`, `limit`) |
+| `GET` | `/v1/portal/tenants/:slug/speaker-usage` | agregados por vereador (filtros: `from`, `to`) |
+| `GET` | `/v1/portal/tenants/:slug/sessions/:sessionGuid/audit-logs` | logs auditaveis de uma sessao |
+
+O middleware valida `public.profiles`, exige que o usuario pertença ao mesmo `tenant_id` do `portal_slug` e bloqueia acesso cruzado entre tenants com `403 TENANT_MISMATCH`.
 
 ### Modulo NOC legado
 
