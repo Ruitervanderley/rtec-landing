@@ -239,6 +239,27 @@ function getTodayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function parseIsoDateOrNull(value: unknown): { ok: true; value: string | null } | { ok: false; error: string } {
+  if (value === null || value === undefined) {
+    return { ok: true, value: null };
+  }
+
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) {
+    return { ok: true, value: null };
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return { ok: false, error: 'INVALID_ISO_DATE' };
+  }
+
+  return { ok: true, value: raw };
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 function resolveUserAccessStatus(props: {
   tenantIsActive: boolean;
   tenantValidUntil: string | null;
@@ -1583,6 +1604,330 @@ export function createOpsV1Router(options: {
     } catch (error) {
       console.error('GET /v1/admin/tenants/:id/detail error:', error);
       res.status(500).json({ error: 'ADMIN_TENANT_DETAIL_ERROR' });
+    }
+  });
+
+  router.post('/admin/tenants/:id/users', requireAdminToken(options.config), async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.params.id ?? '').trim();
+      if (!tenantId) {
+        res.status(400).json({ error: 'TENANT_ID_REQUIRED' });
+        return;
+      }
+
+      if (!isUuid(tenantId)) {
+        res.status(400).json({ error: 'INVALID_TENANT_ID' });
+        return;
+      }
+
+      const { email, password, display_name, is_admin, valid_until } = req.body as {
+        email?: unknown;
+        password?: unknown;
+        display_name?: unknown;
+        is_admin?: unknown;
+        valid_until?: unknown;
+      };
+
+      const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+      if (!normalizedEmail || !normalizedEmail.includes('@')) {
+        res.status(400).json({ error: 'EMAIL_REQUIRED' });
+        return;
+      }
+
+      const rawPassword = typeof password === 'string' ? password : '';
+      if (!rawPassword || rawPassword.length < 8) {
+        res.status(400).json({ error: 'PASSWORD_TOO_SHORT' });
+        return;
+      }
+
+      const displayName = typeof display_name === 'string' && display_name.trim().length > 0
+        ? display_name.trim()
+        : normalizedEmail;
+      const isAdmin = is_admin === true;
+      const validUntil = parseIsoDateOrNull(valid_until);
+      if (!validUntil.ok) {
+        res.status(400).json({ error: validUntil.error });
+        return;
+      }
+
+      const supabaseAdmin = getSupabaseAdminClient();
+      const { data: tenant, error: tenantErr } = await supabaseAdmin
+        .from('tenants')
+        .select('id')
+        .eq('id', tenantId)
+        .maybeSingle();
+
+      if (tenantErr) {
+        throw new Error(`Failed to check tenant: ${tenantErr.message}`);
+      }
+
+      if (!tenant) {
+        res.status(404).json({ error: 'TENANT_NOT_FOUND' });
+        return;
+      }
+
+      const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password: rawPassword,
+        email_confirm: true,
+        user_metadata: {
+          tenant_id: tenantId,
+          role: isAdmin ? 'admin' : 'user',
+        },
+      });
+
+      if (authErr || !authData.user) {
+        const message = authErr?.message ?? '';
+        if (authErr?.status === 422 || /already/i.test(message)) {
+          res.status(409).json({ error: 'USER_EMAIL_ALREADY_EXISTS' });
+          return;
+        }
+
+        console.error('POST /v1/admin/tenants/:id/users createUser error:', authErr);
+        res.status(500).json({ error: 'SUPABASE_AUTH_CREATE_USER_ERROR' });
+        return;
+      }
+
+      const userId = authData.user.id;
+
+      const { error: profileErr } = await supabaseAdmin.from('profiles').upsert({
+        id: userId,
+        tenant_id: tenantId,
+        email: normalizedEmail,
+        display_name: displayName,
+        is_admin: isAdmin,
+        valid_until: validUntil.value,
+      }, {
+        onConflict: 'id',
+      });
+
+      if (profileErr) {
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        throw new Error(`Failed to upsert profile: ${profileErr.message}`);
+      }
+
+      res.json({ ok: true, userId });
+    } catch (error) {
+      console.error('POST /v1/admin/tenants/:id/users error:', error);
+      res.status(500).json({ error: 'ADMIN_TENANT_USER_CREATE_ERROR' });
+    }
+  });
+
+  router.patch('/admin/tenants/:id/users/:userId', requireAdminToken(options.config), async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.params.id ?? '').trim();
+      const userId = String(req.params.userId ?? '').trim();
+
+      if (!tenantId || !userId) {
+        res.status(400).json({ error: 'TENANT_USER_REQUIRED' });
+        return;
+      }
+
+      if (!isUuid(tenantId)) {
+        res.status(400).json({ error: 'INVALID_TENANT_ID' });
+        return;
+      }
+
+      if (!isUuid(userId)) {
+        res.status(400).json({ error: 'INVALID_USER_ID' });
+        return;
+      }
+
+      const { display_name, is_admin, valid_until } = req.body as {
+        display_name?: unknown;
+        is_admin?: unknown;
+        valid_until?: unknown;
+      };
+
+      const updates: Record<string, unknown> = {};
+      if (display_name !== undefined) {
+        updates.display_name = typeof display_name === 'string' ? display_name.trim() : '';
+      }
+      if (is_admin !== undefined) {
+        updates.is_admin = is_admin === true;
+      }
+      if (valid_until !== undefined) {
+        const parsed = parseIsoDateOrNull(valid_until);
+        if (!parsed.ok) {
+          res.status(400).json({ error: parsed.error });
+          return;
+        }
+
+        updates.valid_until = parsed.value;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        res.status(400).json({ error: 'NO_USER_FIELDS' });
+        return;
+      }
+
+      const supabaseAdmin = getSupabaseAdminClient();
+      const { data: existingProfile, error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profileErr) {
+        throw new Error(`Failed to load profile: ${profileErr.message}`);
+      }
+
+      if (!existingProfile) {
+        res.status(404).json({ error: 'USER_NOT_FOUND' });
+        return;
+      }
+
+      const profileTenantId = String((existingProfile as { tenant_id?: string | null }).tenant_id ?? '');
+      if (profileTenantId !== tenantId) {
+        res.status(403).json({ error: 'TENANT_MISMATCH' });
+        return;
+      }
+
+      const { error: updateErr } = await supabaseAdmin
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+        .eq('tenant_id', tenantId);
+
+      if (updateErr) {
+        throw new Error(`Failed to update profile: ${updateErr.message}`);
+      }
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('PATCH /v1/admin/tenants/:id/users/:userId error:', error);
+      res.status(500).json({ error: 'ADMIN_TENANT_USER_UPDATE_ERROR' });
+    }
+  });
+
+  router.post('/admin/tenants/:id/users/:userId/reset-password', requireAdminToken(options.config), async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.params.id ?? '').trim();
+      const userId = String(req.params.userId ?? '').trim();
+
+      if (!tenantId || !userId) {
+        res.status(400).json({ error: 'TENANT_USER_REQUIRED' });
+        return;
+      }
+
+      if (!isUuid(tenantId)) {
+        res.status(400).json({ error: 'INVALID_TENANT_ID' });
+        return;
+      }
+
+      if (!isUuid(userId)) {
+        res.status(400).json({ error: 'INVALID_USER_ID' });
+        return;
+      }
+
+      const { password } = req.body as { password?: unknown };
+      const rawPassword = typeof password === 'string' ? password : '';
+
+      if (!rawPassword || rawPassword.length < 8) {
+        res.status(400).json({ error: 'PASSWORD_TOO_SHORT' });
+        return;
+      }
+
+      const supabaseAdmin = getSupabaseAdminClient();
+      const { data: existingProfile, error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profileErr) {
+        throw new Error(`Failed to load profile: ${profileErr.message}`);
+      }
+
+      if (!existingProfile) {
+        res.status(404).json({ error: 'USER_NOT_FOUND' });
+        return;
+      }
+
+      const profileTenantId = String((existingProfile as { tenant_id?: string | null }).tenant_id ?? '');
+      if (profileTenantId !== tenantId) {
+        res.status(403).json({ error: 'TENANT_MISMATCH' });
+        return;
+      }
+
+      const { error: resetErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: rawPassword,
+      });
+
+      if (resetErr) {
+        console.error('POST /v1/admin/tenants/:id/users/:userId/reset-password updateUserById error:', resetErr);
+        res.status(500).json({ error: 'SUPABASE_AUTH_RESET_PASSWORD_ERROR' });
+        return;
+      }
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('POST /v1/admin/tenants/:id/users/:userId/reset-password error:', error);
+      res.status(500).json({ error: 'ADMIN_TENANT_USER_RESET_PASSWORD_ERROR' });
+    }
+  });
+
+  router.delete('/admin/tenants/:id/users/:userId', requireAdminToken(options.config), async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.params.id ?? '').trim();
+      const userId = String(req.params.userId ?? '').trim();
+
+      if (!tenantId || !userId) {
+        res.status(400).json({ error: 'TENANT_USER_REQUIRED' });
+        return;
+      }
+
+      if (!isUuid(tenantId)) {
+        res.status(400).json({ error: 'INVALID_TENANT_ID' });
+        return;
+      }
+
+      if (!isUuid(userId)) {
+        res.status(400).json({ error: 'INVALID_USER_ID' });
+        return;
+      }
+
+      const supabaseAdmin = getSupabaseAdminClient();
+      const { data: existingProfile, error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profileErr) {
+        throw new Error(`Failed to load profile: ${profileErr.message}`);
+      }
+
+      if (!existingProfile) {
+        res.status(404).json({ error: 'USER_NOT_FOUND' });
+        return;
+      }
+
+      const profileTenantId = String((existingProfile as { tenant_id?: string | null }).tenant_id ?? '');
+      if (profileTenantId !== tenantId) {
+        res.status(403).json({ error: 'TENANT_MISMATCH' });
+        return;
+      }
+
+      const { error: deleteProfileErr } = await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .eq('id', userId)
+        .eq('tenant_id', tenantId);
+
+      if (deleteProfileErr) {
+        throw new Error(`Failed to delete profile: ${deleteProfileErr.message}`);
+      }
+
+      const { error: deleteAuthErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (deleteAuthErr) {
+        console.warn('DELETE /v1/admin/tenants/:id/users/:userId deleteUser warning:', deleteAuthErr);
+      }
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('DELETE /v1/admin/tenants/:id/users/:userId error:', error);
+      res.status(500).json({ error: 'ADMIN_TENANT_USER_DELETE_ERROR' });
     }
   });
 

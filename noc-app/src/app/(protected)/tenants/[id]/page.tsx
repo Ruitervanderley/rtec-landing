@@ -2,22 +2,11 @@ import { AlertCircle, ArrowLeft, ExternalLink, Network, Server, ShieldCheck, Use
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { TenantInfrastructureEditor } from '@/components/TenantInfrastructureEditor';
+import { TenantUsersManager } from '@/components/TenantUsersManager';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { getTenantDetail } from '@/lib/ops-api';
 
 export const dynamic = 'force-dynamic';
-
-function getAccessBadgeColor(status: 'active' | 'tenant_expired' | 'tenant_inactive' | 'user_expired') {
-  if (status === 'active') {
-    return 'badge-success';
-  }
-
-  if (status === 'tenant_inactive') {
-    return 'badge-neutral';
-  }
-
-  return 'badge-error';
-}
 
 export default async function TenantDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -155,43 +144,7 @@ export default async function TenantDetailPage(props: {
         </div>
       </div>
 
-      <section className="card" style={{ display: 'grid', gap: '1rem' }}>
-        <div>
-          <h2 style={{ color: 'var(--text-primary)', fontSize: '1.2rem', fontWeight: 800, margin: '0 0 0.35rem' }}>
-            Usuarios do tenant
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-            Visao atual de acesso dos usuarios vinculados ao tenant.
-          </p>
-        </div>
-
-        <div className="table-wrapper">
-          <table className="base-table" style={{ minWidth: 760 }}>
-            <thead>
-              <tr>
-                {['Nome', 'Email', 'Perfil', 'Validade', 'Acesso'].map(header => (
-                  <th key={header}>{header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {detail.users.map(user => (
-                <tr key={user.userId}>
-                  <td>{user.displayName || '--'}</td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{user.email}</td>
-                  <td>{user.isAdmin ? 'Admin' : 'Usuario'}</td>
-                  <td>{formatDate(user.validUntil)}</td>
-                  <td>
-                    <span className={`badge ${getAccessBadgeColor(user.accessStatus)}`}>
-                      {user.accessStatus}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <TenantUsersManager tenantId={detail.tenant.tenantId} users={detail.users} />
 
       <TenantInfrastructureEditor
         infrastructure={detail.infrastructure}
