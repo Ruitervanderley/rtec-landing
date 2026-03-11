@@ -47,6 +47,14 @@ export type DeviceRow = {
   is_online: boolean;
   created_at: string;
   updated_at: string;
+  cpu_usage_percent?: string;
+  ram_used_mb?: string;
+  ram_total_mb?: string;
+  disk_c_free_percent?: string;
+  local_ip?: string;
+  mac_address?: string;
+  logged_in_user?: string;
+  uptime_seconds?: number | string;
 };
 
 export type BackupRow = {

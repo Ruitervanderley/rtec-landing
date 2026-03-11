@@ -48,7 +48,7 @@ export default async function DevicesPage() {
         <table className="base-table" style={{ minWidth: 1200 }}>
           <thead>
             <tr>
-              {['Tenant', 'Device ID', 'Designação', 'Versão App', 'Online', 'Última Ação', 'Último Heartbeat', 'Ações de Segurança'].map(header => (
+              {['Tenant', 'Device ID', 'Designação', 'Versão App', 'IP/User', 'Uptime', 'CPU', 'RAM', 'Disco C:', 'Online', 'Última Ação', 'Último Heartbeat', 'Ações de Segurança'].map(header => (
                 <th key={header}>{header}</th>
               ))}
             </tr>
@@ -66,6 +66,66 @@ export default async function DevicesPage() {
                       )
                     : '--'}
                 </td>
+                <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                  <div>
+                    {'User: '}
+                    {device.logged_in_user || '--'}
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)' }}>
+                    {'IP: '}
+                    {device.local_ip || '--'}
+                  </div>
+                  <div style={{ color: 'var(--text-muted)' }}>
+                    {'MAC: '}
+                    {device.mac_address || '--'}
+                  </div>
+                </td>
+                <td>
+                  {device.uptime_seconds
+                    ? (
+                        <span className="badge badge-neutral">
+                          {Math.floor(Number(device.uptime_seconds) / 3600)}
+                          {'h '}
+                          {Math.floor((Number(device.uptime_seconds) % 3600) / 60)}
+                          m
+                        </span>
+                      )
+                    : '--'}
+                </td>
+                <td>
+                  {device.cpu_usage_percent
+                    ? (
+                        <span className={`badge ${Number.parseFloat(device.cpu_usage_percent) > 90 ? 'badge-error' : 'badge-neutral'}`}>
+                          {device.cpu_usage_percent}
+                          %
+                        </span>
+                      )
+                    : '--'}
+                </td>
+                <td>
+                  {device.ram_used_mb && device.ram_total_mb
+                    ? (
+                        <span className={`badge ${(Number.parseFloat(device.ram_used_mb) / Number.parseFloat(device.ram_total_mb)) * 100 > 90 ? 'badge-error' : 'badge-neutral'}`}>
+                          {Math.round(Number.parseFloat(device.ram_used_mb) / 1024)}
+                          {' GB / '}
+                          {Math.round(Number.parseFloat(device.ram_total_mb) / 1024)}
+                          {' GB'}
+                        </span>
+                      )
+                    : '--'}
+                </td>
+                <td>
+                  {device.disk_c_free_percent
+                    ? (
+                        <span className={`badge ${Number.parseFloat(device.disk_c_free_percent) < 10 ? 'badge-error' : 'badge-neutral'}`}>
+                          {'Livre: '}
+                          {device.disk_c_free_percent}
+                          %
+                        </span>
+                      )
+                    : '--'}
+                </td>
+
                 <td>
                   <span className={`badge ${device.is_online ? 'badge-success' : 'badge-error'}`}>
                     {device.is_online ? 'ONLINE' : 'OFFLINE'}
@@ -91,7 +151,7 @@ export default async function DevicesPage() {
             ))}
             {!error && devices.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                <td colSpan={13} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   Nenhum Dispositivo provisionado no momento.
                 </td>
               </tr>

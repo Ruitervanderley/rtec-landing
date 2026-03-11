@@ -66,3 +66,6 @@ noc-app/.env.local
 
 # Next.js build cache
 noc-app/.next
+
+# NOC Agent
+noc-agent/

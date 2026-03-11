@@ -1100,7 +1100,8 @@ export function createOpsV1Router(options: {
     }
 
     try {
-      const { appVersion, status, currentSessionGuid, lastSyncUsersAtUtc, lastKeepAliveAtUtc } = req.body as {
+      const { appVersion, status, currentSessionGuid, lastSyncUsersAtUtc, lastKeepAliveAtUtc, meta: clientMeta } = req.body as {
+        meta?: Record<string, unknown>;
         appVersion?: string;
         status?: string;
         currentSessionGuid?: string;
@@ -1114,6 +1115,7 @@ export function createOpsV1Router(options: {
       }
 
       const meta: Record<string, unknown> = {
+        ...(clientMeta && typeof clientMeta === 'object' ? clientMeta : {}),
         currentSessionGuid: currentSessionGuid ?? null,
         lastSyncUsersAtUtc: lastSyncUsersAtUtc ?? null,
         lastKeepAliveAtUtc: lastKeepAliveAtUtc ?? null,
@@ -1487,9 +1489,24 @@ export function createOpsV1Router(options: {
           coalesce(td.last_status, '') as last_status,
           (case when td.last_seen_at is not null and td.last_seen_at >= now() - interval '15 minutes' then true else false end) as is_online,
           td.created_at,
-          td.updated_at
+          td.updated_at,
+          latest_hb.meta->>'cpu_usage_percent' as cpu_usage_percent,
+          latest_hb.meta->>'ram_used_mb' as ram_used_mb,
+          latest_hb.meta->>'ram_total_mb' as ram_total_mb,
+          latest_hb.meta->>'disk_c_free_percent' as disk_c_free_percent,
+          latest_hb.meta->>'local_ip' as local_ip,
+          latest_hb.meta->>'mac_address' as mac_address,
+          latest_hb.meta->>'logged_in_user' as logged_in_user,
+          (latest_hb.meta->>'uptime_seconds')::numeric as uptime_seconds
         from public.tenant_devices td
         left join public.tenants t on t.id = td.tenant_id
+        left join lateral (
+          select hb.meta 
+          from public.device_heartbeats hb 
+          where hb.device_fk = td.id 
+          order by hb.heartbeat_at desc 
+          limit 1
+        ) latest_hb on true
         where td.revoked_at is null
         order by td.last_seen_at desc nulls last
         limit ${limit}
