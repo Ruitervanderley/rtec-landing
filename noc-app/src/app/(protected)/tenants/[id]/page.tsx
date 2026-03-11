@@ -1,10 +1,12 @@
 import { AlertCircle, ArrowLeft, ExternalLink, Network, Server, ShieldCheck, Users } from 'lucide-react';
+import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DeviceTable } from '@/components/DeviceTable';
 import { TenantInfrastructureEditor } from '@/components/TenantInfrastructureEditor';
 import { TenantUsersManager } from '@/components/TenantUsersManager';
 import { formatDate, formatDateTime } from '@/lib/format';
-import { getTenantDetail } from '@/lib/ops-api';
+import { getDevices, getTenantDetail, revokeDevice } from '@/lib/ops-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +16,9 @@ export default async function TenantDetailPage(props: {
   const { id } = await props.params;
 
   let detail: Awaited<ReturnType<typeof getTenantDetail>> | null = null;
+  let devices: Awaited<ReturnType<typeof getDevices>> = [];
   let errorMsg: string | null = null;
+  let deviceErrorMsg: string | null = null;
 
   try {
     detail = await getTenantDetail(id);
@@ -24,6 +28,24 @@ export default async function TenantDetailPage(props: {
     }
 
     errorMsg = error instanceof Error ? error.message : 'Erro ao carregar tenant';
+  }
+
+  if (detail) {
+    try {
+      devices = await getDevices(500, id);
+    } catch (error) {
+      deviceErrorMsg = error instanceof Error ? error.message : 'Erro ao carregar dispositivos do tenant';
+    }
+  }
+
+  async function revokeDeviceAction(formData: FormData) {
+    'use server';
+    const devicePk = String(formData.get('devicePk') ?? '').trim();
+    if (!devicePk) {
+      return;
+    }
+    await revokeDevice(devicePk);
+    revalidatePath(`/tenants/${id}`);
   }
 
   if (!detail && !errorMsg) {
@@ -153,6 +175,13 @@ export default async function TenantDetailPage(props: {
         tenantName={detail.tenant.name}
         tenantType={detail.tenant.type}
       />
+
+      <div>
+        <h2 style={{ color: 'var(--text-primary)', fontSize: '1.4rem', fontWeight: 700, margin: '1rem 0 0.75rem' }}>
+          Computadores Conectados
+        </h2>
+        <DeviceTable devices={devices} error={deviceErrorMsg} revokeDeviceAction={revokeDeviceAction} />
+      </div>
     </section>
   );
 }

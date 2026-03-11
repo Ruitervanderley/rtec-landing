@@ -275,8 +275,11 @@ export async function getTenantDetail(tenantId: string): Promise<TenantDetail> {
   return fetchAdmin<TenantDetail>(`/admin/tenants/${tenantId}/detail`);
 }
 
-export async function getDevices(limit = 300): Promise<DeviceRow[]> {
-  const response = await fetchAdmin<{ devices: DeviceRow[] }>(`/admin/devices?limit=${limit}`);
+export async function getDevices(limit = 300, tenantId?: string): Promise<DeviceRow[]> {
+  const url = tenantId
+    ? `/admin/devices?limit=${limit}&tenantId=${tenantId}`
+    : `/admin/devices?limit=${limit}`;
+  const response = await fetchAdmin<{ devices: DeviceRow[] }>(url);
   return response.devices ?? [];
 }
 

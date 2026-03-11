@@ -1476,6 +1476,7 @@ export function createOpsV1Router(options: {
     try {
       const limitRaw = Number(req.query.limit ?? 200);
       const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(1000, Math.trunc(limitRaw))) : 200;
+      const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId.trim() : null;
 
       const rows = await db.execute(sql`
         select
@@ -1508,6 +1509,7 @@ export function createOpsV1Router(options: {
           limit 1
         ) latest_hb on true
         where td.revoked_at is null
+        ${tenantId ? sql`and td.tenant_id = ${tenantId}` : sql``}
         order by td.last_seen_at desc nulls last
         limit ${limit}
       `);
