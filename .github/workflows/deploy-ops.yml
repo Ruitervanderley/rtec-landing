@@ -17,8 +17,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_API: ${{ github.repository }}-ops-api
-  IMAGE_NAME_APP: ${{ github.repository }}-painel-web
 
 jobs:
   build-and-push-images:
@@ -39,6 +37,13 @@ jobs:
         id: release
         run: echo "deploy_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
+      - name: Normalize image names
+        id: image-names
+        run: |
+          repository="$(printf '%s' "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          echo "api=${repository}-ops-api" >> "$GITHUB_OUTPUT"
+          echo "app=${repository}-painel-web" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -55,8 +60,8 @@ jobs:
           context: ./noc-api
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:main
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:${{ steps.release.outputs.deploy_tag }}
+            ${{ env.REGISTRY }}/${{ steps.image-names.outputs.api }}:main
+            ${{ env.REGISTRY }}/${{ steps.image-names.outputs.api }}:${{ steps.release.outputs.deploy_tag }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -70,8 +75,8 @@ jobs:
           context: ./noc-app
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:main
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:${{ steps.release.outputs.deploy_tag }}
+            ${{ env.REGISTRY }}/${{ steps.image-names.outputs.app }}:main
+            ${{ env.REGISTRY }}/${{ steps.image-names.outputs.app }}:${{ steps.release.outputs.deploy_tag }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
