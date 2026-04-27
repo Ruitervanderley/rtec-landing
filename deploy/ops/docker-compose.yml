@@ -1,29 +1,50 @@
-version: '3.9'
-
 services:
   ops-api:
-    image: ghcr.io/ruitervanderley/rtec-landing-ops-api:main
+    image: ghcr.io/ruitervanderley/rtec-landing-ops-api:${IMAGE_TAG:-main}
     container_name: rtec-ops-api
     env_file:
       - .env
     restart: unless-stopped
     environment:
       - PORT=4000
+      - OPS_RELEASE_VERSION=${IMAGE_TAG:-main}
     expose:
       - '4000'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:4000/health').then(response => process.exit(response.ok ? 0: 1)).catch(() => process.exit(1))
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   painel-web:
-    image: ghcr.io/ruitervanderley/rtec-landing-painel-web:main
+    image: ghcr.io/ruitervanderley/rtec-landing-painel-web:${IMAGE_TAG:-main}
     container_name: rtec-ops-panel
     env_file:
       - .env
     restart: unless-stopped
     environment:
       - PORT=3001
+      - OPS_RELEASE_VERSION=${IMAGE_TAG:-main}
     expose:
       - '3001'
     depends_on:
-      - ops-api
+      ops-api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3001/api/health').then(response => process.exit(response.ok ? 0: 1)).catch(() => process.exit(1))
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -31,5 +52,7 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
-      - painel-web
-      - ops-api
+      painel-web:
+        condition: service_healthy
+      ops-api:
+        condition: service_healthy

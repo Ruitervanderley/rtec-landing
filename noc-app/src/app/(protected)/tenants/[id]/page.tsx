@@ -166,6 +166,62 @@ export default async function TenantDetailPage(props: {
         </div>
       </div>
 
+      <div className="card">
+        <h2 style={{ color: 'var(--text-primary)', fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.75rem' }}>
+          Checklist manual do Cloudflare
+        </h2>
+
+        {detail.tenant.cloudflareStatus === 'manual_redirect_required'
+          ? (
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+                  Este tenant ainda usa o modelo atual de redirect manual. Publique a regra no Cloudflare com os valores abaixo e valide o acesso no host canonico antes de testar o subdominio.
+                </p>
+
+                <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '14px', padding: '1rem' }}>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                      Origem
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontFamily: 'Consolas, monospace', fontSize: '0.82rem', wordBreak: 'break-all' }}>
+                      {detail.tenant.redirectSource}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '14px', padding: '1rem' }}>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                      Destino
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontFamily: 'Consolas, monospace', fontSize: '0.82rem', wordBreak: 'break-all' }}>
+                      {detail.tenant.redirectTarget}
+                    </div>
+                  </div>
+                </div>
+
+                <ol style={{ color: 'var(--text-secondary)', margin: 0, paddingLeft: '1.2rem' }}>
+                  <li>Confirme o slug salvo neste tenant.</li>
+                  <li>Crie a Redirect Rule no Cloudflare com a origem e o destino acima.</li>
+                  <li>
+                    Teste primeiro o portal canonico em
+                    {' '}
+                    <strong>{detail.tenant.portalUrl}</strong>
+                    .
+                  </li>
+                  <li>Depois valide o atalho do subdominio e o login do portal.</li>
+                </ol>
+
+                <div style={{ background: 'rgba(148, 163, 184, 0.08)', border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.85rem 1rem' }}>
+                  O modelo atual descarta rotas profundas no subdominio do cliente e redireciona para a raiz canonica do portal.
+                </div>
+              </div>
+            )
+          : (
+              <div style={{ background: 'rgba(148, 163, 184, 0.08)', border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', color: 'var(--text-secondary)', padding: '0.95rem 1rem' }}>
+                Defina um slug/subdominio valido para este tenant antes de preparar a regra manual do Cloudflare.
+              </div>
+            )}
+      </div>
+
       <TenantUsersManager tenantId={detail.tenant.tenantId} users={detail.users} />
 
       <TenantInfrastructureEditor

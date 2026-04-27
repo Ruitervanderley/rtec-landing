@@ -202,7 +202,7 @@ export function CadastrarTenant() {
                           padding: '1rem',
                         }}
                       >
-                        Este tenant nao exige redirect manual no Cloudflare.
+                        Defina um slug valido para liberar a checklist manual do Cloudflare neste tenant.
                       </div>
                     )}
 

@@ -1,8 +1,9 @@
 'use client';
 
 import type { DeviceRow } from '@/lib/ops-api';
-import { AlertCircle, ShieldAlert } from 'lucide-react';
-import { formatDateTime } from '@/lib/format';
+import { AlertCircle, ArrowUpRight, Clock3, ShieldAlert, UserRound, Wifi, WifiOff } from 'lucide-react';
+import Link from 'next/link';
+import { formatDateTime, formatDurationSeconds } from '@/lib/format';
 
 type DeviceTableProps = {
   devices: DeviceRow[];
@@ -10,135 +11,368 @@ type DeviceTableProps = {
   revokeDeviceAction?: (formData: FormData) => Promise<void>;
 };
 
-export function DeviceTable({ devices, error, revokeDeviceAction }: DeviceTableProps) {
+type TenantGroup = {
+  attentionCount: number;
+  devices: DeviceRow[];
+  onlineCount: number;
+  tenantId: string;
+  tenantName: string;
+};
+
+function toNumber(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getTenantAnchor(props: { tenantId: string }) {
+  return `tenant-${props.tenantId}`;
+}
+
+function getRamRatio(device: DeviceRow) {
+  const used = toNumber(device.ram_used_mb);
+  const total = toNumber(device.ram_total_mb);
+
+  if (used === null || total === null || total <= 0) {
+    return null;
+  }
+
+  return (used / total) * 100;
+}
+
+function getAttentionState(device: DeviceRow) {
+  const cpu = toNumber(device.cpu_usage_percent);
+  const diskFree = toNumber(device.disk_c_free_percent);
+  const ramRatio = getRamRatio(device);
+
+  if (!device.is_online) {
+    return {
+      badgeClass: 'badge-error',
+      label: 'Offline',
+      needsAttention: true,
+    };
+  }
+
+  if ((diskFree !== null && diskFree < 10) || (cpu !== null && cpu >= 90) || (ramRatio !== null && ramRatio >= 90)) {
+    return {
+      badgeClass: 'badge-warning',
+      label: 'Atencao',
+      needsAttention: true,
+    };
+  }
+
+  return {
+    badgeClass: 'badge-success',
+    label: 'Saudavel',
+    needsAttention: false,
+  };
+}
+
+function getMetricTone(props: { status: 'danger' | 'warning' | 'default' }) {
+  if (props.status === 'danger') {
+    return 'metric-pill metric-pill--danger';
+  }
+
+  if (props.status === 'warning') {
+    return 'metric-pill metric-pill--warning';
+  }
+
+  return 'metric-pill';
+}
+
+function formatRam(device: DeviceRow) {
+  const used = toNumber(device.ram_used_mb);
+  const total = toNumber(device.ram_total_mb);
+
+  if (used === null || total === null || total <= 0) {
+    return '--';
+  }
+
+  return `${(used / 1024).toFixed(1)} GB / ${(total / 1024).toFixed(1)} GB`;
+}
+
+function groupDevices(devices: DeviceRow[]) {
+  const groups = new Map<string, TenantGroup>();
+
+  devices.forEach((device) => {
+    const key = device.tenant_id || device.tenant_name;
+    const existing = groups.get(key);
+    const attentionState = getAttentionState(device);
+
+    if (existing) {
+      existing.devices.push(device);
+      existing.onlineCount += device.is_online ? 1 : 0;
+      existing.attentionCount += attentionState.needsAttention ? 1 : 0;
+      return;
+    }
+
+    groups.set(key, {
+      attentionCount: attentionState.needsAttention ? 1 : 0,
+      devices: [device],
+      onlineCount: device.is_online ? 1 : 0,
+      tenantId: device.tenant_id,
+      tenantName: device.tenant_name,
+    });
+  });
+
+  return Array.from(groups.values()).sort((left, right) => {
+    if (right.onlineCount !== left.onlineCount) {
+      return right.onlineCount - left.onlineCount;
+    }
+
+    if (right.devices.length !== left.devices.length) {
+      return right.devices.length - left.devices.length;
+    }
+
+    return left.tenantName.localeCompare(right.tenantName, 'pt-BR');
+  });
+}
+
+export function DeviceTable(props: DeviceTableProps) {
+  const devices = Array.isArray(props.devices) ? props.devices : [];
+  const tenantGroups = groupDevices(devices);
+  const totalOnline = devices.filter(device => device.is_online).length;
+  const totalAttention = devices.filter(device => getAttentionState(device).needsAttention).length;
+
   return (
-    <section>
-      {error
+    <section className="page-stack">
+      {props.error
         ? (
-            <div className="card" style={{ backgroundColor: '#fef2f2', borderColor: '#fca5a5', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+            <div className="alert-panel alert-panel--error">
               <AlertCircle size={20} />
-              {error}
+              {props.error}
             </div>
           )
         : null}
 
-      <div className="table-wrapper">
-        <table className="base-table" style={{ minWidth: 1200 }}>
-          <thead>
-            <tr>
-              {['Tenant', 'Device ID', 'Designação', 'Versão App', 'IP/User', 'Uptime', 'CPU', 'RAM', 'Disco C:', 'Online', 'Última Ação', 'Último Heartbeat', 'Ações de Segurança'].map(header => (
-                <th key={header}>{header}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(Array.isArray(devices) ? devices : []).map(device => (
-              <tr key={device.id}>
-                <td style={{ fontWeight: 600 }}>{device.tenant_name}</td>
-                <td style={{ fontFamily: 'Consolas, monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{device.device_id}</td>
-                <td style={{ fontWeight: 500 }}>{device.device_name || '--'}</td>
-                <td>
-                  {device.app_version
-                    ? (
-                        <span className="badge badge-neutral">{device.app_version}</span>
-                      )
-                    : '--'}
-                </td>
-                <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                  <div>
-                    {'User: '}
-                    {device.logged_in_user || '--'}
+      {!props.error && devices.length > 0
+        ? (
+            <>
+              <div className="summary-strip">
+                <div className="summary-card">
+                  <span className="summary-card__label">Empresas monitoradas</span>
+                  <strong className="summary-card__value">{tenantGroups.length}</strong>
+                  <div className="summary-card__meta">Cada tenant agora aparece em um bloco proprio.</div>
+                </div>
+                <div className="summary-card">
+                  <span className="summary-card__label">Dispositivos ativos</span>
+                  <strong className="summary-card__value">{devices.length}</strong>
+                  <div className="summary-card__meta">Total provisionado e visivel na frota.</div>
+                </div>
+                <div className="summary-card">
+                  <span className="summary-card__label">Online agora</span>
+                  <strong className="summary-card__value">{totalOnline}</strong>
+                  <div className="summary-card__meta">
+                    {devices.length - totalOnline}
+                    {' offline ou sem heartbeat recente.'}
                   </div>
-                  <div style={{ color: 'var(--text-secondary)' }}>
-                    {'IP: '}
-                    {device.local_ip || '--'}
-                  </div>
-                  <div style={{ color: 'var(--text-muted)' }}>
-                    {'MAC: '}
-                    {device.mac_address || '--'}
-                  </div>
-                </td>
-                <td>
-                  {device.uptime_seconds
-                    ? (
-                        <span className="badge badge-neutral">
-                          {Math.floor(Number(device.uptime_seconds) / 3600)}
-                          {'h '}
-                          {Math.floor((Number(device.uptime_seconds) % 3600) / 60)}
-                          m
-                        </span>
-                      )
-                    : '--'}
-                </td>
-                <td>
-                  {device.cpu_usage_percent
-                    ? (
-                        <span className={`badge ${Number.parseFloat(device.cpu_usage_percent) > 90 ? 'badge-error' : 'badge-neutral'}`}>
-                          {device.cpu_usage_percent}
-                          %
-                        </span>
-                      )
-                    : '--'}
-                </td>
-                <td>
-                  {device.ram_used_mb && device.ram_total_mb
-                    ? (
-                        <span className={`badge ${(Number.parseFloat(device.ram_used_mb) / Number.parseFloat(device.ram_total_mb)) * 100 > 90 ? 'badge-error' : 'badge-neutral'}`}>
-                          {Math.round(Number.parseFloat(device.ram_used_mb) / 1024)}
-                          {' GB / '}
-                          {Math.round(Number.parseFloat(device.ram_total_mb) / 1024)}
-                          {' GB'}
-                        </span>
-                      )
-                    : '--'}
-                </td>
-                <td>
-                  {device.disk_c_free_percent
-                    ? (
-                        <span className={`badge ${Number.parseFloat(device.disk_c_free_percent) < 10 ? 'badge-error' : 'badge-neutral'}`}>
-                          {'Livre: '}
-                          {device.disk_c_free_percent}
-                          %
-                        </span>
-                      )
-                    : '--'}
-                </td>
+                </div>
+                <div className="summary-card">
+                  <span className="summary-card__label">Precisando atencao</span>
+                  <strong className="summary-card__value">{totalAttention}</strong>
+                  <div className="summary-card__meta">Offline, disco baixo, CPU alta ou RAM sob pressao.</div>
+                </div>
+              </div>
 
-                <td>
-                  <span className={`badge ${device.is_online ? 'badge-success' : 'badge-error'}`}>
-                    {device.is_online ? 'ONLINE' : 'OFFLINE'}
-                  </span>
-                </td>
-                <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={device.last_status || ''}>
-                  {device.last_status || '--'}
-                </td>
-                <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{formatDateTime(device.last_seen_at)}</td>
-                <td>
-                  {revokeDeviceAction && (
-                    <form action={revokeDeviceAction}>
-                      <input type="hidden" name="devicePk" value={device.id} />
-                      <button
-                        type="submit"
-                        className="btn-revoke"
-                      >
-                        <ShieldAlert size={14} />
-                        Revogar Acesso
-                      </button>
-                    </form>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!error && devices.length === 0 && (
-              <tr>
-                <td colSpan={13} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                  Nenhum Dispositivo provisionado no momento.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              <div className="fleet-nav">
+                {tenantGroups.map(group => (
+                  <a
+                    key={group.tenantId}
+                    className="fleet-nav__chip"
+                    href={`#${getTenantAnchor({ tenantId: group.tenantId })}`}
+                  >
+                    <strong>{group.tenantName}</strong>
+                    <span>
+                      {group.onlineCount}
+                      {' online de '}
+                      {group.devices.length}
+                    </span>
+                  </a>
+                ))}
+              </div>
+
+              <div className="stack-list">
+                {tenantGroups.map((group) => {
+                  const sortedDevices = [...group.devices].sort((left, right) => {
+                    if (left.is_online !== right.is_online) {
+                      return left.is_online ? -1 : 1;
+                    }
+
+                    return (right.last_seen_at ?? '').localeCompare(left.last_seen_at ?? '');
+                  });
+
+                  return (
+                    <article
+                      key={group.tenantId}
+                      className="fleet-group"
+                      id={getTenantAnchor({ tenantId: group.tenantId })}
+                    >
+                      <div className="fleet-group__header">
+                        <div>
+                          <div className="page-hero__eyebrow">Empresa monitorada</div>
+                          <h2 className="fleet-group__title">{group.tenantName}</h2>
+                          <p className="fleet-group__description">
+                            {group.devices.length}
+                            {' dispositivo(s), '}
+                            {group.onlineCount}
+                            {' online e '}
+                            {group.devices.length - group.onlineCount}
+                            {' fora do ar neste momento.'}
+                          </p>
+                        </div>
+
+                        <div className="page-hero__actions">
+                          <div className="fleet-group__stats">
+                            <span className="tenant-stat">
+                              <Wifi size={14} />
+                              {group.onlineCount}
+                              {' online'}
+                            </span>
+                            <span className="tenant-stat">
+                              <WifiOff size={14} />
+                              {group.devices.length - group.onlineCount}
+                              {' offline'}
+                            </span>
+                            <span className="tenant-stat">
+                              <AlertCircle size={14} />
+                              {group.attentionCount}
+                              {' com atencao'}
+                            </span>
+                          </div>
+
+                          <Link className="inline-link" href={`/tenants/${group.tenantId}`}>
+                            Abrir tenant
+                            <ArrowUpRight size={14} />
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="device-grid">
+                        {sortedDevices.map((device) => {
+                          const attentionState = getAttentionState(device);
+                          const cpu = toNumber(device.cpu_usage_percent);
+                          const diskFree = toNumber(device.disk_c_free_percent);
+                          const ramRatio = getRamRatio(device);
+
+                          return (
+                            <article key={device.id} className="device-card">
+                              <div className="device-card__header">
+                                <div className="device-card__title">
+                                  <strong className="device-card__name">{device.device_name || 'Dispositivo sem nome'}</strong>
+                                  <span className="device-card__code">{device.device_id}</span>
+                                </div>
+
+                                <div className="device-card__header-meta">
+                                  {device.app_version
+                                    ? <span className="badge badge-neutral">{device.app_version}</span>
+                                    : null}
+                                  <span className={`badge ${attentionState.badgeClass}`}>
+                                    {device.is_online ? <Wifi size={12} /> : <WifiOff size={12} />}
+                                    {attentionState.label}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="metric-grid">
+                                <div className={getMetricTone({
+                                  status: cpu !== null && cpu >= 90 ? 'danger' : cpu !== null && cpu >= 70 ? 'warning' : 'default',
+                                })}
+                                >
+                                  <div className="metric-pill__label">CPU</div>
+                                  <div className="metric-pill__value">{cpu !== null ? `${cpu.toFixed(1)}%` : '--'}</div>
+                                </div>
+
+                                <div className={getMetricTone({
+                                  status: ramRatio !== null && ramRatio >= 90 ? 'danger' : ramRatio !== null && ramRatio >= 75 ? 'warning' : 'default',
+                                })}
+                                >
+                                  <div className="metric-pill__label">RAM</div>
+                                  <div className="metric-pill__value">{formatRam(device)}</div>
+                                </div>
+
+                                <div className={getMetricTone({
+                                  status: diskFree !== null && diskFree < 10 ? 'danger' : diskFree !== null && diskFree < 20 ? 'warning' : 'default',
+                                })}
+                                >
+                                  <div className="metric-pill__label">Disco C</div>
+                                  <div className="metric-pill__value">{diskFree !== null ? `${diskFree.toFixed(1)}% livre` : '--'}</div>
+                                </div>
+
+                                <div className="metric-pill">
+                                  <div className="metric-pill__label">Uptime</div>
+                                  <div className="metric-pill__value">
+                                    {formatDurationSeconds(toNumber(device.uptime_seconds) ?? null)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="device-card__details">
+                                <div>
+                                  <strong>Usuario:</strong>
+                                  {' '}
+                                  <UserRound size={13} style={{ display: 'inline-flex', marginRight: '0.2rem', verticalAlign: 'text-bottom' }} />
+                                  {device.logged_in_user || '--'}
+                                </div>
+                                <div>
+                                  <strong>IP local:</strong>
+                                  {' '}
+                                  {device.local_ip || '--'}
+                                </div>
+                                <div>
+                                  <strong>MAC:</strong>
+                                  {' '}
+                                  {device.mac_address || '--'}
+                                </div>
+                                <div>
+                                  <strong>Status:</strong>
+                                  {' '}
+                                  {device.last_status || '--'}
+                                </div>
+                              </div>
+
+                              <div className="device-card__footer">
+                                <div className="device-card__footer-copy">
+                                  <span className="device-card__footer-label">Ultimo heartbeat</span>
+                                  <span className="device-card__footer-value">
+                                    <Clock3 size={13} style={{ display: 'inline-flex', marginRight: '0.3rem', verticalAlign: 'text-bottom' }} />
+                                    {formatDateTime(device.last_seen_at)}
+                                  </span>
+                                </div>
+
+                                {props.revokeDeviceAction
+                                  ? (
+                                      <form action={props.revokeDeviceAction}>
+                                        <input name="devicePk" type="hidden" value={device.id} />
+                                        <button className="badge badge-error" type="submit">
+                                          <ShieldAlert size={12} />
+                                          Revogar acesso
+                                        </button>
+                                      </form>
+                                    )
+                                  : null}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )
+        : null}
+
+      {!props.error && devices.length === 0
+        ? (
+            <div className="empty-state">
+              Nenhum dispositivo provisionado no momento.
+            </div>
+          )
+        : null}
     </section>
   );
 }

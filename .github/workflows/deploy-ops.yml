@@ -1,4 +1,4 @@
-name: Build and Push to GHCR
+name: Deploy OPS Stack
 
 on:
   push:
@@ -7,8 +7,13 @@ on:
     paths:
       - 'noc-api/**'
       - 'noc-app/**'
+      - 'deploy/ops/**'
       - .github/workflows/deploy-ops.yml
   workflow_dispatch:
+
+concurrency:
+  group: deploy-ops-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -17,48 +22,172 @@ env:
 
 jobs:
   build-and-push-images:
+    name: Build and publish OPS images
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
+    outputs:
+      deploy_tag: ${{ steps.release.outputs.deploy_tag }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Log in to the Container registry
+      - name: Define release tag
+        id: release
+        run: echo "deploy_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build & Push API
-      - name: Extract metadata (tags, labels) for API
-        id: meta-api
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}
-
-      - name: Build and push API Docker image
-        uses: docker/build-push-action@v5
+      - name: Build and push noc-api image
+        uses: docker/build-push-action@v6
         with:
           context: ./noc-api
           push: true
-          tags: ${{ steps.meta-api.outputs.tags }}
-          labels: ${{ steps.meta-api.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:${{ steps.release.outputs.deploy_tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.release.outputs.deploy_tag }}
+          cache-from: type=gha,scope=noc-api
+          cache-to: type=gha,mode=max,scope=noc-api
 
-      # Build & Push App
-      - name: Extract metadata (tags, labels) for App
-        id: meta-app
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}
-
-      - name: Build and push App Docker image
-        uses: docker/build-push-action@v5
+      - name: Build and push noc-app image
+        uses: docker/build-push-action@v6
         with:
           context: ./noc-app
           push: true
-          tags: ${{ steps.meta-app.outputs.tags }}
-          labels: ${{ steps.meta-app.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:${{ steps.release.outputs.deploy_tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.release.outputs.deploy_tag }}
+          cache-from: type=gha,scope=noc-app
+          cache-to: type=gha,mode=max,scope=noc-app
+
+  deploy-to-vps:
+    name: Deploy OPS stack on VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - build-and-push-images
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Configure SSH access
+        env:
+          VPS_HOST: ${{ secrets.OPS_VPS_HOST }}
+          VPS_PORT: ${{ secrets.OPS_VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.OPS_VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${VPS_PORT:-22}" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy current release and rollback on failure
+        env:
+          DEPLOY_TAG: ${{ needs.build-and-push-images.outputs.deploy_tag }}
+          DEPLOY_API_HEALTHCHECK_URL: ${{ secrets.OPS_API_HEALTHCHECK_URL }}
+          DEPLOY_PANEL_HEALTHCHECK_URL: ${{ secrets.OPS_PANEL_HEALTHCHECK_URL }}
+          OPS_GHCR_TOKEN: ${{ secrets.OPS_GHCR_TOKEN }}
+          OPS_GHCR_USERNAME: ${{ secrets.OPS_GHCR_USERNAME }}
+          VPS_DEPLOY_PATH: ${{ secrets.OPS_VPS_DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.OPS_VPS_HOST }}
+          VPS_PORT: ${{ secrets.OPS_VPS_PORT }}
+          VPS_USER: ${{ secrets.OPS_VPS_USER }}
+        run: |
+          set -euo pipefail
+
+          port="${VPS_PORT:-22}"
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+
+          {
+            printf 'export DEPLOY_TAG=%q\n' "$DEPLOY_TAG"
+            if [ -n "${VPS_DEPLOY_PATH:-}" ]; then
+              printf 'export DEPLOY_PATH=%q\n' "$VPS_DEPLOY_PATH"
+            fi
+            if [ -n "${DEPLOY_API_HEALTHCHECK_URL:-}" ]; then
+              printf 'export DEPLOY_API_HEALTHCHECK_URL=%q\n' "$DEPLOY_API_HEALTHCHECK_URL"
+            fi
+            if [ -n "${DEPLOY_PANEL_HEALTHCHECK_URL:-}" ]; then
+              printf 'export DEPLOY_PANEL_HEALTHCHECK_URL=%q\n' "$DEPLOY_PANEL_HEALTHCHECK_URL"
+            fi
+            if [ -n "${OPS_GHCR_USERNAME:-}" ]; then
+              printf 'export OPS_GHCR_USERNAME=%q\n' "$OPS_GHCR_USERNAME"
+            fi
+            if [ -n "${OPS_GHCR_TOKEN:-}" ]; then
+              printf 'export OPS_GHCR_TOKEN=%q\n' "$OPS_GHCR_TOKEN"
+            fi
+          } > "$env_file"
+
+          scp -P "$port" "$env_file" "$VPS_USER@$VPS_HOST:/tmp/rtec-ops-deploy.env"
+
+          ssh -p "$port" "$VPS_USER@$VPS_HOST" 'bash -se' <<'EOF'
+          set -euo pipefail
+
+          source /tmp/rtec-ops-deploy.env
+          rm -f /tmp/rtec-ops-deploy.env
+
+          deploy_path="${DEPLOY_PATH:-$HOME/rtec-landing/deploy/ops}"
+          case "$deploy_path" in
+            "~")
+              deploy_path="$HOME"
+              ;;
+            "~/"*)
+              deploy_path="$HOME/${deploy_path#~/}"
+              ;;
+          esac
+
+          repo_root="$(cd "$deploy_path/../.." && pwd)"
+
+          cd "$repo_root"
+          git fetch origin main --prune
+          if git show-ref --verify --quiet refs/heads/main; then
+            git checkout main
+          else
+            git checkout -b main origin/main
+          fi
+          git pull --ff-only origin main
+
+          cd "$deploy_path"
+          if [ ! -f .env ]; then
+            echo "[ERROR] Missing $deploy_path/.env"
+            exit 1
+          fi
+
+          previous_tag="$(awk -F= '$1 == "IMAGE_TAG" { print substr($0, index($0, "=") + 1); exit }' .env)"
+          previous_tag="${previous_tag:-main}"
+
+          if [ -n "${OPS_GHCR_USERNAME:-}" ] && [ -n "${OPS_GHCR_TOKEN:-}" ]; then
+            printf '%s' "$OPS_GHCR_TOKEN" | docker login ghcr.io -u "$OPS_GHCR_USERNAME" --password-stdin
+          fi
+
+          if DEPLOY_IMAGE_TAG="$DEPLOY_TAG" DEPLOY_API_HEALTHCHECK_URL="${DEPLOY_API_HEALTHCHECK_URL:-}" DEPLOY_PANEL_HEALTHCHECK_URL="${DEPLOY_PANEL_HEALTHCHECK_URL:-}" bash ./deploy.sh; then
+            echo "[INFO] Deploy finished with tag $DEPLOY_TAG"
+            exit 0
+          fi
+
+          echo "[WARN] Deploy failed, rolling back to $previous_tag"
+          DEPLOY_IMAGE_TAG="$previous_tag" DEPLOY_API_HEALTHCHECK_URL="${DEPLOY_API_HEALTHCHECK_URL:-}" DEPLOY_PANEL_HEALTHCHECK_URL="${DEPLOY_PANEL_HEALTHCHECK_URL:-}" bash ./deploy.sh
+          exit 1
+          EOF

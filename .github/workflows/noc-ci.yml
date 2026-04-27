@@ -1,0 +1,82 @@
+name: NOC CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'noc-api/**'
+      - 'noc-app/**'
+      - .github/workflows/noc-ci.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'noc-api/**'
+      - 'noc-app/**'
+      - .github/workflows/noc-ci.yml
+  workflow_dispatch:
+
+jobs:
+  noc-api:
+    name: Validate noc-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: noc-api
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: npm
+          cache-dependency-path: noc-api/package-lock.json
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  noc-app:
+    name: Validate noc-app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: noc-app
+    env:
+      NEXT_PUBLIC_NOC_API_URL: http://127.0.0.1:4000
+      NOC_ADMIN_PASSWORD: ci-placeholder-password
+      NOC_SESSION_SECRET: ci-placeholder-session-secret
+      OPS_ADMIN_SERVICE_TOKEN: ci-placeholder-admin-token
+      OPS_API_URL: http://127.0.0.1:4000
+      PANEL_PUBLIC_URL: http://127.0.0.1:3001
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: npm
+          cache-dependency-path: noc-app/package-lock.json
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build

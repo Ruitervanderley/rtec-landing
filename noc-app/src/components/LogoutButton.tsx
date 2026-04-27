@@ -7,22 +7,8 @@ export function LogoutButton() {
   return (
     <form action={logout}>
       <button
+        className="ops-danger-button"
         type="submit"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          width: '100%',
-          padding: '0.6rem 1rem',
-          borderRadius: '8px',
-          border: '1px solid rgba(239, 68, 68, 0.2)',
-          background: 'rgba(239, 68, 68, 0.08)',
-          color: '#f87171',
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-        }}
       >
         <LogOut size={16} />
         Sair do Painel

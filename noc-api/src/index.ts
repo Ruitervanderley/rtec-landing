@@ -7,7 +7,7 @@ import devicesRoutes from './routes/devices.js';
 import devicesCreateRoutes from './routes/devicesCreate.js';
 import incidentsRoutes from './routes/incidents.js';
 import ingestRoutes from './routes/ingest.js';
-import { createOpsV1Router, getOpsHealth } from './routes/opsV1.js';
+import { createOpsV1Router } from './routes/opsV1.js';
 import { createPortalV1Router } from './routes/portalV1.js';
 import servicesRoutes from './routes/services.js';
 
@@ -35,17 +35,12 @@ app.use((_req, res, next) => {
 app.options('*', (_req, res) => res.sendStatus(204));
 
 app.get('/health', (_req, res) => {
-  void (async () => {
-    const ops = await getOpsHealth({
-      config: opsConfig,
-      r2Service: opsR2Service,
-      jobRunner: opsJobRunner,
-    });
-    res.json({
-      status: 'ok',
-      ops,
-    });
-  })();
+  res.json({
+    status: 'ok',
+    service: 'ops-api',
+    releaseVersion: (process.env.OPS_RELEASE_VERSION ?? process.env.IMAGE_TAG ?? 'main').trim() || 'main',
+    serverTimeUtc: new Date().toISOString(),
+  });
 });
 
 app.use('/ingest-event', ingestRoutes);

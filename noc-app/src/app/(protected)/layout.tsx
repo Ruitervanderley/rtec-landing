@@ -1,128 +1,106 @@
-import { Database, Home, Monitor, Settings, Users } from 'lucide-react';
+'use client';
+
+import { Activity, Database, Home, Monitor, Settings, ShieldCheck, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { LogoutButton } from '@/components/LogoutButton';
 
 const navItems = [
-  { href: '/dashboard', icon: Home, label: 'Dashboard' },
-  { href: '/tenants', icon: Users, label: 'Tenants' },
-  { href: '/devices', icon: Monitor, label: 'Dispositivos' },
-  { href: '/backups', icon: Database, label: 'Backups' },
-  { href: '/servicos', icon: Settings, label: 'NOC Servicos' },
+  { href: '/dashboard', icon: Home, label: 'Dashboard', description: 'Panorama geral do stack' },
+  { href: '/tenants', icon: Users, label: 'Empresas', description: 'Clientes, portais e licencas' },
+  { href: '/devices', icon: Monitor, label: 'Dispositivos', description: 'Frota agrupada por tenant' },
+  { href: '/backups', icon: Database, label: 'Backups', description: 'Historico e retencao' },
+  { href: '/servicos', icon: Settings, label: 'Servicos', description: 'Catalogo e incidentes' },
 ];
 
 export default function ProtectedLayout(props: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const currentItem = navItems.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`)) ?? navItems[0];
+  const dateLabel = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+  }).format(new Date());
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
-      <aside
-        style={{
-          backgroundColor: 'var(--sidebar-bg)',
-          boxShadow: 'var(--shadow-lg)',
-          color: 'var(--sidebar-text)',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100vh',
-          left: 0,
-          position: 'fixed',
-          top: 0,
-          width: '260px',
-          zIndex: 40,
-        }}
-      >
-        <div
-          style={{
-            alignItems: 'center',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
-            display: 'flex',
-            height: '70px',
-            justifyContent: 'center',
-            padding: '0 1.5rem',
-          }}
-        >
+    <div className="ops-shell">
+      <aside className="ops-sidebar">
+        <div className="ops-sidebar__brand">
           <Image
             alt="R.TEC Solucoes Tecnologicas"
-            height={42}
+            height={44}
             priority
             src="/logo.png"
-            style={{ height: '42px', objectFit: 'contain', width: 'auto' }}
-            width={168}
+            style={{ height: '44px', objectFit: 'contain', width: 'auto' }}
+            width={172}
           />
+          <div className="ops-sidebar__brand-copy">
+            <span className="ops-sidebar__eyebrow">Operations mesh</span>
+            <strong className="ops-sidebar__title">NOC multi-tenant</strong>
+          </div>
         </div>
 
-        <nav style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: '0.5rem', padding: '1.5rem 1rem' }}>
+        <div className="ops-sidebar__intro">
+          <strong>Empresas separadas por contexto operacional</strong>
+          <p>
+            O painel agora prioriza leitura por tenant, frota conectada, saude do stack e atalho rapido para cada empresa.
+          </p>
+        </div>
+
+        <nav className="ops-nav">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             return (
-              <Link key={item.href} className="sidebar-link" href={item.href}>
-                <Icon size={20} strokeWidth={2.5} />
-                {item.label}
+              <Link
+                key={item.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={`ops-nav__link${isActive ? ' is-active' : ''}`}
+                href={item.href}
+              >
+                <span className="ops-nav__icon">
+                  <Icon size={20} strokeWidth={2.2} />
+                </span>
+                <span className="ops-nav__copy">
+                  <span className="ops-nav__label">{item.label}</span>
+                  <span className="ops-nav__description">{item.description}</span>
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        <div
-          style={{
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            padding: '1rem',
-          }}
-        >
+        <div className="ops-sidebar__footer">
           <LogoutButton />
-          <div style={{ color: '#475569', fontSize: '0.7rem', textAlign: 'center' }}>
-            R.TEC NOC Panel v2.0
-          </div>
+          <div className="ops-sidebar__version">R.TEC NOC panel v3.0</div>
         </div>
       </aside>
 
-      <div style={{ display: 'flex', flex: 1, flexDirection: 'column', marginLeft: '260px' }}>
-        <header
-          style={{
-            WebkitBackdropFilter: 'blur(12px)',
-            alignItems: 'center',
-            backdropFilter: 'blur(12px)',
-            backgroundColor: 'var(--bg-glass)',
-            borderBottom: '1px solid var(--border-color)',
-            display: 'flex',
-            height: '70px',
-            justifyContent: 'flex-end',
-            padding: '0 2rem',
-            position: 'sticky',
-            top: 0,
-            zIndex: 30,
-          }}
-        >
-          <div style={{ alignItems: 'center', display: 'flex', gap: '1rem' }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>NOC Admin</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Operations</div>
-            </div>
-            <div
-              style={{
-                alignItems: 'center',
-                background: 'var(--brand-gradient)',
-                borderRadius: '50%',
-                color: '#fff',
-                display: 'flex',
-                fontWeight: 700,
-                height: '36px',
-                justifyContent: 'center',
-                width: '36px',
-              }}
-            >
-              RT
-            </div>
+      <div className="ops-main">
+        <header className="ops-topbar">
+          <div className="ops-topbar__context">
+            <span className="ops-topbar__eyebrow">R.TEC operational cockpit</span>
+            <strong className="ops-topbar__title">{currentItem.label}</strong>
+            <span className="ops-topbar__description">{currentItem.description}</span>
+          </div>
+
+          <div className="ops-topbar__cluster">
+            <span className="ops-topbar__badge">
+              <ShieldCheck size={14} />
+              Empresas segmentadas
+            </span>
+            <span className="ops-topbar__badge">
+              <Activity size={14} />
+              {dateLabel}
+            </span>
+            <span className="ops-topbar__avatar">RT</span>
           </div>
         </header>
 
-        <main style={{ margin: '0 auto', maxWidth: '1400px', padding: '2rem', width: '100%' }}>
-          {props.children}
-        </main>
+        <main className="ops-content">{props.children}</main>
       </div>
     </div>
   );

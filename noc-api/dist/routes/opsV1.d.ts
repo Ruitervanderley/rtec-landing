@@ -12,6 +12,7 @@ export declare function createOpsV1Router(options: {
 export declare function getOpsHealth(options: {
     config: OpsConfig;
     r2Service: R2Service;
+    alertService: OpsAlertService;
     jobRunner: OpsJobRunner;
 }): Promise<Record<string, unknown>>;
 //# sourceMappingURL=opsV1.d.ts.map

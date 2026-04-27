@@ -19,6 +19,37 @@ export type OpsOverview = {
   lastAlertAtUtc: string | null;
 };
 
+export type OpsDependencyHealth = {
+  ok: boolean;
+  status: 'ok' | 'error' | 'not_configured';
+  message: string;
+  latencyMs: number | null;
+  statusCode?: number | null;
+};
+
+export type OpsAdminHealth = {
+  status: 'ok' | 'degraded';
+  service: 'ops-api';
+  deployment: {
+    nodeEnv: string | null;
+    releaseVersion: string;
+    serverTimeUtc: string;
+  };
+  dependencies: {
+    database: OpsDependencyHealth;
+    supabase: OpsDependencyHealth;
+    r2: OpsDependencyHealth;
+  };
+  jobs: OpsOverview['jobs'];
+  alerts: {
+    lastAlertAtUtc: string | null;
+  };
+  metrics: {
+    activeDeviceTokens: number;
+    pendingOrFailedBackups: number;
+  };
+};
+
 export type TenantRow = {
   id: string;
   name: string;
@@ -136,6 +167,7 @@ export type TenantDetail = {
   };
   tenant: {
     adminUsers: number;
+    cloudflareStatus: 'manual_redirect_required' | 'not_applicable';
     deviceCount: number;
     isActive: boolean;
     lastBackupAt: string | null;
@@ -264,6 +296,10 @@ async function patchAdmin<T>(path: string, body: Record<string, unknown>): Promi
 
 export async function getOverview(): Promise<OpsOverview> {
   return fetchAdmin<OpsOverview>('/admin/overview');
+}
+
+export async function getAdminHealth(): Promise<OpsAdminHealth> {
+  return fetchAdmin<OpsAdminHealth>('/admin/health');
 }
 
 export async function getTenants(): Promise<TenantRow[]> {

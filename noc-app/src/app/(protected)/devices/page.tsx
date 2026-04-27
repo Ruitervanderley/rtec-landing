@@ -1,6 +1,5 @@
 import { Laptop } from 'lucide-react';
 import { revalidatePath } from 'next/cache';
-import Link from 'next/link';
 import { DeviceTable } from '@/components/DeviceTable';
 import { getDevices, revokeDevice } from '@/lib/ops-api';
 
@@ -13,6 +12,7 @@ export default async function DevicesPage() {
     if (!devicePk) {
       return;
     }
+
     await revokeDevice(devicePk);
     revalidatePath('/devices');
   }
@@ -27,19 +27,18 @@ export default async function DevicesPage() {
   }
 
   return (
-    <section>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Laptop size={26} color="var(--accent-primary)" />
-          Todos os Dispositivos Ativos
-        </h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          Status individual de comunicação de todos os clientes. Utilize o menu
-          {' '}
-          <Link href="/tenants" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Tenants</Link>
-          {' '}
-          para ver os PCs de cada empresa.
-        </p>
+    <section className="page-stack">
+      <div className="page-hero">
+        <div className="page-hero__content">
+          <span className="page-hero__eyebrow">Frota operacional</span>
+          <h1 className="page-hero__title">
+            <Laptop size={28} color="var(--accent-primary)" />
+            Dispositivos agrupados por empresa
+          </h1>
+          <p className="page-hero__description">
+            Esta visao deixa de misturar toda a frota em uma unica tabela. Cada empresa aparece em um bloco proprio, com contagem de online, alertas de atencao e atalho direto para o tenant.
+          </p>
+        </div>
       </div>
 
       <DeviceTable

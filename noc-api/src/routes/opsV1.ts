@@ -59,9 +59,16 @@ class InMemoryRateLimiter {
 }
 
 const rateLimiter = new InMemoryRateLimiter();
-const PORTAL_PUBLIC_BASE_URL = (process.env.PANEL_PUBLIC_BASE_URL ?? 'https://painel.rtectecnologia.com.br')
+const PORTAL_PUBLIC_BASE_URL = (process.env.PANEL_PUBLIC_BASE_URL
+  ?? process.env.PANEL_PUBLIC_URL
+  ?? 'https://painel.rtectecnologia.com.br')
   .trim()
   .replace(/\/$/, '');
+const TENANT_REDIRECT_ZONE_HOST = (process.env.TENANT_REDIRECT_ZONE_HOST ?? 'rtectecnologia.com.br')
+  .trim()
+  .toLowerCase();
+
+type CloudflareRoutingStatus = 'manual_redirect_required' | 'not_applicable';
 
 type PortalTenantRow = {
   tenantId: string;
@@ -201,16 +208,17 @@ function buildPortalRoutingInfo(portalSlug: string | null) {
       portalUrl: null,
       redirectSource: null,
       redirectTarget: null,
-      cloudflareStatus: 'not_applicable' as const,
+      cloudflareStatus: 'not_applicable' as CloudflareRoutingStatus,
     };
   }
 
   const portalUrl = `${PORTAL_PUBLIC_BASE_URL}/portal/${portalSlug}`;
+  const redirectSource = `https://${portalSlug}.${TENANT_REDIRECT_ZONE_HOST}/*`;
   return {
     portalUrl,
-    redirectSource: null,
+    redirectSource,
     redirectTarget: portalUrl,
-    cloudflareStatus: 'not_applicable' as const,
+    cloudflareStatus: 'manual_redirect_required' as CloudflareRoutingStatus,
   };
 }
 
@@ -1472,6 +1480,22 @@ export function createOpsV1Router(options: {
     }
   });
 
+  router.get('/admin/health', requireAdminToken(options.config), async (_req: Request, res: Response) => {
+    try {
+      const health = await getOpsHealth({
+        config: options.config,
+        r2Service: options.r2Service,
+        alertService: options.alertService,
+        jobRunner: options.jobRunner,
+      });
+
+      res.json(health);
+    } catch (error) {
+      console.error('GET /v1/admin/health error:', error);
+      res.status(500).json({ error: 'ADMIN_HEALTH_ERROR' });
+    }
+  });
+
   router.get('/admin/devices', requireAdminToken(options.config), async (req: Request, res: Response) => {
     try {
       const limitRaw = Number(req.query.limit ?? 200);
@@ -1509,7 +1533,7 @@ export function createOpsV1Router(options: {
           limit 1
         ) latest_hb on true
         where td.revoked_at is null
-        ${tenantId ? sql`and td.tenant_id = ${tenantId}` : sql``}
+        ${tenantId ? sql`and td.tenant_id = ${tenantId}::uuid` : sql``}
         order by td.last_seen_at desc nulls last
         limit ${limit}
       `);
@@ -1614,6 +1638,7 @@ export function createOpsV1Router(options: {
         },
         tenant: {
           ...tenant,
+          cloudflareStatus: routingInfo.cloudflareStatus,
           portalUrl: routingInfo.portalUrl,
           redirectSource: routingInfo.redirectSource,
           redirectTarget: routingInfo.redirectTarget,
@@ -2480,11 +2505,44 @@ export function createOpsV1Router(options: {
 export async function getOpsHealth(options: {
   config: OpsConfig;
   r2Service: R2Service;
+  alertService: OpsAlertService;
   jobRunner: OpsJobRunner;
 }): Promise<Record<string, unknown>> {
-  let supabaseStatus: Record<string, unknown> = { ok: false, message: 'not_configured' };
+  let databaseStatus: Record<string, unknown> = {
+    ok: false,
+    status: 'error',
+    message: 'database_check_not_started',
+    latencyMs: null,
+  };
+  const databaseCheckStartedAt = Date.now();
+
+  try {
+    await pool.query('select 1');
+    databaseStatus = {
+      ok: true,
+      status: 'ok',
+      message: 'ok',
+      latencyMs: Date.now() - databaseCheckStartedAt,
+    };
+  } catch (error) {
+    databaseStatus = {
+      ok: false,
+      status: 'error',
+      message: error instanceof Error ? error.message : 'database_check_error',
+      latencyMs: Date.now() - databaseCheckStartedAt,
+    };
+  }
+
+  let supabaseStatus: Record<string, unknown> = {
+    ok: false,
+    status: 'not_configured',
+    message: 'not_configured',
+    latencyMs: null,
+    statusCode: null,
+  };
 
   if (options.config.supabaseUrl && options.config.supabaseAnonKey) {
+    const supabaseCheckStartedAt = Date.now();
     try {
       const response = await fetch(`${options.config.supabaseUrl}/auth/v1/settings`, {
         method: 'GET',
@@ -2494,40 +2552,89 @@ export async function getOpsHealth(options: {
       });
       supabaseStatus = {
         ok: response.ok,
+        status: response.ok ? 'ok' : 'error',
+        message: response.ok ? 'ok' : `http_${response.status}`,
+        latencyMs: Date.now() - supabaseCheckStartedAt,
         statusCode: response.status,
       };
     } catch (error) {
       supabaseStatus = {
         ok: false,
+        status: 'error',
         message: error instanceof Error ? error.message : 'supabase_check_error',
+        latencyMs: Date.now() - supabaseCheckStartedAt,
+        statusCode: null,
       };
     }
   }
 
-  const r2Status = await options.r2Service.checkHealth();
+  const r2CheckStartedAt = Date.now();
+  const rawR2Status = await options.r2Service.checkHealth();
+  const r2Status = {
+    ok: rawR2Status.ok,
+    status: rawR2Status.ok ? 'ok' : (options.r2Service.isConfigured ? 'error' : 'not_configured'),
+    message: rawR2Status.message,
+    latencyMs: Date.now() - r2CheckStartedAt,
+  };
 
-  const activeTokens = await db
-    .select({
-      total: sql<number>`count(1)`.mapWith(Number),
-    })
-    .from(deviceApiTokens)
-    .where(and(isNull(deviceApiTokens.revokedAt), gt(deviceApiTokens.expiresAt, new Date())));
+  let activeDeviceTokens = 0;
+  let pendingOrFailedBackups = 0;
 
-  const pendingBackups = await db
-    .select({
-      total: sql<number>`count(1)`.mapWith(Number),
-    })
-    .from(deviceBackups)
-    .where(inArray(deviceBackups.status, ['PENDING', 'FAILED']));
+  if (databaseStatus.ok) {
+    try {
+      const [activeTokens, pendingBackups] = await Promise.all([
+        db
+          .select({
+            total: sql<number>`count(1)`.mapWith(Number),
+          })
+          .from(deviceApiTokens)
+          .where(and(isNull(deviceApiTokens.revokedAt), gt(deviceApiTokens.expiresAt, new Date()))),
+        db
+          .select({
+            total: sql<number>`count(1)`.mapWith(Number),
+          })
+          .from(deviceBackups)
+          .where(inArray(deviceBackups.status, ['PENDING', 'FAILED'])),
+      ]);
+
+      activeDeviceTokens = activeTokens[0]?.total ?? 0;
+      pendingOrFailedBackups = pendingBackups[0]?.total ?? 0;
+    } catch (error) {
+      databaseStatus = {
+        ok: false,
+        status: 'error',
+        message: error instanceof Error ? error.message : 'database_metrics_error',
+        latencyMs: databaseStatus.latencyMs ?? null,
+      };
+    }
+  }
 
   const runtime = options.jobRunner.getState();
+  const serverTimeUtc = new Date().toISOString();
+  const databaseOk = databaseStatus.ok === true;
+  const supabaseOk = supabaseStatus.ok === true;
+  const r2OkOrOptional = r2Status.ok === true || r2Status.status === 'not_configured';
 
   return {
-    supabase: supabaseStatus,
-    r2: r2Status,
+    status: databaseOk && supabaseOk && r2OkOrOptional ? 'ok' : 'degraded',
+    service: 'ops-api',
+    deployment: {
+      nodeEnv: process.env.NODE_ENV ?? null,
+      releaseVersion: (process.env.OPS_RELEASE_VERSION ?? process.env.IMAGE_TAG ?? 'main').trim() || 'main',
+      serverTimeUtc,
+    },
+    dependencies: {
+      database: databaseStatus,
+      supabase: supabaseStatus,
+      r2: r2Status,
+    },
     jobs: runtime,
-    activeDeviceTokens: activeTokens[0]?.total ?? 0,
-    pendingOrFailedBackups: pendingBackups[0]?.total ?? 0,
-    serverTimeUtc: new Date().toISOString(),
+    alerts: {
+      lastAlertAtUtc: options.alertService.lastAlertAtUtc?.toISOString() ?? null,
+    },
+    metrics: {
+      activeDeviceTokens,
+      pendingOrFailedBackups,
+    },
   };
 }
