@@ -34,6 +34,18 @@ function getSessionSecret() {
 }
 
 export const Env = {
+  get nocAgentPackageSha256() {
+    return readEnv('NOC_AGENT_PACKAGE_SHA256');
+  },
+  get nocAgentPackageUpdatedAt() {
+    return readEnv('NOC_AGENT_PACKAGE_UPDATED_AT') || 'não informado';
+  },
+  get nocAgentPackageUrl() {
+    return readEnv('NOC_AGENT_PACKAGE_URL');
+  },
+  get nocAgentPackageVersion() {
+    return readEnv('NOC_AGENT_PACKAGE_VERSION') || '1.1.0';
+  },
   get nocAdminPassword() {
     return requireEnv('NOC_ADMIN_PASSWORD');
   },

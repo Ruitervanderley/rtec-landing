@@ -1302,7 +1302,8 @@ export function createOpsV1Router(options: {
     }
 
     try {
-      const { appVersion, status, currentSessionGuid, lastSyncUsersAtUtc, lastKeepAliveAtUtc, meta: clientMeta } = req.body as {
+      const { app_version: appVersionLegacy, appVersion, status, currentSessionGuid, lastSyncUsersAtUtc, lastKeepAliveAtUtc, meta: clientMeta } = req.body as {
+        app_version?: string;
         meta?: Record<string, unknown>;
         appVersion?: string;
         status?: string;
@@ -1323,7 +1324,8 @@ export function createOpsV1Router(options: {
         lastKeepAliveAtUtc: lastKeepAliveAtUtc ?? null,
       };
 
-      const normalizedVersion = typeof appVersion === 'string' ? appVersion.trim() : '';
+      const versionInput = typeof appVersion === 'string' ? appVersion : appVersionLegacy;
+      const normalizedVersion = typeof versionInput === 'string' ? versionInput.trim() : '';
 
       await db.insert(deviceHeartbeats).values({
         deviceFk: req.opsDevice.devicePk,

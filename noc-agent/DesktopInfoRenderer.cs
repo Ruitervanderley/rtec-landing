@@ -54,9 +54,9 @@ public static class DesktopInfoRenderer
     {
         var scale = Math.Max(1f, Math.Min(canvasSize.Width / 1920f, canvasSize.Height / 1080f));
         var width = (int)(520 * scale);
-        var height = (int)(260 * scale);
+        var height = (int)(250 * scale);
         var margin = (int)(42 * scale);
-        var bottomSafeArea = (int)(126 * scale);
+        var bottomSafeArea = (int)(190 * scale);
         var x = Math.Max(margin, canvasSize.Width - width - margin);
         var y = Math.Max(margin, canvasSize.Height - height - margin - bottomSafeArea);
         var bounds = new Rectangle(x, y, width, height);
@@ -87,7 +87,7 @@ public static class DesktopInfoRenderer
         DrawLine("MAC", NormalizeText(snapshot.MacAddress, "-"), graphics, labelBrush, valueBrush, metaFont, valueFont, x, ref cursorY, scale);
         DrawLine("Rede", NormalizeText(snapshot.AdapterName, "-"), graphics, labelBrush, valueBrush, metaFont, valueFont, x, ref cursorY, scale);
 
-        var footer = $"Agente {NormalizeText(snapshot.AgentVersion, "1.1.0")}  |  Atualizado {snapshot.UpdatedAt:dd/MM/yyyy HH:mm}";
+        var footer = $"Agente {NormalizeVersion(snapshot.AgentVersion)}  |  Atualizado {snapshot.UpdatedAt:dd/MM/yyyy HH:mm}";
         graphics.DrawString(footer, metaFont, labelBrush, x + (int)(50 * scale), y + height - (int)(36 * scale));
     }
 
@@ -118,6 +118,13 @@ public static class DesktopInfoRenderer
         return string.IsNullOrWhiteSpace(value) || value.Equals("Unknown", StringComparison.OrdinalIgnoreCase)
             ? fallback
             : value.Trim();
+    }
+
+    private static string NormalizeVersion(string value)
+    {
+        var normalized = NormalizeText(value, "1.1.0");
+        var metadataIndex = normalized.IndexOf('+');
+        return metadataIndex > 0 ? normalized[..metadataIndex] : normalized;
     }
 
     private static void FillRoundedRectangle(Graphics graphics, Brush brush, Rectangle bounds, float radius)

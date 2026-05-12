@@ -71,6 +71,7 @@ public class Worker : BackgroundService
                 var payload = new
                 {
                     status = "ONLINE",
+                    appVersion = _appVersion,
                     app_version = _appVersion,
                     device_name = deviceName,
                     meta = new
@@ -176,9 +177,16 @@ public class Worker : BackgroundService
 
         if (!string.IsNullOrWhiteSpace(informationalVersion))
         {
-            return informationalVersion.Trim();
+            return NormalizeVersion(informationalVersion);
         }
 
         return assembly.GetName().Version?.ToString() ?? "1.0.0";
+    }
+
+    private static string NormalizeVersion(string version)
+    {
+        var normalized = version.Trim();
+        var metadataIndex = normalized.IndexOf('+');
+        return metadataIndex > 0 ? normalized[..metadataIndex] : normalized;
     }
 }

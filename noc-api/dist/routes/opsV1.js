@@ -979,7 +979,7 @@ export function createOpsV1Router(options) {
             return;
         }
         try {
-            const { appVersion, status, currentSessionGuid, lastSyncUsersAtUtc, lastKeepAliveAtUtc, meta: clientMeta } = req.body;
+            const { app_version: appVersionLegacy, appVersion, status, currentSessionGuid, lastSyncUsersAtUtc, lastKeepAliveAtUtc, meta: clientMeta } = req.body;
             if (!status || typeof status !== 'string') {
                 res.status(400).json({ error: 'status is required' });
                 return;
@@ -990,7 +990,8 @@ export function createOpsV1Router(options) {
                 lastSyncUsersAtUtc: lastSyncUsersAtUtc ?? null,
                 lastKeepAliveAtUtc: lastKeepAliveAtUtc ?? null,
             };
-            const normalizedVersion = typeof appVersion === 'string' ? appVersion.trim() : '';
+            const versionInput = typeof appVersion === 'string' ? appVersion : appVersionLegacy;
+            const normalizedVersion = typeof versionInput === 'string' ? versionInput.trim() : '';
             await db.insert(deviceHeartbeats).values({
                 deviceFk: req.opsDevice.devicePk,
                 status: status.trim(),

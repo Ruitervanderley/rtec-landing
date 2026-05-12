@@ -16,6 +16,14 @@ type AgentWallpaperConfig = {
   mode: 'rtec' | 'current' | 'custom';
 };
 
+type OfficialAgentPackage = {
+  fileName: string;
+  sha256: string;
+  updatedAt: string;
+  url: string;
+  version: string;
+};
+
 type ZipFileEntry = {
   content: string;
   name: string;
@@ -298,6 +306,7 @@ function TokenResultPanel(props: {
 export function TenantAgentManager(props: {
   agent: TenantAgentDetail;
   devices: DeviceRow[];
+  officialPackage: OfficialAgentPackage;
   tenantId: string;
   tenantName: string;
 }) {
@@ -476,6 +485,53 @@ export function TenantAgentManager(props: {
       {result
         ? <TokenResultPanel result={result} tenantName={props.tenantName} wallpaper={wallpaperResult} />
         : null}
+
+      <section className="agent-official-package">
+        <div>
+          <div className="page-hero__eyebrow">Pacote oficial versionado</div>
+          <h3 className="agent-official-package__title">{props.officialPackage.fileName}</h3>
+          <p className="agent-official-package__description">
+            Baixe o instalador oficial uma vez e combine com o pacote de configuração gerado para cada empresa ou máquina.
+          </p>
+        </div>
+
+        <div className="agent-official-package__meta">
+          <span>
+            Versão
+            {' '}
+            {props.officialPackage.version}
+          </span>
+          <span>
+            Atualizado
+            {' '}
+            {props.officialPackage.updatedAt}
+          </span>
+          <span>
+            SHA256
+            {' '}
+            {props.officialPackage.sha256 || 'não configurado'}
+          </span>
+        </div>
+
+        <div className="agent-official-package__actions">
+          {props.officialPackage.url
+            ? (
+                <a className="agent-primary-button" href={props.officialPackage.url} rel="noreferrer" target="_blank">
+                  <Download size={15} />
+                  Baixar pacote oficial
+                </a>
+              )
+            : (
+                <button className="agent-primary-button" disabled type="button">
+                  <Download size={15} />
+                  URL não configurada
+                </button>
+              )}
+          <span className="agent-official-package__hint">
+            Configure `NOC_AGENT_PACKAGE_URL` na VPS para publicar o link oficial.
+          </span>
+        </div>
+      </section>
 
       <div className="ops-layout-grid">
         <section className="ops-note-card">

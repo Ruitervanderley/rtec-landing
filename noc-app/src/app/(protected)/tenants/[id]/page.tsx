@@ -8,6 +8,7 @@ import { TenantBackupWorkspace } from '@/components/TenantBackupWorkspace';
 import { TenantDeviceWorkspace } from '@/components/TenantDeviceWorkspace';
 import { TenantInfrastructureEditor } from '@/components/TenantInfrastructureEditor';
 import { TenantUsersManager } from '@/components/TenantUsersManager';
+import { Env } from '@/lib/Env';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { getBackups, getDevices, getTenantDetail, revokeDevice } from '@/lib/ops-api';
 
@@ -596,6 +597,13 @@ export default async function TenantDetailPage(props: {
             <TenantAgentManager
               agent={detail.agent}
               devices={devices}
+              officialPackage={{
+                fileName: `RtecNocAgent-${Env.nocAgentPackageVersion}-win-x64.zip`,
+                sha256: Env.nocAgentPackageSha256,
+                updatedAt: Env.nocAgentPackageUpdatedAt,
+                url: Env.nocAgentPackageUrl,
+                version: Env.nocAgentPackageVersion,
+              }}
               tenantId={detail.tenant.tenantId}
               tenantName={detail.tenant.name}
             />
