@@ -35,7 +35,9 @@ jobs:
 
       - name: Define release tag
         id: release
-        run: echo "deploy_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "deploy_tag=$(git rev-parse --short=12 "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+          echo "deploy_sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Normalize image names
         id: image-names
@@ -62,6 +64,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ steps.image-names.outputs.api }}:main
             ${{ env.REGISTRY }}/${{ steps.image-names.outputs.api }}:${{ steps.release.outputs.deploy_tag }}
+            ${{ env.REGISTRY }}/${{ steps.image-names.outputs.api }}:${{ steps.release.outputs.deploy_sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -77,6 +80,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ steps.image-names.outputs.app }}:main
             ${{ env.REGISTRY }}/${{ steps.image-names.outputs.app }}:${{ steps.release.outputs.deploy_tag }}
+            ${{ env.REGISTRY }}/${{ steps.image-names.outputs.app }}:${{ steps.release.outputs.deploy_sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
