@@ -107,6 +107,43 @@ type TenantUserWithAccess = TenantUserRow & {
   isBlocked: boolean;
 };
 
+type TenantProvisionOwner = TenantUserRow;
+
+type TenantAgentSummary = {
+  activeTokens: number;
+  lastHeartbeatAt: string | null;
+  latestTokenIssuedAt: string | null;
+  onlineDevices: number;
+  provisionedDevices: number;
+};
+
+type TenantOperationalStatus = 'healthy' | 'degraded' | 'critical';
+
+type TenantOperationalSummary = {
+  adminUsers: number;
+  cloudflareStatus: CloudflareRoutingStatus;
+  deviceCount: number;
+  failedBackups24h: number;
+  hasBackupFailures: boolean;
+  hasOfflineDevices: boolean;
+  hasPendingBackups: boolean;
+  hasStaleHeartbeat: boolean;
+  isActive: boolean;
+  isLicenseExpired: boolean;
+  lastBackupAt: string | null;
+  lastSeenAt: string | null;
+  name: string;
+  offlineDevices: number;
+  onlineDevices: number;
+  pendingBackups: number;
+  portalSlug: string | null;
+  status: TenantOperationalStatus;
+  tenantId: string;
+  type: string;
+  userCount: number;
+  validUntil: string | null;
+};
+
 type TenantInfrastructureAsset = {
   category: string;
   host: string | null;
@@ -237,6 +274,88 @@ function toIsoString(value: Date | string | null | undefined) {
   }
 
   return parsed.toISOString();
+}
+
+function isExpiredDate(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  return parsed.getTime() < Date.now();
+}
+
+function buildTenantOperationalSummary(row: {
+  admin_users: number | string;
+  device_count: number | string;
+  failed_backups_24h: number | string;
+  is_active: boolean;
+  last_backup_at: Date | string | null;
+  last_seen_at: Date | string | null;
+  name: string;
+  online_devices: number | string;
+  pending_backups: number | string;
+  portal_slug: string | null;
+  subdomain: string | null;
+  tenant_id: string;
+  type: string;
+  user_count: number | string;
+  valid_until: string | null;
+}): TenantOperationalSummary {
+  const deviceCount = Number(row.device_count ?? 0);
+  const onlineDevices = Number(row.online_devices ?? 0);
+  const failedBackups24h = Number(row.failed_backups_24h ?? 0);
+  const pendingBackups = Number(row.pending_backups ?? 0);
+  const offlineDevices = Math.max(deviceCount - onlineDevices, 0);
+  const lastSeenAt = toIsoString(row.last_seen_at);
+  const lastBackupAt = toIsoString(row.last_backup_at);
+  const validUntil = row.valid_until ?? null;
+  const portalSlug = sanitizeTenantSubdomain(row.portal_slug ?? row.subdomain ?? null);
+  const routingInfo = buildPortalRoutingInfo(portalSlug);
+  const hasStaleHeartbeat = Boolean(
+    deviceCount > 0
+    && (!lastSeenAt || new Date(lastSeenAt).getTime() < Date.now() - (30 * 60 * 1000)),
+  );
+  const isLicenseExpired = isExpiredDate(validUntil);
+  const hasBackupFailures = failedBackups24h > 0;
+  const hasPendingBackups = pendingBackups > 0;
+  const hasOfflineDevices = offlineDevices > 0;
+
+  let status: TenantOperationalStatus = 'healthy';
+  if (!row.is_active || isLicenseExpired || hasBackupFailures || hasOfflineDevices) {
+    status = 'critical';
+  } else if (hasStaleHeartbeat || hasPendingBackups || deviceCount === 0) {
+    status = 'degraded';
+  }
+
+  return {
+    adminUsers: Number(row.admin_users ?? 0),
+    cloudflareStatus: routingInfo.cloudflareStatus,
+    deviceCount,
+    failedBackups24h,
+    hasBackupFailures,
+    hasOfflineDevices,
+    hasPendingBackups,
+    hasStaleHeartbeat,
+    isActive: row.is_active,
+    isLicenseExpired,
+    lastBackupAt,
+    lastSeenAt,
+    name: row.name,
+    offlineDevices,
+    onlineDevices,
+    pendingBackups,
+    portalSlug,
+    status,
+    tenantId: row.tenant_id,
+    type: row.type,
+    userCount: Number(row.user_count ?? 0),
+    validUntil,
+  };
 }
 
 function toNumber(value: unknown): number {
@@ -567,6 +686,81 @@ async function getTenantUsers(tenantId: string) {
     userId: String((row as { user_id?: string }).user_id ?? ''),
     validUntil: ((row as { valid_until?: string | null }).valid_until ?? null),
   })) satisfies TenantUserRow[];
+}
+
+function selectTenantProvisionOwner(users: TenantUserRow[]) {
+  const adminUser = users.find(user => user.isAdmin);
+  if (adminUser) {
+    return adminUser satisfies TenantProvisionOwner;
+  }
+
+  return users[0] ?? null;
+}
+
+async function getTenantAgentSummary(tenantId: string) {
+  const result = await db.execute(sql`
+    select
+      coalesce(
+        (
+          select count(1)::int
+          from public.tenant_devices td
+          where td.tenant_id = ${tenantId}::uuid
+            and td.revoked_at is null
+        ),
+        0
+      ) as provisioned_devices,
+      coalesce(
+        (
+          select count(1)::int
+          from public.tenant_devices td
+          where td.tenant_id = ${tenantId}::uuid
+            and td.revoked_at is null
+            and td.last_seen_at >= now() - interval '15 minutes'
+        ),
+        0
+      ) as online_devices,
+      coalesce(
+        (
+          select count(1)::int
+          from public.device_api_tokens dat
+          inner join public.tenant_devices td on td.id = dat.device_fk
+          where td.tenant_id = ${tenantId}::uuid
+            and td.revoked_at is null
+            and dat.revoked_at is null
+            and dat.expires_at > now()
+        ),
+        0
+      ) as active_tokens,
+      (
+        select max(td.last_seen_at)
+        from public.tenant_devices td
+        where td.tenant_id = ${tenantId}::uuid
+          and td.revoked_at is null
+      ) as last_heartbeat_at,
+      (
+        select max(dat.created_at)
+        from public.device_api_tokens dat
+        inner join public.tenant_devices td on td.id = dat.device_fk
+        where td.tenant_id = ${tenantId}::uuid
+          and td.revoked_at is null
+      ) as latest_token_issued_at
+  `);
+
+  const row = (result.rows[0] ?? {}) as {
+    active_tokens?: number | string;
+    last_heartbeat_at?: Date | string | null;
+    latest_token_issued_at?: Date | string | null;
+    online_devices?: number | string;
+    provisioned_devices?: number | string;
+  };
+
+  return {
+    activeTokens: toNumber(row.active_tokens),
+    lastHeartbeatAt: toIsoString(row.last_heartbeat_at),
+    latestTokenIssuedAt: toIsoString(row.latest_token_issued_at),
+    onlineDevices: toNumber(row.online_devices),
+    provisionedDevices: toNumber(row.provisioned_devices),
+  } satisfies TenantAgentSummary;
 }
 
 function toStringValue(value: unknown) {
@@ -1452,14 +1646,122 @@ export function createOpsV1Router(options: {
   router.get('/admin/overview', requireAdminToken(options.config), async (_req: Request, res: Response) => {
     try {
       const countsResult = await db.execute(sql`
-        select
-          (select count(1)::int from public.tenants) as total_tenants,
+          select
+            (select count(1)::int from public.tenants) as total_tenants,
           (select count(1)::int from public.tenant_devices where revoked_at is null) as total_devices,
           (select count(1)::int from public.tenant_devices where revoked_at is null and last_seen_at >= now() - interval '15 minutes') as online_devices,
           (select count(1)::int from public.device_backups where status = 'FAILED' and created_at >= now() - interval '24 hours') as failed_backups_24h,
-          (select count(1)::int from public.device_backups where status = 'UPLOADED' and created_at >= now() - interval '24 hours') as uploaded_backups_24h
-      `);
+            (select count(1)::int from public.device_backups where status = 'UPLOADED' and created_at >= now() - interval '24 hours') as uploaded_backups_24h
+        `);
       const counts = (countsResult.rows[0] ?? {}) as Record<string, unknown>;
+      const tenantSummaryResult = await db.execute(sql`
+          select
+            t.id::text as tenant_id,
+            t.name,
+            coalesce(t.type, 'empresa_ti') as type,
+            coalesce(t.portal_slug, t.subdomain) as portal_slug,
+            t.subdomain,
+            coalesce(t.is_active, false) as is_active,
+            t.valid_until::text as valid_until,
+            coalesce(
+              (
+                select count(1)::int
+                from public.tenant_devices td
+                where td.tenant_id = t.id
+                  and td.revoked_at is null
+              ),
+              0
+            ) as device_count,
+            coalesce(
+              (
+                select count(1)::int
+                from public.tenant_devices td
+                where td.tenant_id = t.id
+                  and td.revoked_at is null
+                  and td.last_seen_at >= now() - interval '15 minutes'
+              ),
+              0
+            ) as online_devices,
+            (
+              select max(td.last_seen_at)
+              from public.tenant_devices td
+              where td.tenant_id = t.id
+                and td.revoked_at is null
+            ) as last_seen_at,
+            (
+              select max(b.created_at)
+              from public.device_backups b
+              where b.tenant_id = t.id
+            ) as last_backup_at,
+            coalesce(
+              (
+                select count(1)::int
+                from public.device_backups b
+                where b.tenant_id = t.id
+                  and b.status = 'FAILED'
+                  and b.created_at >= now() - interval '24 hours'
+              ),
+              0
+            ) as failed_backups_24h,
+            coalesce(
+              (
+                select count(1)::int
+                from public.device_backups b
+                where b.tenant_id = t.id
+                  and b.status = 'PENDING'
+              ),
+              0
+            ) as pending_backups,
+            coalesce(
+              (
+                select count(1)::int
+                from public.profiles p
+                where p.tenant_id = t.id
+              ),
+              0
+            ) as user_count,
+            coalesce(
+              (
+                select count(1)::int
+                from public.profiles p
+                where p.tenant_id = t.id
+                  and coalesce(p.is_admin, false) = true
+              ),
+              0
+            ) as admin_users
+          from public.tenants t
+          order by t.name asc
+        `);
+      const operationalTenants = tenantSummaryResult.rows
+        .map(row => buildTenantOperationalSummary(row as {
+          admin_users: number | string;
+          device_count: number | string;
+          failed_backups_24h: number | string;
+          is_active: boolean;
+          last_backup_at: Date | string | null;
+          last_seen_at: Date | string | null;
+          name: string;
+          online_devices: number | string;
+          pending_backups: number | string;
+          portal_slug: string | null;
+          subdomain: string | null;
+          tenant_id: string;
+          type: string;
+          user_count: number | string;
+          valid_until: string | null;
+        }))
+        .sort((left, right) => {
+          const statusWeight = { critical: 0, degraded: 1, healthy: 2 } as const;
+          if (statusWeight[left.status] !== statusWeight[right.status]) {
+            return statusWeight[left.status] - statusWeight[right.status];
+          }
+
+          if (right.offlineDevices !== left.offlineDevices) {
+            return right.offlineDevices - left.offlineDevices;
+          }
+
+          return left.name.localeCompare(right.name, 'pt-BR');
+        });
 
       const runtime = options.jobRunner.getState();
 
@@ -1473,6 +1775,7 @@ export function createOpsV1Router(options: {
         },
         jobs: runtime,
         lastAlertAtUtc: options.alertService.lastAlertAtUtc?.toISOString() ?? null,
+        operationalTenants,
       });
     } catch (error) {
       console.error('GET /v1/admin/overview error:', error);
@@ -1522,9 +1825,15 @@ export function createOpsV1Router(options: {
           latest_hb.meta->>'local_ip' as local_ip,
           latest_hb.meta->>'mac_address' as mac_address,
           latest_hb.meta->>'logged_in_user' as logged_in_user,
-          (latest_hb.meta->>'uptime_seconds')::numeric as uptime_seconds
+          (latest_hb.meta->>'uptime_seconds')::numeric as uptime_seconds,
+          active_token.expires_at as active_token_expires_at,
+          active_token.created_at as active_token_created_at,
+          coalesce(owner_profile.email, '') as owner_email,
+          coalesce(owner_profile.display_name, '') as owner_display_name,
+          coalesce(owner_profile.is_admin, false) as owner_is_admin
         from public.tenant_devices td
         left join public.tenants t on t.id = td.tenant_id
+        left join public.profiles owner_profile on owner_profile.id = td.user_id
         left join lateral (
           select hb.meta 
           from public.device_heartbeats hb 
@@ -1532,6 +1841,15 @@ export function createOpsV1Router(options: {
           order by hb.heartbeat_at desc 
           limit 1
         ) latest_hb on true
+        left join lateral (
+          select dat.expires_at, dat.created_at
+          from public.device_api_tokens dat
+          where dat.device_fk = td.id
+            and dat.revoked_at is null
+            and dat.expires_at > now()
+          order by dat.created_at desc
+          limit 1
+        ) active_token on true
         where td.revoked_at is null
         ${tenantId ? sql`and td.tenant_id = ${tenantId}::uuid` : sql``}
         order by td.last_seen_at desc nulls last
@@ -1627,8 +1945,22 @@ export function createOpsV1Router(options: {
       }));
       const infrastructure = await getTenantInfrastructureProfile(tenant);
       const routingInfo = buildPortalRoutingInfo(tenant.portalSlug);
+      const agentSummary = await getTenantAgentSummary(tenant.tenantId);
+      const agentOwner = selectTenantProvisionOwner(users);
 
       res.json({
+        agent: {
+          canProvision: Boolean(agentOwner),
+          owner: agentOwner
+            ? {
+                displayName: agentOwner.displayName,
+                email: agentOwner.email,
+                isAdmin: agentOwner.isAdmin,
+                userId: agentOwner.userId,
+              }
+            : null,
+          summary: agentSummary,
+        },
         infrastructure: infrastructure.profile,
         infrastructureIsDefault: infrastructure.isDefault,
         license: {
@@ -2222,6 +2554,176 @@ export function createOpsV1Router(options: {
     } catch (error) {
       console.error('POST /v1/admin/tenants/provision error:', error);
       res.status(500).json({ error: error instanceof Error ? error.message : 'PROVISION_ERROR' });
+    }
+  });
+
+  router.post('/admin/tenants/:id/agent/provision', requireAdminToken(options.config), async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.params.id ?? '').trim();
+      if (!tenantId || !isUuid(tenantId)) {
+        res.status(400).json({ error: 'INVALID_TENANT_ID' });
+        return;
+      }
+
+      const tenant = await getTenantAdminById(tenantId);
+      if (!tenant) {
+        res.status(404).json({ error: 'TENANT_NOT_FOUND' });
+        return;
+      }
+
+      const owner = selectTenantProvisionOwner(await getTenantUsers(tenantId));
+      if (!owner) {
+        res.status(400).json({ error: 'TENANT_HAS_NO_USERS' });
+        return;
+      }
+
+      const deviceIdInput = toStringValue((req.body as { device_id?: unknown }).device_id);
+      const deviceNameInput = toStringValue((req.body as { device_name?: unknown }).device_name);
+      const appVersionInput = toStringValue((req.body as { app_version?: unknown }).app_version);
+      const normalizedDeviceId = deviceIdInput || `agent-${crypto.randomUUID().slice(0, 12)}`;
+      const normalizedDeviceName = deviceNameInput || `${tenant.name} - estacao`;
+
+      const existingDeviceRows = await db
+        .select({
+          id: tenantDevices.id,
+          tenantId: tenantDevices.tenantId,
+        })
+        .from(tenantDevices)
+        .where(eq(tenantDevices.deviceId, normalizedDeviceId))
+        .limit(1);
+
+      let devicePk = '';
+
+      if (existingDeviceRows.length > 0) {
+        const existingDevice = existingDeviceRows[0]!;
+        if (existingDevice.tenantId !== tenantId) {
+          res.status(409).json({ error: 'DEVICE_ID_ALREADY_ASSIGNED' });
+          return;
+        }
+
+        devicePk = existingDevice.id;
+
+        await db
+          .update(tenantDevices)
+          .set({
+            appVersion: appVersionInput || '1.0.0',
+            deviceName: normalizedDeviceName,
+            revokedAt: null,
+            updatedAt: new Date(),
+            userId: owner.userId,
+          })
+          .where(eq(tenantDevices.id, devicePk));
+      } else {
+        const inserted = await db
+          .insert(tenantDevices)
+          .values({
+            appVersion: appVersionInput || '1.0.0',
+            deviceId: normalizedDeviceId,
+            deviceName: normalizedDeviceName,
+            tenantId,
+            userId: owner.userId,
+          })
+          .returning({ id: tenantDevices.id });
+
+        devicePk = inserted[0]!.id;
+      }
+
+      await db
+        .update(deviceApiTokens)
+        .set({ revokedAt: new Date() })
+        .where(
+          and(
+            eq(deviceApiTokens.deviceFk, devicePk),
+            isNull(deviceApiTokens.revokedAt),
+          ),
+        );
+
+      const token = generateOpaqueToken('ltdev');
+      const tokenHash = hashOpaqueToken(token);
+      const expiresAt = nowPlusDays(DEVICE_TOKEN_TTL_DAYS);
+
+      await db.insert(deviceApiTokens).values({
+        deviceFk: devicePk,
+        expiresAt,
+        tokenHash,
+      });
+
+      res.json({
+        deviceId: normalizedDeviceId,
+        deviceName: normalizedDeviceName,
+        devicePk,
+        deviceToken: token,
+        expiresAtUtc: expiresAt.toISOString(),
+        owner: {
+          displayName: owner.displayName,
+          email: owner.email,
+          isAdmin: owner.isAdmin,
+          userId: owner.userId,
+        },
+        tenantId,
+      });
+    } catch (error) {
+      console.error('POST /v1/admin/tenants/:id/agent/provision error:', error);
+      res.status(500).json({ error: 'ADMIN_AGENT_PROVISION_ERROR' });
+    }
+  });
+
+  router.post('/admin/devices/:id/token', requireAdminToken(options.config), async (req: Request, res: Response) => {
+    try {
+      const devicePk = String(req.params.id ?? '').trim();
+      if (!devicePk) {
+        res.status(400).json({ error: 'DEVICE_ID_REQUIRED' });
+        return;
+      }
+
+      const rows = await db
+        .select({
+          deviceId: tenantDevices.deviceId,
+          deviceName: tenantDevices.deviceName,
+          id: tenantDevices.id,
+          tenantId: tenantDevices.tenantId,
+        })
+        .from(tenantDevices)
+        .where(and(eq(tenantDevices.id, devicePk), isNull(tenantDevices.revokedAt)))
+        .limit(1);
+
+      const device = rows[0];
+      if (!device) {
+        res.status(404).json({ error: 'DEVICE_NOT_FOUND' });
+        return;
+      }
+
+      await db
+        .update(deviceApiTokens)
+        .set({ revokedAt: new Date() })
+        .where(
+          and(
+            eq(deviceApiTokens.deviceFk, devicePk),
+            isNull(deviceApiTokens.revokedAt),
+          ),
+        );
+
+      const token = generateOpaqueToken('ltdev');
+      const tokenHash = hashOpaqueToken(token);
+      const expiresAt = nowPlusDays(DEVICE_TOKEN_TTL_DAYS);
+
+      await db.insert(deviceApiTokens).values({
+        deviceFk: devicePk,
+        expiresAt,
+        tokenHash,
+      });
+
+      res.json({
+        deviceId: device.deviceId,
+        deviceName: device.deviceName ?? '',
+        devicePk,
+        deviceToken: token,
+        expiresAtUtc: expiresAt.toISOString(),
+        tenantId: device.tenantId,
+      });
+    } catch (error) {
+      console.error('POST /v1/admin/devices/:id/token error:', error);
+      res.status(500).json({ error: 'ADMIN_DEVICE_TOKEN_ROTATE_ERROR' });
     }
   });
 

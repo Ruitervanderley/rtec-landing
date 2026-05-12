@@ -1,4 +1,5 @@
-import { Lock } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PortalReportsLoginForm } from '@/components/PortalReportsLoginForm';
 import { getPortalTenantSummary, PortalApiError } from '@/lib/portalApi';
@@ -34,14 +35,15 @@ export default async function PortalLoginPage(props: PortalLoginPageProps) {
   }
 
   let tenantName = slug;
+  let tenantSummary: Awaited<ReturnType<typeof getPortalTenantSummary>> = null;
 
   try {
-    const tenant = await getPortalTenantSummary(slug);
-    if (!tenant) {
+    tenantSummary = await getPortalTenantSummary(slug);
+    if (!tenantSummary) {
       redirect(getPortalPath({ slug }));
     }
 
-    tenantName = tenant.name;
+    tenantName = tenantSummary.name;
   } catch (error) {
     if (error instanceof PortalApiError && error.status === 404) {
       redirect(getPortalPath({ slug }));
@@ -49,25 +51,67 @@ export default async function PortalLoginPage(props: PortalLoginPageProps) {
   }
 
   return (
-    <main style={{ alignItems: 'center', background: '#0b1121', color: '#fff', display: 'flex', justifyContent: 'center', minHeight: '100vh', padding: '2rem' }}>
-      <div style={{ background: 'rgba(15, 23, 42, 0.92)', border: '1px solid rgba(148, 163, 184, 0.14)', borderRadius: '24px', maxWidth: '460px', padding: '2rem', width: '100%' }}>
-        <div style={{ alignItems: 'center', background: 'rgba(77, 184, 255, 0.12)', borderRadius: '16px', display: 'inline-flex', height: '56px', justifyContent: 'center', marginBottom: '1.25rem', width: '56px' }}>
-          <Lock color="#4db8ff" size={28} />
+    <main className="portal-shell">
+      <section className="portal-auth-shell">
+        <div className="portal-auth-panel">
+          <div className="portal-auth-panel__content">
+            <Link className="portal-inline-link portal-inline-link--muted" href={getPortalPath({ slug })}>
+              <ArrowLeft size={15} />
+              Voltar ao portal
+            </Link>
+
+            <div className="portal-chip">Portal autenticado</div>
+            <h1 className="portal-auth-panel__title">
+              Relatorios de
+              {' '}
+              {tenantName}
+            </h1>
+            <p className="portal-auth-panel__description">
+              Entre com o mesmo email e senha cadastrados para este tenant. O acesso valida a empresa antes de liberar os
+              relatórios operacionais.
+            </p>
+
+            {errorMessage
+              ? <div className="portal-inline-alert portal-inline-alert--error">{errorMessage}</div>
+              : null}
+
+            <PortalReportsLoginForm slug={slug} />
+          </div>
+
+          <aside className="portal-auth-sidecard">
+            <div className="portal-auth-sidecard__icon">
+              <Lock size={28} />
+            </div>
+            <h2 className="portal-auth-sidecard__title">Acesso por tenant</h2>
+            <p className="portal-auth-sidecard__copy">
+              Cada usuário entra apenas no próprio ambiente, com sessão isolada e visibilidade restrita aos dados da empresa.
+            </p>
+
+            <div className="portal-auth-sidecard__stack">
+              <div className="portal-auth-signal">
+                <ShieldCheck size={16} />
+                <span>
+                  {tenantSummary?.isActive ? 'Licença ativa' : 'Licença inativa'}
+                </span>
+              </div>
+              <div className="portal-auth-signal">
+                <ShieldCheck size={16} />
+                <span>
+                  {tenantSummary?.onlineDevices ?? 0}
+                  {' dispositivo(s) online agora'}
+                </span>
+              </div>
+              <div className="portal-auth-signal">
+                <ShieldCheck size={16} />
+                <span>
+                  {tenantSummary?.licensedUsers ?? 0}
+                  {' licença(s) válida(s)'}
+                </span>
+              </div>
+            </div>
+          </aside>
         </div>
-        <p style={{ color: '#4db8ff', fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.5rem' }}>Portal autenticado</p>
-        <h1 style={{ fontSize: '1.7rem', fontWeight: 900, margin: '0 0 0.75rem' }}>
-          Relatorios de
-          {' '}
-          {tenantName}
-        </h1>
-        <p style={{ color: '#94a3b8', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
-          Entre com o mesmo email e senha cadastrados no Supabase para este tenant.
-        </p>
-        {errorMessage
-          ? <div style={{ border: '1px solid rgba(248, 113, 113, 0.35)', borderRadius: '12px', color: '#fca5a5', fontSize: '0.9rem', marginBottom: '1rem', padding: '0.9rem 1rem' }}>{errorMessage}</div>
-          : null}
-        <PortalReportsLoginForm slug={slug} />
-      </div>
+      </section>
     </main>
   );
 }

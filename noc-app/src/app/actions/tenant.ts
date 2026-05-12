@@ -1,5 +1,6 @@
 'use server';
 
+import type { TenantAgentProvisionResult } from '@/lib/ops-api';
 import { revalidatePath } from 'next/cache';
 import { Env } from '@/lib/Env';
 
@@ -156,6 +157,112 @@ export async function updateTenantInfrastructureAction(formData: FormData): Prom
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Erro ao salvar infraestrutura do tenant',
+    };
+  }
+}
+
+export async function provisionTenantAgentAction(formData: FormData): Promise<ActionError | TenantAgentProvisionResult> {
+  const tenantId = String(formData.get('tenant_id') ?? '').trim();
+  const deviceId = String(formData.get('device_id') ?? '').trim();
+  const deviceName = String(formData.get('device_name') ?? '').trim();
+  const appVersion = String(formData.get('app_version') ?? '').trim();
+
+  if (!tenantId) {
+    return { error: 'Tenant e obrigatorio.' };
+  }
+
+  try {
+    const response = await fetch(`${Env.opsApiBaseUrl}/v1/admin/tenants/${tenantId}/agent/provision`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Env.opsAdminServiceToken}`,
+      },
+      body: JSON.stringify({
+        app_version: appVersion || undefined,
+        device_id: deviceId || undefined,
+        device_name: deviceName || undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      return { error: data.error || `Falha na API: ${response.status}` };
+    }
+
+    const payload = (await response.json()) as TenantAgentProvisionResult;
+    revalidatePath('/tenants');
+    revalidatePath(`/tenants/${tenantId}`);
+    revalidatePath('/devices');
+    return payload;
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Erro de conexao com API NOC',
+    };
+  }
+}
+
+export async function rotateTenantAgentTokenAction(formData: FormData): Promise<ActionError | TenantAgentProvisionResult> {
+  const tenantId = String(formData.get('tenant_id') ?? '').trim();
+  const devicePk = String(formData.get('device_pk') ?? '').trim();
+
+  if (!tenantId || !devicePk) {
+    return { error: 'Tenant e dispositivo sao obrigatorios.' };
+  }
+
+  try {
+    const response = await fetch(`${Env.opsApiBaseUrl}/v1/admin/devices/${devicePk}/token`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${Env.opsAdminServiceToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      return { error: data.error || `Falha na API: ${response.status}` };
+    }
+
+    const payload = (await response.json()) as TenantAgentProvisionResult;
+    revalidatePath('/devices');
+    revalidatePath('/tenants');
+    revalidatePath(`/tenants/${tenantId}`);
+    return payload;
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Erro de conexao com API NOC',
+    };
+  }
+}
+
+export async function revokeTenantAgentAction(formData: FormData): Promise<ActionError | { success: true }> {
+  const tenantId = String(formData.get('tenant_id') ?? '').trim();
+  const devicePk = String(formData.get('device_pk') ?? '').trim();
+
+  if (!tenantId || !devicePk) {
+    return { error: 'Tenant e dispositivo sao obrigatorios.' };
+  }
+
+  try {
+    const response = await fetch(`${Env.opsApiBaseUrl}/v1/admin/devices/${devicePk}/revoke`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${Env.opsAdminServiceToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      return { error: data.error || `Falha na API: ${response.status}` };
+    }
+
+    revalidatePath('/devices');
+    revalidatePath('/tenants');
+    revalidatePath(`/tenants/${tenantId}`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Erro de conexao com API NOC',
     };
   }
 }

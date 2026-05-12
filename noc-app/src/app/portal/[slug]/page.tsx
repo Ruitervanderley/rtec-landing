@@ -1,88 +1,7 @@
-import { AlertTriangle, Building2, FileText, HardDrive, Monitor, Network, Server, Shield, Users, Wifi, WifiOff } from 'lucide-react';
+import { AlertTriangle, Building2, FileText, HardDrive, Monitor, Server, Shield, Users, Wifi, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPortalTenantSummary, PortalApiError } from '@/lib/portalApi';
-
-function InfoCard(props: {
-  description: string;
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <div
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '18px',
-        padding: '1.5rem',
-      }}
-    >
-      <div
-        style={{
-          alignItems: 'center',
-          background: 'rgba(77, 184, 255, 0.12)',
-          borderRadius: '12px',
-          display: 'inline-flex',
-          height: '44px',
-          justifyContent: 'center',
-          marginBottom: '1rem',
-          width: '44px',
-        }}
-      >
-        {props.icon}
-      </div>
-      <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.5rem' }}>{props.title}</h2>
-      <p style={{ color: '#94a3b8', lineHeight: 1.55, margin: 0 }}>{props.description}</p>
-    </div>
-  );
-}
-
-function StatusBadge(props: {
-  isActive: boolean;
-  isOnline: boolean;
-}) {
-  const palette = !props.isActive
-    ? {
-        background: 'rgba(239, 68, 68, 0.12)',
-        borderColor: 'rgba(239, 68, 68, 0.35)',
-        color: '#f87171',
-        icon: <AlertTriangle size={16} />,
-        label: 'Licenca inativa',
-      }
-    : props.isOnline
-      ? {
-          background: 'rgba(34, 197, 94, 0.12)',
-          borderColor: 'rgba(34, 197, 94, 0.35)',
-          color: '#4ade80',
-          icon: <Wifi size={16} />,
-          label: 'Operacao assistida',
-        }
-      : {
-          background: 'rgba(248, 113, 113, 0.12)',
-          borderColor: 'rgba(248, 113, 113, 0.35)',
-          color: '#fca5a5',
-          icon: <WifiOff size={16} />,
-          label: 'Sem dispositivos online',
-        };
-
-  return (
-    <div
-      style={{
-        alignItems: 'center',
-        background: palette.background,
-        border: `1px solid ${palette.borderColor}`,
-        borderRadius: '999px',
-        color: palette.color,
-        display: 'inline-flex',
-        gap: '0.5rem',
-        padding: '0.55rem 1rem',
-      }}
-    >
-      {palette.icon}
-      <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{palette.label}</span>
-    </div>
-  );
-}
 
 function formatTimestamp(value: string | null) {
   if (!value) {
@@ -98,6 +17,33 @@ function formatDate(value: string | null) {
   }
 
   return new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR');
+}
+
+function getStatusMeta(props: {
+  isActive: boolean;
+  isOnline: boolean;
+}) {
+  if (!props.isActive) {
+    return {
+      badgeClass: 'portal-status-badge portal-status-badge--danger',
+      icon: <AlertTriangle size={15} />,
+      label: 'Licenca inativa',
+    };
+  }
+
+  if (props.isOnline) {
+    return {
+      badgeClass: 'portal-status-badge portal-status-badge--success',
+      icon: <Wifi size={15} />,
+      label: 'Operacao assistida',
+    };
+  }
+
+  return {
+    badgeClass: 'portal-status-badge portal-status-badge--neutral',
+    icon: <WifiOff size={15} />,
+    label: 'Sem dispositivos online',
+  };
 }
 
 export default async function PortalLandingPage(props: {
@@ -124,269 +70,163 @@ export default async function PortalLandingPage(props: {
 
   if (!tenant) {
     return (
-      <main
-        style={{
-          alignItems: 'center',
-          background: '#0b1121',
-          color: '#fff',
-          display: 'flex',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          padding: '2rem',
-        }}
-      >
-        <div
-          style={{
-            background: 'rgba(15, 23, 42, 0.92)',
-            border: '1px solid rgba(248, 113, 113, 0.2)',
-            borderRadius: '24px',
-            maxWidth: '560px',
-            padding: '2rem',
-            width: '100%',
-          }}
-        >
-          <div
-            style={{
-              alignItems: 'center',
-              background: 'rgba(248, 113, 113, 0.12)',
-              borderRadius: '16px',
-              color: '#fca5a5',
-              display: 'inline-flex',
-              height: '56px',
-              justifyContent: 'center',
-              marginBottom: '1.25rem',
-              width: '56px',
-            }}
-          >
-            <AlertTriangle size={28} />
+      <main className="portal-shell">
+        <section className="portal-state-shell">
+          <div className="portal-state-card portal-state-card--error">
+            <div className="portal-state-card__icon">
+              <AlertTriangle size={28} />
+            </div>
+            <h1 className="portal-state-card__title">Portal temporariamente indisponivel</h1>
+            <p className="portal-state-card__copy">
+              Nao foi possivel carregar os dados operacionais deste tenant no momento.
+            </p>
+            <p className="portal-state-card__meta">{apiError}</p>
+            <a className="portal-inline-link" href="https://wa.me/message/J4U5D52DAZMED1" rel="noreferrer" target="_blank">
+              Falar com o suporte da R.TEC
+            </a>
           </div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '0 0 0.75rem' }}>
-            Portal temporariamente indisponivel
-          </h1>
-          <p style={{ color: '#94a3b8', lineHeight: 1.6, margin: '0 0 1.5rem' }}>
-            Nao foi possivel carregar os dados operacionais deste tenant no momento.
-          </p>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 1.5rem' }}>
-            {apiError}
-          </p>
-          <a
-            href="https://wa.me/message/J4U5D52DAZMED1"
-            rel="noreferrer"
-            style={{
-              color: '#4db8ff',
-              fontWeight: 700,
-              textDecoration: 'none',
-            }}
-            target="_blank"
-          >
-            Falar com o suporte da R.TEC
-          </a>
-        </div>
+        </section>
       </main>
     );
   }
 
   const isCamara = tenant.type === 'camara';
+  const statusMeta = getStatusMeta({
+    isActive: tenant.isActive,
+    isOnline: tenant.isOnline,
+  });
   const cards = isCamara
     ? [
         {
           description: 'Consulte o ambiente do LegislativoTimer, a validade das licencas e a disponibilidade dos terminais monitorados.',
-          icon: <Building2 size={22} color="#4db8ff" />,
+          icon: <Building2 size={20} color="#4db8ff" />,
           title: 'Ambiente legislativo',
         },
         {
           description: 'Acesse relatorios autenticados com usuarios, licencas, backups e status operacional do tenant.',
-          icon: <FileText size={22} color="#4db8ff" />,
+          icon: <FileText size={20} color="#4db8ff" />,
           title: 'Relatorios centralizados',
         },
         {
           description: 'A R.TEC acompanha o tenant com suporte operacional, alertas e trilha tecnica para o ambiente da camara.',
-          icon: <Shield size={22} color="#4db8ff" />,
+          icon: <Shield size={20} color="#4db8ff" />,
           title: 'Suporte assistido',
         },
       ]
     : [
         {
           description: 'Veja quantos equipamentos estao ativos, acompanhe heartbeats e valide rapidamente a saude do ambiente de TI.',
-          icon: <Monitor size={22} color="#4db8ff" />,
+          icon: <Monitor size={20} color="#4db8ff" />,
           title: 'Dispositivos monitorados',
         },
         {
           description: 'Use o portal para consolidar rede, VPN, backups e historico operacional da empresa atendida.',
-          icon: <Network size={22} color="#4db8ff" />,
+          icon: <Server size={20} color="#4db8ff" />,
           title: 'Infraestrutura assistida',
         },
         {
           description: 'Acesse relatorios autenticados com dados reais de operacao, usuarios e inventario tecnico.',
-          icon: <HardDrive size={22} color="#4db8ff" />,
+          icon: <HardDrive size={20} color="#4db8ff" />,
           title: 'Relatorios operacionais',
         },
       ];
 
   return (
-    <main
-      style={{
-        background: '#0b1121',
-        color: '#fff',
-        minHeight: '100vh',
-      }}
-    >
-      <section
-        style={{
-          background: 'radial-gradient(circle at top, rgba(77, 184, 255, 0.18), transparent 45%)',
-          padding: '4rem 1.5rem 2rem',
-        }}
-      >
-        <div style={{ margin: '0 auto', maxWidth: '1100px' }}>
-          <div
-            style={{
-              alignItems: 'center',
-              display: 'flex',
-              gap: '0.9rem',
-              marginBottom: '1.5rem',
-            }}
-          >
-            <div
-              style={{
-                alignItems: 'center',
-                background: 'linear-gradient(135deg, #2d82cc, #4db8ff)',
-                borderRadius: '18px',
-                display: 'flex',
-                height: '64px',
-                justifyContent: 'center',
-                width: '64px',
-              }}
-            >
-              {isCamara ? <Building2 size={32} color="#fff" /> : <Server size={32} color="#fff" />}
+    <main className="portal-shell">
+      <section className="portal-page">
+        <header className="portal-hero">
+          <div className="portal-hero__content">
+            <div className="portal-chip">Portal do tenant</div>
+            <h1 className="portal-hero__title">{tenant.name}</h1>
+            <p className="portal-hero__description">
+              {isCamara
+                ? 'Este portal apresenta o status do tenant da camara e libera o acesso aos relatorios autenticados do ambiente legislativo.'
+                : 'Este portal apresenta o status do ambiente de TI e libera o acesso aos relatorios autenticados administrados pela R.TEC.'}
+            </p>
+
+            <div className="portal-status-row">
+              <span className={statusMeta.badgeClass}>
+                {statusMeta.icon}
+                {statusMeta.label}
+              </span>
+              <span className="portal-status-badge portal-status-badge--neutral">
+                <Users size={15} />
+                {tenant.licensedUsers}
+                {' licencas validas'}
+              </span>
             </div>
-            <div>
-              <p style={{ color: '#4db8ff', fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.35rem' }}>
-                Portal do tenant
-              </p>
-              <h1 style={{ fontSize: '2.6rem', fontWeight: 900, letterSpacing: '-0.03em', margin: 0 }}>
-                {tenant.name}
-              </h1>
+
+            <div className="portal-action-row">
+              <Link className="portal-button portal-button--primary" href={`/portal/login?slug=${encodeURIComponent(slug)}`}>
+                Entrar no portal
+              </Link>
+              <a className="portal-button portal-button--ghost" href="https://wa.me/message/J4U5D52DAZMED1" rel="noreferrer" target="_blank">
+                Falar com o suporte
+              </a>
             </div>
           </div>
 
-          <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: 1.6, margin: '0 0 1.5rem', maxWidth: '720px' }}>
-            {isCamara
-              ? 'Este portal apresenta o status publico do tenant da camara e libera o acesso aos relatorios autenticados do ambiente legislativo.'
-              : 'Este portal apresenta o status publico do ambiente de TI e libera o acesso aos relatorios autenticados com dados operacionais administrados pela R.TEC.'}
-          </p>
+          <aside className="portal-side-panel">
+            <div className="portal-side-panel__icon">
+              {isCamara ? <Building2 size={30} color="#fff" /> : <Server size={30} color="#fff" />}
+            </div>
+            <div className="portal-side-panel__grid">
+              <div className="portal-side-panel__item">
+                <span className="portal-side-panel__label">Dispositivos</span>
+                <strong className="portal-side-panel__value">{tenant.deviceCount}</strong>
+              </div>
+              <div className="portal-side-panel__item">
+                <span className="portal-side-panel__label">Online agora</span>
+                <strong className="portal-side-panel__value">{tenant.onlineDevices}</strong>
+              </div>
+              <div className="portal-side-panel__item">
+                <span className="portal-side-panel__label">Ultimo heartbeat</span>
+                <strong className="portal-side-panel__value">{formatTimestamp(tenant.lastSeenAt)}</strong>
+              </div>
+              <div className="portal-side-panel__item">
+                <span className="portal-side-panel__label">Validade</span>
+                <strong className="portal-side-panel__value">{formatDate(tenant.validUntil)}</strong>
+              </div>
+            </div>
+          </aside>
+        </header>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <StatusBadge isActive={tenant.isActive} isOnline={tenant.isOnline} />
-          </div>
+        <section className="portal-kpi-grid">
+          <article className="portal-kpi-card">
+            <span className="portal-kpi-card__label">Frota monitorada</span>
+            <strong className="portal-kpi-card__value">{tenant.deviceCount}</strong>
+            <span className="portal-kpi-card__meta">Equipamentos vinculados ao tenant.</span>
+          </article>
+          <article className="portal-kpi-card">
+            <span className="portal-kpi-card__label">Dispositivos online</span>
+            <strong className="portal-kpi-card__value">{tenant.onlineDevices}</strong>
+            <span className="portal-kpi-card__meta">Leitura operacional do momento.</span>
+          </article>
+          <article className="portal-kpi-card">
+            <span className="portal-kpi-card__label">Ultimo backup</span>
+            <strong className="portal-kpi-card__value">{formatTimestamp(tenant.lastBackupAt)}</strong>
+            <span className="portal-kpi-card__meta">Referencia rapida de protecao de dados.</span>
+          </article>
+          <article className="portal-kpi-card">
+            <span className="portal-kpi-card__label">Usuarios validos</span>
+            <strong className="portal-kpi-card__value">
+              {tenant.licensedUsers}
+              {' / '}
+              {tenant.userCount}
+            </strong>
+            <span className="portal-kpi-card__meta">Usuarios com acesso no tenant.</span>
+          </article>
+        </section>
 
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.9rem',
-            }}
-          >
-            <Link
-              href={`/portal/login?slug=${encodeURIComponent(slug)}`}
-              style={{
-                background: 'linear-gradient(135deg, #2d82cc, #4db8ff)',
-                borderRadius: '12px',
-                color: '#fff',
-                fontWeight: 700,
-                padding: '0.9rem 1.25rem',
-                textDecoration: 'none',
-              }}
-            >
-              Entrar no portal
-            </Link>
-            <a
-              href="https://wa.me/message/J4U5D52DAZMED1"
-              rel="noreferrer"
-              style={{
-                border: '1px solid rgba(148, 163, 184, 0.25)',
-                borderRadius: '12px',
-                color: '#cbd5e1',
-                fontWeight: 700,
-                padding: '0.9rem 1.25rem',
-                textDecoration: 'none',
-              }}
-              target="_blank"
-            >
-              Falar com o suporte
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ padding: '0 1.5rem 3rem' }}>
-        <div style={{ margin: '0 auto', maxWidth: '1100px' }}>
-          <div
-            style={{
-              display: 'grid',
-              gap: '1rem',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              marginBottom: '1.5rem',
-            }}
-          >
-            <InfoCard
-              description={`Total de dispositivos vinculados: ${tenant.deviceCount}.`}
-              icon={<Server size={22} color="#4db8ff" />}
-              title={isCamara ? 'Estrutura monitorada' : 'Inventario do tenant'}
-            />
-            <InfoCard
-              description={`Dispositivos online agora: ${tenant.onlineDevices}.`}
-              icon={<Monitor size={22} color="#4db8ff" />}
-              title="Status em tempo real"
-            />
-            <InfoCard
-              description={`Validade do tenant: ${formatDate(tenant.validUntil)}. Usuarios ativos: ${tenant.licensedUsers}/${tenant.userCount}.`}
-              icon={<Users size={22} color="#4db8ff" />}
-              title={isCamara ? 'Licencas e usuarios' : 'Equipe e licencas'}
-            />
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gap: '1rem',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              marginBottom: '1.5rem',
-            }}
-          >
-            <InfoCard
-              description={`Ultimo heartbeat: ${formatTimestamp(tenant.lastSeenAt)}.`}
-              icon={<Wifi size={22} color="#4db8ff" />}
-              title="Heartbeat recente"
-            />
-            <InfoCard
-              description={`Ultimo backup: ${formatTimestamp(tenant.lastBackupAt)}.`}
-              icon={<HardDrive size={22} color="#4db8ff" />}
-              title="Historico de backup"
-            />
-            <InfoCard
-              description={`Ultimo sync de relatorios: ${formatTimestamp(tenant.lastReportSyncAt)}.`}
-              icon={<FileText size={22} color="#4db8ff" />}
-              title="Sync de relatorios"
-            />
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gap: '1rem',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            }}
-          >
-            {cards.map(card => (
-              <InfoCard
-                key={card.title}
-                description={card.description}
-                icon={card.icon}
-                title={card.title}
-              />
-            ))}
-          </div>
-        </div>
+        <section className="portal-card-grid">
+          {cards.map(card => (
+            <article className="portal-feature-card" key={card.title}>
+              <div className="portal-feature-card__icon">{card.icon}</div>
+              <h2 className="portal-feature-card__title">{card.title}</h2>
+              <p className="portal-feature-card__copy">{card.description}</p>
+            </article>
+          ))}
+        </section>
       </section>
     </main>
   );

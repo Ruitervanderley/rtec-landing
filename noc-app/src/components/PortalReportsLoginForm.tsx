@@ -14,74 +14,43 @@ export function PortalReportsLoginForm(props: {
   const [state, formAction, isPending] = useActionState(loginPortalAction, initialState);
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <form action={formAction} className="portal-form">
       <input type="hidden" name="slug" value={props.slug} />
 
       {state.error
         ? (
-            <div
-              style={{
-                border: '1px solid rgba(248, 113, 113, 0.35)',
-                borderRadius: '12px',
-                color: '#fca5a5',
-                fontSize: '0.9rem',
-                padding: '0.9rem 1rem',
-              }}
-            >
+            <div className="portal-inline-alert portal-inline-alert--error">
               {state.error}
             </div>
           )
         : null}
 
-      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600 }}>Email</span>
+      <label className="portal-form__field">
+        <span className="portal-form__label">Email</span>
         <input
           name="email"
           type="email"
           required
           placeholder="admin@empresa.com.br"
-          style={{
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            borderRadius: '12px',
-            color: '#fff',
-            fontSize: '0.95rem',
-            padding: '0.85rem 1rem',
-          }}
+          className="portal-form__input"
         />
       </label>
 
-      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600 }}>Senha</span>
+      <label className="portal-form__field">
+        <span className="portal-form__label">Senha</span>
         <input
           name="password"
           type="password"
           required
           placeholder="Sua senha"
-          style={{
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            borderRadius: '12px',
-            color: '#fff',
-            fontSize: '0.95rem',
-            padding: '0.85rem 1rem',
-          }}
+          className="portal-form__input"
         />
       </label>
 
       <button
         type="submit"
         disabled={isPending}
-        style={{
-          background: 'linear-gradient(135deg, #2d82cc, #4db8ff)',
-          border: 'none',
-          borderRadius: '12px',
-          color: '#fff',
-          cursor: isPending ? 'wait' : 'pointer',
-          fontSize: '0.95rem',
-          fontWeight: 700,
-          padding: '0.9rem 1rem',
-        }}
+        className="portal-button portal-button--primary"
       >
         {isPending ? 'Entrando...' : 'Entrar no portal'}
       </button>

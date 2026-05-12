@@ -8,6 +8,30 @@ export type OpsOverview = {
     failedBackups24h: number;
     uploadedBackups24h: number;
   };
+  operationalTenants: Array<{
+    adminUsers: number;
+    cloudflareStatus: 'manual_redirect_required' | 'not_applicable';
+    deviceCount: number;
+    failedBackups24h: number;
+    hasBackupFailures: boolean;
+    hasOfflineDevices: boolean;
+    hasPendingBackups: boolean;
+    hasStaleHeartbeat: boolean;
+    isActive: boolean;
+    isLicenseExpired: boolean;
+    lastBackupAt: string | null;
+    lastSeenAt: string | null;
+    name: string;
+    offlineDevices: number;
+    onlineDevices: number;
+    pendingBackups: number;
+    portalSlug: string | null;
+    status: 'healthy' | 'degraded' | 'critical';
+    tenantId: string;
+    type: string;
+    userCount: number;
+    validUntil: string | null;
+  }>;
   jobs: {
     startedAtUtc: string;
     lastOfflineScanAtUtc: string | null;
@@ -85,7 +109,43 @@ export type DeviceRow = {
   local_ip?: string;
   mac_address?: string;
   logged_in_user?: string;
+  owner_display_name?: string;
+  owner_email?: string;
+  owner_is_admin?: boolean;
+  active_token_expires_at?: string | null;
+  active_token_created_at?: string | null;
   uptime_seconds?: number | string;
+};
+
+export type TenantAgentSummary = {
+  activeTokens: number;
+  lastHeartbeatAt: string | null;
+  latestTokenIssuedAt: string | null;
+  onlineDevices: number;
+  provisionedDevices: number;
+};
+
+export type TenantAgentOwner = {
+  displayName: string;
+  email: string;
+  isAdmin: boolean;
+  userId: string;
+};
+
+export type TenantAgentDetail = {
+  canProvision: boolean;
+  owner: TenantAgentOwner | null;
+  summary: TenantAgentSummary;
+};
+
+export type TenantAgentProvisionResult = {
+  deviceId: string;
+  deviceName: string;
+  devicePk: string;
+  deviceToken: string;
+  expiresAtUtc: string;
+  owner?: TenantAgentOwner;
+  tenantId: string;
 };
 
 export type BackupRow = {
@@ -158,6 +218,7 @@ export type TenantInfrastructureProfile = {
 };
 
 export type TenantDetail = {
+  agent: TenantAgentDetail;
   infrastructure: TenantInfrastructureProfile;
   infrastructureIsDefault: boolean;
   license: {
@@ -373,4 +434,25 @@ export async function updateTenant(props: {
     type: props.type,
     valid_until: props.validUntil,
   });
+}
+
+export async function provisionTenantAgent(props: {
+  appVersion?: string;
+  deviceId?: string;
+  deviceName?: string;
+  tenantId: string;
+}) {
+  return postAdmin<TenantAgentProvisionResult>(`/admin/tenants/${props.tenantId}/agent/provision`, {
+    app_version: props.appVersion ?? undefined,
+    device_id: props.deviceId ?? undefined,
+    device_name: props.deviceName ?? undefined,
+  });
+}
+
+export async function rotateTenantAgentToken(devicePk: string) {
+  if (!devicePk) {
+    throw new Error('devicePk is required');
+  }
+
+  return postAdmin<TenantAgentProvisionResult>(`/admin/devices/${devicePk}/token`, {});
 }

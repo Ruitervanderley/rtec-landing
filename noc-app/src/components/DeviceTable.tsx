@@ -14,6 +14,7 @@ type DeviceTableProps = {
 type TenantGroup = {
   attentionCount: number;
   devices: DeviceRow[];
+  offlineCount: number;
   onlineCount: number;
   tenantId: string;
   tenantName: string;
@@ -71,6 +72,15 @@ function getAttentionState(device: DeviceRow) {
   };
 }
 
+function getOperationalStatusLabel(device: DeviceRow) {
+  if (!device.is_online) {
+    return 'OFFLINE';
+  }
+
+  const normalized = (device.last_status ?? '').trim().toUpperCase();
+  return normalized || 'ONLINE';
+}
+
 function getMetricTone(props: { status: 'danger' | 'warning' | 'default' }) {
   if (props.status === 'danger') {
     return 'metric-pill metric-pill--danger';
@@ -105,6 +115,7 @@ function groupDevices(devices: DeviceRow[]) {
     if (existing) {
       existing.devices.push(device);
       existing.onlineCount += device.is_online ? 1 : 0;
+      existing.offlineCount += device.is_online ? 0 : 1;
       existing.attentionCount += attentionState.needsAttention ? 1 : 0;
       return;
     }
@@ -112,6 +123,7 @@ function groupDevices(devices: DeviceRow[]) {
     groups.set(key, {
       attentionCount: attentionState.needsAttention ? 1 : 0,
       devices: [device],
+      offlineCount: device.is_online ? 0 : 1,
       onlineCount: device.is_online ? 1 : 0,
       tenantId: device.tenant_id,
       tenantName: device.tenant_name,
@@ -119,6 +131,14 @@ function groupDevices(devices: DeviceRow[]) {
   });
 
   return Array.from(groups.values()).sort((left, right) => {
+    if (right.attentionCount !== left.attentionCount) {
+      return right.attentionCount - left.attentionCount;
+    }
+
+    if (right.offlineCount !== left.offlineCount) {
+      return right.offlineCount - left.offlineCount;
+    }
+
     if (right.onlineCount !== left.onlineCount) {
       return right.onlineCount - left.onlineCount;
     }
@@ -197,8 +217,15 @@ export function DeviceTable(props: DeviceTableProps) {
               <div className="stack-list">
                 {tenantGroups.map((group) => {
                   const sortedDevices = [...group.devices].sort((left, right) => {
+                    const leftAttention = getAttentionState(left);
+                    const rightAttention = getAttentionState(right);
+
+                    if (leftAttention.needsAttention !== rightAttention.needsAttention) {
+                      return leftAttention.needsAttention ? -1 : 1;
+                    }
+
                     if (left.is_online !== right.is_online) {
-                      return left.is_online ? -1 : 1;
+                      return left.is_online ? 1 : -1;
                     }
 
                     return (right.last_seen_at ?? '').localeCompare(left.last_seen_at ?? '');
@@ -329,7 +356,7 @@ export function DeviceTable(props: DeviceTableProps) {
                                 <div>
                                   <strong>Status:</strong>
                                   {' '}
-                                  {device.last_status || '--'}
+                                  {getOperationalStatusLabel(device)}
                                 </div>
                               </div>
 
