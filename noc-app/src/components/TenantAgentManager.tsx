@@ -59,7 +59,7 @@ function TokenResultPanel(props: {
     <div className="agent-token-panel">
       <div className="agent-token-panel__header">
         <div>
-          <div className="page-hero__eyebrow">Token gerado</div>
+          <div className="page-hero__eyebrow">Token de instalação gerado</div>
           <strong className="agent-token-panel__title">{props.result.deviceName}</strong>
         </div>
         <span className="badge badge-success">
@@ -77,7 +77,7 @@ function TokenResultPanel(props: {
         <div>
           <div className="agent-token-panel__label">Responsavel</div>
           <div className="agent-token-panel__value">
-            {props.result.owner?.displayName || props.result.owner?.email || '--'}
+            {props.result.owner?.displayName || props.result.owner?.email || 'Emissão administrativa'}
           </div>
         </div>
       </div>
@@ -94,7 +94,7 @@ function TokenResultPanel(props: {
 
       <div className="ops-note-card ops-note-card--blue">
         <strong>Fluxo de instalacao</strong>
-        <span>Copie o `noc-agent.exe`, este `appsettings.json`, `install-agent.ps1` e opcionalmente `Bginfo.exe` para a maquina do cliente. Depois rode o instalador em PowerShell como administrador.</span>
+        <span>Use o pacote RtecNocAgent-1.1.0-win-x64.zip, substitua o appsettings.json por este conteudo e execute install-agent.ps1 como administrador na maquina do cliente.</span>
       </div>
     </div>
   );
@@ -131,7 +131,7 @@ export function TenantAgentManager(props: {
 
     setResult(response);
     setCreateOpen(false);
-    setSuccessMsg('Agente provisionado. Guarde o token e aplique no appsettings da maquina.');
+    setSuccessMsg('Token de instalacao gerado. Aplique o appsettings.json na maquina do cliente.');
     router.refresh();
   }
 
@@ -186,19 +186,19 @@ export function TenantAgentManager(props: {
           <div className="page-hero__eyebrow">Agente da empresa</div>
           <h2 className="agent-panel__title">Instalacao e controle do RTEC NOC Agent</h2>
           <p className="agent-panel__description">
-            Gere o token da maquina, aplique no `appsettings.json` do agente e acompanhe quais dispositivos deste tenant continuam autorizados.
+            Gere o token de instalacao pelo proprio painel, aplique no `appsettings.json` do agente e acompanhe quais dispositivos deste tenant continuam autorizados.
           </p>
         </div>
 
         <div className="page-hero__actions">
           <button
             className="agent-primary-button"
-            disabled={!props.agent.canProvision || working}
+            disabled={working}
             onClick={() => setCreateOpen(true)}
             type="button"
           >
             <Laptop size={16} />
-            Provisionar agente
+            Gerar token de instalacao
           </button>
         </div>
       </div>
@@ -246,7 +246,7 @@ export function TenantAgentManager(props: {
         : (
             <div className="alert-panel alert-panel--warning">
               <AlertCircle size={18} />
-              Este tenant ainda nao possui usuarios vinculados. Crie um usuario antes de provisionar o agente.
+              Este tenant ainda nao possui usuarios vinculados. O painel pode emitir o token mesmo assim, mas o dispositivo ficara sem responsavel ate um usuario ser associado.
             </div>
           )}
 
@@ -271,7 +271,7 @@ export function TenantAgentManager(props: {
         <section className="ops-note-card">
           <strong>Como implantar o agente nesta empresa</strong>
           <ol className="ops-number-list">
-            <li>Gere o token desta empresa com o botão de provisionamento.</li>
+            <li>Gere o token desta empresa pelo painel.</li>
             <li>Copie o pacote do agente para a pasta local da maquina.</li>
             <li>Substitua o `DeviceToken` no `appsettings.json` e ajuste o nome da maquina, se necessário.</li>
             <li>Execute `install-agent.ps1` como administrador.</li>
@@ -375,7 +375,7 @@ export function TenantAgentManager(props: {
               <div className="agent-modal__panel">
                 <div className="agent-modal__header">
                   <div>
-                    <h3 className="agent-modal__title">Provisionar agente</h3>
+                    <h3 className="agent-modal__title">Gerar token de instalacao</h3>
                     <p className="agent-modal__subtitle">{props.tenantName}</p>
                   </div>
                   <button
@@ -397,7 +397,7 @@ export function TenantAgentManager(props: {
 
                   <label className="agent-modal__field">
                     <span>Device ID opcional</span>
-                    <input name="device_id" placeholder="Se vazio, o sistema gera automaticamente" type="text" />
+                    <input name="device_id" placeholder="Deixe vazio para gerar automaticamente" type="text" />
                   </label>
 
                   <label className="agent-modal__field">
@@ -416,7 +416,7 @@ export function TenantAgentManager(props: {
                     </button>
                     <button className="agent-primary-button" disabled={working} type="submit">
                       <KeyRound size={15} />
-                      {working ? 'Gerando...' : 'Gerar token'}
+                      {working ? 'Gerando...' : 'Gerar token de instalacao'}
                     </button>
                   </div>
                 </form>

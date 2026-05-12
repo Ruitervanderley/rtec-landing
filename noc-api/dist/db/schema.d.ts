@@ -767,7 +767,7 @@ export declare const tenantDevices: import("drizzle-orm/pg-core").PgTableWithCol
             columnType: "PgUUID";
             data: string;
             driverParam: string;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;

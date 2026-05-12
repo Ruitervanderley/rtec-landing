@@ -68,6 +68,12 @@ noc-app/.env.local
 noc-app/.next
 
 # NOC Agent build artifacts
+.dotnet/
 noc-agent/bin/
+noc-agent/dist/
 noc-agent/obj/
 noc-agent/msbuild.log
+
+# NOC App local diagnostics
+noc-app/devserver.log
+noc-app/lint-output.txt

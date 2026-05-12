@@ -1518,7 +1518,7 @@ export function createOpsV1Router(options) {
             const agentOwner = selectTenantProvisionOwner(users);
             res.json({
                 agent: {
-                    canProvision: Boolean(agentOwner),
+                    canProvision: true,
                     owner: agentOwner
                         ? {
                             displayName: agentOwner.displayName,
@@ -2033,10 +2033,6 @@ export function createOpsV1Router(options) {
                 return;
             }
             const owner = selectTenantProvisionOwner(await getTenantUsers(tenantId));
-            if (!owner) {
-                res.status(400).json({ error: 'TENANT_HAS_NO_USERS' });
-                return;
-            }
             const deviceIdInput = toStringValue(req.body.device_id);
             const deviceNameInput = toStringValue(req.body.device_name);
             const appVersionInput = toStringValue(req.body.app_version);
@@ -2065,7 +2061,7 @@ export function createOpsV1Router(options) {
                     deviceName: normalizedDeviceName,
                     revokedAt: null,
                     updatedAt: new Date(),
-                    userId: owner.userId,
+                    userId: owner?.userId ?? null,
                 })
                     .where(eq(tenantDevices.id, devicePk));
             }
@@ -2077,7 +2073,7 @@ export function createOpsV1Router(options) {
                     deviceId: normalizedDeviceId,
                     deviceName: normalizedDeviceName,
                     tenantId,
-                    userId: owner.userId,
+                    userId: owner?.userId ?? null,
                 })
                     .returning({ id: tenantDevices.id });
                 devicePk = inserted[0].id;
@@ -2100,12 +2096,14 @@ export function createOpsV1Router(options) {
                 devicePk,
                 deviceToken: token,
                 expiresAtUtc: expiresAt.toISOString(),
-                owner: {
-                    displayName: owner.displayName,
-                    email: owner.email,
-                    isAdmin: owner.isAdmin,
-                    userId: owner.userId,
-                },
+                owner: owner
+                    ? {
+                        displayName: owner.displayName,
+                        email: owner.email,
+                        isAdmin: owner.isAdmin,
+                        userId: owner.userId,
+                    }
+                    : null,
                 tenantId,
             });
         }

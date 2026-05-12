@@ -9,7 +9,7 @@ import { hashOpaqueToken } from './tokenUtils.js';
 export type DeviceAuthContext = {
   devicePk: string;
   tenantId: string;
-  userId: string;
+  userId: string | null;
   deviceId: string;
   deviceName: string;
 };

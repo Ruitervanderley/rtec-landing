@@ -100,7 +100,7 @@ export const incidentDevices = pgTable('incident_devices', {
 export const tenantDevices = pgTable('tenant_devices', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').notNull(),
-    userId: uuid('user_id').notNull(),
+    userId: uuid('user_id'),
     deviceId: text('device_id').notNull().unique(),
     deviceName: text('device_name'),
     appVersion: text('app_version'),

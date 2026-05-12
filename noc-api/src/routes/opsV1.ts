@@ -1953,7 +1953,7 @@ export function createOpsV1Router(options: {
 
       res.json({
         agent: {
-          canProvision: Boolean(agentOwner),
+          canProvision: true,
           owner: agentOwner
             ? {
                 displayName: agentOwner.displayName,
@@ -2575,10 +2575,6 @@ export function createOpsV1Router(options: {
       }
 
       const owner = selectTenantProvisionOwner(await getTenantUsers(tenantId));
-      if (!owner) {
-        res.status(400).json({ error: 'TENANT_HAS_NO_USERS' });
-        return;
-      }
 
       const deviceIdInput = toStringValue((req.body as { device_id?: unknown }).device_id);
       const deviceNameInput = toStringValue((req.body as { device_name?: unknown }).device_name);
@@ -2613,7 +2609,7 @@ export function createOpsV1Router(options: {
             deviceName: normalizedDeviceName,
             revokedAt: null,
             updatedAt: new Date(),
-            userId: owner.userId,
+            userId: owner?.userId ?? null,
           })
           .where(eq(tenantDevices.id, devicePk));
       } else {
@@ -2624,7 +2620,7 @@ export function createOpsV1Router(options: {
             deviceId: normalizedDeviceId,
             deviceName: normalizedDeviceName,
             tenantId,
-            userId: owner.userId,
+            userId: owner?.userId ?? null,
           })
           .returning({ id: tenantDevices.id });
 
@@ -2657,12 +2653,14 @@ export function createOpsV1Router(options: {
         devicePk,
         deviceToken: token,
         expiresAtUtc: expiresAt.toISOString(),
-        owner: {
-          displayName: owner.displayName,
-          email: owner.email,
-          isAdmin: owner.isAdmin,
-          userId: owner.userId,
-        },
+        owner: owner
+          ? {
+              displayName: owner.displayName,
+              email: owner.email,
+              isAdmin: owner.isAdmin,
+              userId: owner.userId,
+            }
+          : null,
         tenantId,
       });
     } catch (error) {
