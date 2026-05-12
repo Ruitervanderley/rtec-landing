@@ -27,11 +27,16 @@ function normalizeTab(value: string | string[] | undefined): TenantTab {
   return 'summary';
 }
 
-function getTenantStatus(detail: Awaited<ReturnType<typeof getTenantDetail>>) {
+function getTenantStatus(
+  detail: Awaited<ReturnType<typeof getTenantDetail>>,
+  backups: Awaited<ReturnType<typeof getBackups>>,
+) {
   const offlineDevices = Math.max(detail.tenant.deviceCount - detail.tenant.onlineDevices, 0);
   const isLicenseExpired = Boolean(detail.tenant.validUntil && new Date(detail.tenant.validUntil).getTime() < Date.now());
+  const hasBackupHistory = backups.length > 0;
   const hasBackupGap = Boolean(
-    detail.tenant.deviceCount > 0
+    hasBackupHistory
+    && detail.tenant.deviceCount > 0
     && (!detail.tenant.lastBackupAt || new Date(detail.tenant.lastBackupAt).getTime() < Date.now() - (36 * 60 * 60 * 1000)),
   );
   const hasStaleHeartbeat = Boolean(
@@ -296,7 +301,7 @@ export default async function TenantDetailPage(props: {
     );
   }
 
-  const tenantStatus = getTenantStatus(detail);
+  const tenantStatus = getTenantStatus(detail, backups);
   const operationalAlerts = getTenantOperationalAlerts(detail, devices);
   const spotlightDevices = getTenantDeviceSpotlight(devices);
   const summaryCards = [

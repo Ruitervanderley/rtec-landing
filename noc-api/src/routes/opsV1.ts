@@ -125,6 +125,7 @@ type TenantOperationalSummary = {
   deviceCount: number;
   failedBackups24h: number;
   hasBackupFailures: boolean;
+  hasBackupHistory: boolean;
   hasOfflineDevices: boolean;
   hasPendingBackups: boolean;
   hasStaleHeartbeat: boolean;
@@ -291,6 +292,7 @@ function isExpiredDate(value: string | null) {
 
 function buildTenantOperationalSummary(row: {
   admin_users: number | string;
+  backup_count: number | string;
   device_count: number | string;
   failed_backups_24h: number | string;
   is_active: boolean;
@@ -309,6 +311,7 @@ function buildTenantOperationalSummary(row: {
   const deviceCount = Number(row.device_count ?? 0);
   const onlineDevices = Number(row.online_devices ?? 0);
   const failedBackups24h = Number(row.failed_backups_24h ?? 0);
+  const backupCount = Number(row.backup_count ?? 0);
   const pendingBackups = Number(row.pending_backups ?? 0);
   const offlineDevices = Math.max(deviceCount - onlineDevices, 0);
   const lastSeenAt = toIsoString(row.last_seen_at);
@@ -321,8 +324,9 @@ function buildTenantOperationalSummary(row: {
     && (!lastSeenAt || new Date(lastSeenAt).getTime() < Date.now() - (30 * 60 * 1000)),
   );
   const isLicenseExpired = isExpiredDate(validUntil);
-  const hasBackupFailures = failedBackups24h > 0;
-  const hasPendingBackups = pendingBackups > 0;
+  const hasBackupHistory = backupCount > 0;
+  const hasBackupFailures = hasBackupHistory && failedBackups24h > 0;
+  const hasPendingBackups = hasBackupHistory && pendingBackups > 0;
   const hasOfflineDevices = offlineDevices > 0;
 
   let status: TenantOperationalStatus = 'healthy';
@@ -338,6 +342,7 @@ function buildTenantOperationalSummary(row: {
     deviceCount,
     failedBackups24h,
     hasBackupFailures,
+    hasBackupHistory,
     hasOfflineDevices,
     hasPendingBackups,
     hasStaleHeartbeat,
@@ -1700,6 +1705,14 @@ export function createOpsV1Router(options: {
                 select count(1)::int
                 from public.device_backups b
                 where b.tenant_id = t.id
+              ),
+              0
+            ) as backup_count,
+            coalesce(
+              (
+                select count(1)::int
+                from public.device_backups b
+                where b.tenant_id = t.id
                   and b.status = 'FAILED'
                   and b.created_at >= now() - interval '24 hours'
               ),
@@ -1737,6 +1750,7 @@ export function createOpsV1Router(options: {
       const operationalTenants = tenantSummaryResult.rows
         .map(row => buildTenantOperationalSummary(row as {
           admin_users: number | string;
+          backup_count: number | string;
           device_count: number | string;
           failed_backups_24h: number | string;
           is_active: boolean;

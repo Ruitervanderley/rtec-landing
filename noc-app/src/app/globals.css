@@ -1190,6 +1190,14 @@ textarea {
   font-weight: 700;
 }
 
+.device-card__attention {
+  padding: 0.55rem 0.65rem;
+  border-radius: 12px;
+  background: rgba(251, 191, 36, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.26);
+  color: #92400e;
+}
+
 .device-card__footer {
   display: flex;
   align-items: flex-end;

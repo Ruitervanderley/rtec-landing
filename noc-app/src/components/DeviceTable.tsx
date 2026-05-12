@@ -3,6 +3,7 @@
 import type { DeviceRow } from '@/lib/ops-api';
 import { AlertCircle, ArrowUpRight, Clock3, ShieldAlert, UserRound, Wifi, WifiOff } from 'lucide-react';
 import Link from 'next/link';
+import { getDeviceOperationalStatus, getRamUsagePercent, toMetricNumber } from '@/lib/device-health';
 import { formatDateTime, formatDurationSeconds } from '@/lib/format';
 
 type DeviceTableProps = {
@@ -20,55 +21,17 @@ type TenantGroup = {
   tenantName: string;
 };
 
-function toNumber(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function getTenantAnchor(props: { tenantId: string }) {
   return `tenant-${props.tenantId}`;
 }
 
-function getRamRatio(device: DeviceRow) {
-  const used = toNumber(device.ram_used_mb);
-  const total = toNumber(device.ram_total_mb);
-
-  if (used === null || total === null || total <= 0) {
-    return null;
-  }
-
-  return (used / total) * 100;
-}
-
 function getAttentionState(device: DeviceRow) {
-  const cpu = toNumber(device.cpu_usage_percent);
-  const diskFree = toNumber(device.disk_c_free_percent);
-  const ramRatio = getRamRatio(device);
-
-  if (!device.is_online) {
-    return {
-      badgeClass: 'badge-error',
-      label: 'Offline',
-      needsAttention: true,
-    };
-  }
-
-  if ((diskFree !== null && diskFree < 10) || (cpu !== null && cpu >= 90) || (ramRatio !== null && ramRatio >= 90)) {
-    return {
-      badgeClass: 'badge-warning',
-      label: 'Atencao',
-      needsAttention: true,
-    };
-  }
-
+  const status = getDeviceOperationalStatus(device);
   return {
-    badgeClass: 'badge-success',
-    label: 'Saudavel',
-    needsAttention: false,
+    badgeClass: status.badgeClass,
+    label: status.label,
+    needsAttention: status.key !== 'healthy',
+    signals: status.signals,
   };
 }
 
@@ -94,8 +57,8 @@ function getMetricTone(props: { status: 'danger' | 'warning' | 'default' }) {
 }
 
 function formatRam(device: DeviceRow) {
-  const used = toNumber(device.ram_used_mb);
-  const total = toNumber(device.ram_total_mb);
+  const used = toMetricNumber(device.ram_used_mb);
+  const total = toMetricNumber(device.ram_total_mb);
 
   if (used === null || total === null || total <= 0) {
     return '--';
@@ -280,9 +243,9 @@ export function DeviceTable(props: DeviceTableProps) {
                       <div className="device-grid">
                         {sortedDevices.map((device) => {
                           const attentionState = getAttentionState(device);
-                          const cpu = toNumber(device.cpu_usage_percent);
-                          const diskFree = toNumber(device.disk_c_free_percent);
-                          const ramRatio = getRamRatio(device);
+                          const cpu = toMetricNumber(device.cpu_usage_percent);
+                          const diskFree = toMetricNumber(device.disk_c_free_percent);
+                          const ramRatio = getRamUsagePercent(device);
 
                           return (
                             <article key={device.id} className="device-card">
@@ -331,12 +294,21 @@ export function DeviceTable(props: DeviceTableProps) {
                                 <div className="metric-pill">
                                   <div className="metric-pill__label">Uptime</div>
                                   <div className="metric-pill__value">
-                                    {formatDurationSeconds(toNumber(device.uptime_seconds) ?? null)}
+                                    {formatDurationSeconds(toMetricNumber(device.uptime_seconds) ?? null)}
                                   </div>
                                 </div>
                               </div>
 
                               <div className="device-card__details">
+                                {attentionState.signals.length > 0
+                                  ? (
+                                      <div className="device-card__attention">
+                                        <strong>Atencao:</strong>
+                                        {' '}
+                                        {attentionState.signals.join(' · ')}
+                                      </div>
+                                    )
+                                  : null}
                                 <div>
                                   <strong>Usuario:</strong>
                                   {' '}

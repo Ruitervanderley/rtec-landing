@@ -4,6 +4,7 @@ import type { DeviceRow } from '@/lib/ops-api';
 import { AlertCircle, ArrowUpRight, Clock3, Cpu, HardDrive, Search, ShieldAlert, UserRound, Wifi, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { getDeviceOperationalStatus, toMetricNumber } from '@/lib/device-health';
 import { formatDateTime, formatDurationSeconds } from '@/lib/format';
 
 type TenantDeviceWorkspaceProps = {
@@ -14,61 +15,13 @@ type TenantDeviceWorkspaceProps = {
   tenantName: string;
 };
 
-function toNumber(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function getRamRatio(device: DeviceRow) {
-  const used = toNumber(device.ram_used_mb);
-  const total = toNumber(device.ram_total_mb);
-
-  if (used === null || total === null || total <= 0) {
-    return null;
-  }
-
-  return (used / total) * 100;
-}
-
 function getOperationalStatus(device: DeviceRow) {
-  const cpu = toNumber(device.cpu_usage_percent);
-  const diskFree = toNumber(device.disk_c_free_percent);
-  const ramRatio = getRamRatio(device);
-  const staleHeartbeat = !device.last_seen_at || new Date(device.last_seen_at).getTime() < Date.now() - (30 * 60 * 1000);
-
-  if (!device.is_online) {
-    return {
-      badgeClass: 'badge-error',
-      key: 'offline',
-      label: 'Offline',
-      priority: 0,
-    };
-  }
-
-  if (staleHeartbeat || (diskFree !== null && diskFree < 10) || (cpu !== null && cpu >= 90) || (ramRatio !== null && ramRatio >= 90)) {
-    return {
-      badgeClass: 'badge-warning',
-      key: 'attention',
-      label: 'Atencao',
-      priority: 1,
-    };
-  }
-
-  return {
-    badgeClass: 'badge-success',
-    key: 'healthy',
-    label: 'Saudavel',
-    priority: 2,
-  };
+  return getDeviceOperationalStatus(device);
 }
 
 function formatRam(device: DeviceRow) {
-  const used = toNumber(device.ram_used_mb);
-  const total = toNumber(device.ram_total_mb);
+  const used = toMetricNumber(device.ram_used_mb);
+  const total = toMetricNumber(device.ram_total_mb);
 
   if (used === null || total === null || total <= 0) {
     return '--';
@@ -144,7 +97,7 @@ export function TenantDeviceWorkspace(props: TenantDeviceWorkspaceProps) {
     return status.key === 'attention' || status.key === 'offline';
   }).length;
   const onlineDevices = devices.filter(device => device.is_online).length;
-  const staleDevices = devices.filter(device => !device.last_seen_at || new Date(device.last_seen_at).getTime() < referenceTime - (30 * 60 * 1000)).length;
+  const staleDevices = devices.filter(device => getDeviceOperationalStatus(device, referenceTime).signals.includes('Heartbeat atrasado')).length;
 
   return (
     <section className="page-stack">
@@ -240,8 +193,8 @@ export function TenantDeviceWorkspace(props: TenantDeviceWorkspaceProps) {
             <div className="tenant-device-grid">
               {filteredDevices.map((device) => {
                 const status = getOperationalStatus(device);
-                const cpu = toNumber(device.cpu_usage_percent);
-                const diskFree = toNumber(device.disk_c_free_percent);
+                const cpu = toMetricNumber(device.cpu_usage_percent);
+                const diskFree = toMetricNumber(device.disk_c_free_percent);
 
                 return (
                   <article className="tenant-device-card" key={device.id}>
@@ -277,7 +230,7 @@ export function TenantDeviceWorkspace(props: TenantDeviceWorkspaceProps) {
                       </div>
                       <div className="tenant-device-metric">
                         <span>Uptime</span>
-                        <strong>{formatDurationSeconds(toNumber(device.uptime_seconds) ?? null)}</strong>
+                        <strong>{formatDurationSeconds(toMetricNumber(device.uptime_seconds) ?? null)}</strong>
                       </div>
                     </div>
 
@@ -330,8 +283,8 @@ export function TenantDeviceWorkspace(props: TenantDeviceWorkspaceProps) {
                       ? (
                           <div className="tenant-device-card__alert">
                             <Clock3 size={14} />
-                            {status.key === 'offline'
-                              ? 'Sem comunicacao recente com o NOC Agent.'
+                            {status.signals.length > 0
+                              ? status.signals.join(' · ')
                               : 'Existe degradacao de recursos ou heartbeat atrasado nesta maquina.'}
                           </div>
                         )

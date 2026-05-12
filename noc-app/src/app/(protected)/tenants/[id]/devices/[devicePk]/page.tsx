@@ -1,23 +1,15 @@
 import { AlertCircle, ArrowLeft, Cpu, Laptop, UserRound, Wifi, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getDeviceOperationalStatus, getRamUsagePercent, toMetricNumber } from '@/lib/device-health';
 import { formatDateTime, formatDurationSeconds } from '@/lib/format';
 import { getDevices, getTenantDetail } from '@/lib/ops-api';
 
 export const dynamic = 'force-dynamic';
 
-function toNumber(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function formatRam(usedValue: string | number | null | undefined, totalValue: string | number | null | undefined) {
-  const used = toNumber(usedValue);
-  const total = toNumber(totalValue);
+  const used = toMetricNumber(usedValue);
+  const total = toMetricNumber(totalValue);
 
   if (used === null || total === null || total <= 0) {
     return '--';
@@ -56,6 +48,10 @@ export default async function TenantDeviceDetailPage(props: {
   if (!detail || !device) {
     notFound();
   }
+  const operationalStatus = getDeviceOperationalStatus(device);
+  const cpu = toMetricNumber(device.cpu_usage_percent);
+  const diskFree = toMetricNumber(device.disk_c_free_percent);
+  const ramUsage = getRamUsagePercent(device);
 
   return (
     <section className="page-stack">
@@ -77,12 +73,21 @@ export default async function TenantDeviceDetailPage(props: {
         </div>
 
         <div className="page-hero__actions">
-          <span className={`badge ${device.is_online ? 'badge-success' : 'badge-error'}`}>
+          <span className={`badge ${operationalStatus.badgeClass}`}>
             {device.is_online ? <Wifi size={12} /> : <WifiOff size={12} />}
-            {device.is_online ? 'Online' : 'Offline'}
+            {operationalStatus.label}
           </span>
         </div>
       </div>
+
+      {operationalStatus.signals.length > 0
+        ? (
+            <div className="alert-panel alert-panel--warning">
+              <AlertCircle size={18} />
+              {operationalStatus.signals.join(' · ')}
+            </div>
+          )
+        : null}
 
       <div className="summary-strip">
         <article className="summary-card">
@@ -134,19 +139,22 @@ export default async function TenantDeviceDetailPage(props: {
           <div className="tenant-device-card__metrics">
             <div className="tenant-device-metric">
               <span>CPU</span>
-              <strong>{toNumber(device.cpu_usage_percent) !== null ? `${toNumber(device.cpu_usage_percent)?.toFixed(1)}%` : '--'}</strong>
+              <strong>{cpu !== null ? `${cpu.toFixed(1)}%` : '--'}</strong>
             </div>
             <div className="tenant-device-metric">
               <span>RAM</span>
-              <strong>{formatRam(device.ram_used_mb, device.ram_total_mb)}</strong>
+              <strong>
+                {formatRam(device.ram_used_mb, device.ram_total_mb)}
+                {ramUsage !== null ? ` (${ramUsage.toFixed(1)}%)` : ''}
+              </strong>
             </div>
             <div className="tenant-device-metric">
               <span>Disco C</span>
-              <strong>{toNumber(device.disk_c_free_percent) !== null ? `${toNumber(device.disk_c_free_percent)?.toFixed(1)}% livre` : '--'}</strong>
+              <strong>{diskFree !== null ? `${diskFree.toFixed(1)}% livre` : '--'}</strong>
             </div>
             <div className="tenant-device-metric">
               <span>Uptime</span>
-              <strong>{formatDurationSeconds(toNumber(device.uptime_seconds) ?? null)}</strong>
+              <strong>{formatDurationSeconds(toMetricNumber(device.uptime_seconds) ?? null)}</strong>
             </div>
           </div>
         </section>

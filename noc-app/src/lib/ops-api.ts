@@ -14,6 +14,7 @@ export type OpsOverview = {
     deviceCount: number;
     failedBackups24h: number;
     hasBackupFailures: boolean;
+    hasBackupHistory: boolean;
     hasOfflineDevices: boolean;
     hasPendingBackups: boolean;
     hasStaleHeartbeat: boolean;
