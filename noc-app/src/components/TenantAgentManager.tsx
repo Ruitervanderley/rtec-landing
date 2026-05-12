@@ -1,7 +1,7 @@
 'use client';
 
 import type { DeviceRow, TenantAgentDetail, TenantAgentProvisionResult } from '@/lib/ops-api';
-import { AlertCircle, Download, KeyRound, Laptop, RefreshCcw, ShieldAlert, X } from 'lucide-react';
+import { AlertCircle, Clipboard, Download, KeyRound, Laptop, RefreshCcw, ShieldAlert, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -10,6 +10,124 @@ import {
   rotateTenantAgentTokenAction,
 } from '@/app/actions/tenant';
 import { formatDateTime } from '@/lib/format';
+
+type AgentWallpaperConfig = {
+  imagePath: string;
+  mode: 'rtec' | 'current' | 'custom';
+};
+
+type ZipFileEntry = {
+  content: string;
+  name: string;
+};
+
+function sanitizeFilePart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'rtec-noc';
+}
+
+function getDosDateParts(date: Date) {
+  const year = Math.max(1980, date.getFullYear());
+
+  return {
+    date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
+    time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+  };
+}
+
+function getCrc32(bytes: Uint8Array) {
+  let crc = 0xFFFFFFFF;
+
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) {
+      crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+    }
+  }
+
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function pushUint16(target: number[], value: number) {
+  target.push(value & 0xFF, (value >>> 8) & 0xFF);
+}
+
+function pushUint32(target: number[], value: number) {
+  target.push(value & 0xFF, (value >>> 8) & 0xFF, (value >>> 16) & 0xFF, (value >>> 24) & 0xFF);
+}
+
+function createZipBlob(files: ZipFileEntry[]) {
+  const encoder = new TextEncoder();
+  const now = getDosDateParts(new Date());
+  const body: number[] = [];
+  const centralDirectory: number[] = [];
+
+  for (const file of files) {
+    const nameBytes = encoder.encode(file.name);
+    const contentBytes = encoder.encode(file.content);
+    const crc = getCrc32(contentBytes);
+    const offset = body.length;
+
+    pushUint32(body, 0x04034B50);
+    pushUint16(body, 20);
+    pushUint16(body, 0x0800);
+    pushUint16(body, 0);
+    pushUint16(body, now.time);
+    pushUint16(body, now.date);
+    pushUint32(body, crc);
+    pushUint32(body, contentBytes.length);
+    pushUint32(body, contentBytes.length);
+    pushUint16(body, nameBytes.length);
+    pushUint16(body, 0);
+    body.push(...nameBytes, ...contentBytes);
+
+    pushUint32(centralDirectory, 0x02014B50);
+    pushUint16(centralDirectory, 20);
+    pushUint16(centralDirectory, 20);
+    pushUint16(centralDirectory, 0x0800);
+    pushUint16(centralDirectory, 0);
+    pushUint16(centralDirectory, now.time);
+    pushUint16(centralDirectory, now.date);
+    pushUint32(centralDirectory, crc);
+    pushUint32(centralDirectory, contentBytes.length);
+    pushUint32(centralDirectory, contentBytes.length);
+    pushUint16(centralDirectory, nameBytes.length);
+    pushUint16(centralDirectory, 0);
+    pushUint16(centralDirectory, 0);
+    pushUint16(centralDirectory, 0);
+    pushUint16(centralDirectory, 0);
+    pushUint32(centralDirectory, 0);
+    pushUint32(centralDirectory, offset);
+    centralDirectory.push(...nameBytes);
+  }
+
+  const centralOffset = body.length;
+  body.push(...centralDirectory);
+  pushUint32(body, 0x06054B50);
+  pushUint16(body, 0);
+  pushUint16(body, 0);
+  pushUint16(body, files.length);
+  pushUint16(body, files.length);
+  pushUint32(body, centralDirectory.length);
+  pushUint32(body, centralOffset);
+  pushUint16(body, 0);
+
+  return new Blob([new Uint8Array(body)], { type: 'application/zip' });
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 function getTokenStatus(device: DeviceRow) {
   if (!device.active_token_expires_at) {
@@ -42,18 +160,72 @@ function getTokenStatus(device: DeviceRow) {
 
 function TokenResultPanel(props: {
   result: TenantAgentProvisionResult;
+  tenantName: string;
+  wallpaper: AgentWallpaperConfig;
 }) {
+  const [copyStatus, setCopyStatus] = useState('');
+  const preserveExistingWallpaper = props.wallpaper.mode === 'current';
+  const wallpaperImagePath = props.wallpaper.mode === 'custom' ? props.wallpaper.imagePath : '';
   const configJson = JSON.stringify({
     AgentSettings: {
       ApiBaseUrl: 'https://api.rtectecnologia.com.br',
+      CompanyName: props.tenantName,
       DeviceToken: props.result.deviceToken,
       DeviceNameOverride: props.result.deviceName,
       EnableBgInfo: true,
+      PreserveExistingWallpaper: preserveExistingWallpaper,
+      WallpaperImagePath: wallpaperImagePath,
       HeartbeatTimeoutSeconds: 20,
       IntervalSeconds: 60,
       ServiceName: 'RtecNocAgent',
     },
   }, null, 2);
+  const installCommand = 'Set-ExecutionPolicy -Scope Process Bypass\r\n.\\install-agent.ps1';
+  const packageName = `rtec-noc-agent-${sanitizeFilePart(props.tenantName)}-${sanitizeFilePart(props.result.deviceName)}.zip`;
+
+  function getInstallReadme() {
+    return [
+      `RTEC NOC Agent - ${props.tenantName}`,
+      '',
+      `Dispositivo: ${props.result.deviceName}`,
+      `Device ID: ${props.result.deviceId}`,
+      `Token expira em: ${formatDateTime(props.result.expiresAtUtc)}`,
+      '',
+      'Como instalar:',
+      '1. Extraia o pacote RtecNocAgent-1.1.0-win-x64.zip oficial.',
+      '2. Substitua o appsettings.json pelo arquivo deste ZIP.',
+      '3. Se usar wallpaper customizado, coloque wallpaper.jpg, wallpaper.jpeg ou wallpaper.png ao lado do instalador.',
+      '4. Abra o PowerShell como Administrador.',
+      '5. Execute install-command.ps1 ou rode o comando abaixo:',
+      '',
+      installCommand,
+      '',
+      'Observacao: este pacote contém a configuração da empresa. Ele não inclui o noc-agent.exe.',
+    ].join('\r\n');
+  }
+
+  function handleDownloadPackage() {
+    downloadBlob(createZipBlob([
+      {
+        content: configJson,
+        name: 'appsettings.json',
+      },
+      {
+        content: getInstallReadme(),
+        name: 'README-INSTALACAO.txt',
+      },
+      {
+        content: installCommand,
+        name: 'install-command.ps1',
+      },
+    ]), packageName);
+  }
+
+  async function handleCopyInstallCommand() {
+    await navigator.clipboard.writeText(installCommand);
+    setCopyStatus('Comando copiado.');
+    window.setTimeout(() => setCopyStatus(''), 2500);
+  }
 
   return (
     <div className="agent-token-panel">
@@ -92,9 +264,32 @@ function TokenResultPanel(props: {
         <pre className="agent-token-panel__code">{configJson}</pre>
       </div>
 
+      <div className="agent-token-panel__actions">
+        <button className="agent-primary-button" onClick={handleDownloadPackage} type="button">
+          <Download size={15} />
+          Baixar pacote de configuração
+        </button>
+        <button className="agent-secondary-button" onClick={handleCopyInstallCommand} type="button">
+          <Clipboard size={15} />
+          Copiar comando de instalação
+        </button>
+        {copyStatus ? <span className="agent-token-panel__status">{copyStatus}</span> : null}
+      </div>
+
       <div className="ops-note-card ops-note-card--blue">
         <strong>Fluxo de instalacao</strong>
-        <span>Use o pacote RtecNocAgent-1.1.0-win-x64.zip, substitua o appsettings.json por este conteudo e execute install-agent.ps1 como administrador na maquina do cliente.</span>
+        <span>Use o pacote RtecNocAgent-1.1.0-win-x64.zip, substitua o appsettings.json por este conteudo e execute install-agent.ps1 como administrador na maquina do cliente. O instalador aplica uma identificação visual limpa na área de trabalho.</span>
+      </div>
+
+      <div className="ops-note-card">
+        <strong>Plano de fundo definido pelo NOC</strong>
+        <span>
+          {props.wallpaper.mode === 'rtec'
+            ? 'Usar fundo limpo padrão RTEC.'
+            : props.wallpaper.mode === 'current'
+              ? 'Manter o wallpaper atual da máquina e aplicar apenas o cartão do agente.'
+              : `Usar imagem local: ${props.wallpaper.imagePath || 'caminho não informado'}`}
+        </span>
       </div>
     </div>
   );
@@ -112,6 +307,11 @@ export function TenantAgentManager(props: {
   const [successMsg, setSuccessMsg] = useState('');
   const [working, setWorking] = useState(false);
   const [result, setResult] = useState<TenantAgentProvisionResult | null>(null);
+  const [wallpaperMode, setWallpaperMode] = useState<AgentWallpaperConfig['mode']>('current');
+  const [wallpaperResult, setWallpaperResult] = useState<AgentWallpaperConfig>({
+    imagePath: '',
+    mode: 'current',
+  });
   const coverageRatio = props.agent.summary.provisionedDevices > 0
     ? Math.round((props.agent.summary.onlineDevices / props.agent.summary.provisionedDevices) * 100)
     : 0;
@@ -120,6 +320,8 @@ export function TenantAgentManager(props: {
     setWorking(true);
     setErrorMsg('');
     setSuccessMsg('');
+    const requestedWallpaperMode = String(formData.get('wallpaper_mode') ?? 'rtec') as AgentWallpaperConfig['mode'];
+    const requestedWallpaperPath = String(formData.get('wallpaper_image_path') ?? '').trim();
 
     const response = await provisionTenantAgentAction(formData);
     setWorking(false);
@@ -130,6 +332,10 @@ export function TenantAgentManager(props: {
     }
 
     setResult(response);
+    setWallpaperResult({
+      imagePath: requestedWallpaperPath,
+      mode: requestedWallpaperMode === 'current' || requestedWallpaperMode === 'custom' ? requestedWallpaperMode : 'rtec',
+    });
     setCreateOpen(false);
     setSuccessMsg('Token de instalacao gerado. Aplique o appsettings.json na maquina do cliente.');
     router.refresh();
@@ -153,6 +359,10 @@ export function TenantAgentManager(props: {
     }
 
     setResult(response);
+    setWallpaperResult({
+      imagePath: '',
+      mode: 'current',
+    });
     setSuccessMsg('Token rotacionado. Substitua o valor no appsettings da maquina.');
     router.refresh();
   }
@@ -264,7 +474,7 @@ export function TenantAgentManager(props: {
         : null}
 
       {result
-        ? <TokenResultPanel result={result} />
+        ? <TokenResultPanel result={result} tenantName={props.tenantName} wallpaper={wallpaperResult} />
         : null}
 
       <div className="ops-layout-grid">
@@ -288,7 +498,7 @@ export function TenantAgentManager(props: {
             <span className="tenant-alert-block__signal">appsettings.json</span>
             <span className="tenant-alert-block__signal">install-agent.ps1</span>
             <span className="tenant-alert-block__signal">uninstall-agent.ps1</span>
-            <span className="tenant-alert-block__signal">Bginfo.exe opcional</span>
+            <span className="tenant-alert-block__signal">Identificação visual integrada</span>
           </div>
         </section>
       </div>
@@ -404,6 +614,32 @@ export function TenantAgentManager(props: {
                     <span>Versao inicial do agente</span>
                     <input defaultValue="1.1.0" name="app_version" type="text" />
                   </label>
+
+                  <label className="agent-modal__field">
+                    <span>Plano de fundo da área de trabalho</span>
+                    <select
+                      name="wallpaper_mode"
+                      onChange={event => setWallpaperMode(event.target.value as AgentWallpaperConfig['mode'])}
+                      value={wallpaperMode}
+                    >
+                      <option value="current">Manter wallpaper atual da máquina</option>
+                      <option value="rtec">Fundo padrão RTEC limpo</option>
+                      <option value="custom">Usar imagem local informada abaixo</option>
+                    </select>
+                  </label>
+
+                  {wallpaperMode === 'custom'
+                    ? (
+                        <label className="agent-modal__field">
+                          <span>Caminho local da imagem</span>
+                          <input
+                            name="wallpaper_image_path"
+                            placeholder="wallpaper.jpg ou C:\\Rtec\\NOC\\wallpaper.jpg"
+                            type="text"
+                          />
+                        </label>
+                      )
+                    : <input name="wallpaper_image_path" type="hidden" value="" />}
 
                   <div className="agent-modal__footer">
                     <button

@@ -18,6 +18,31 @@ builder.Services.AddWindowsService(options =>
 builder.Services.Configure<AgentSettings>(
     builder.Configuration.GetSection(AgentSettings.SectionName));
 
+if (args.Contains("--apply-desktop-info", StringComparer.OrdinalIgnoreCase))
+{
+    var collector = new DeviceMetricsCollector();
+    var metrics = collector.Collect();
+    var deviceName = string.IsNullOrWhiteSpace(agentSettings.DeviceNameOverride)
+        ? metrics.Hostname
+        : agentSettings.DeviceNameOverride.Trim();
+
+    DesktopInfoRenderer.Apply(new DesktopInfoSnapshot
+    {
+        CompanyName = agentSettings.CompanyName,
+        DeviceName = deviceName,
+        UserName = metrics.LoggedInUser,
+        IpAddress = metrics.LocalIpAddress,
+        MacAddress = metrics.MacAddress,
+        AdapterName = metrics.NetworkAdapterName,
+        AgentVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.1.0",
+        PreserveExistingWallpaper = agentSettings.PreserveExistingWallpaper,
+        WallpaperImagePath = agentSettings.WallpaperImagePath,
+        UpdatedAt = DateTimeOffset.Now,
+    });
+
+    return;
+}
+
 // Register HttpClient for the Worker
 builder.Services.AddHttpClient<Worker>((serviceProvider, client) =>
 {

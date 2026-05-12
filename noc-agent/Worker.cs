@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Net.Http.Json;
 using System.Reflection;
 using Microsoft.Extensions.Options;
@@ -13,7 +11,6 @@ public class Worker : BackgroundService
     private readonly HttpClient _httpClient;
     private readonly AgentSettings _settings;
     private readonly DeviceMetricsCollector _collector;
-    private readonly string _appDirectory;
     private readonly string _appVersion;
     private readonly Uri _heartbeatUri;
     private bool _missingTokenWarningLogged;
@@ -24,7 +21,6 @@ public class Worker : BackgroundService
         _httpClient = httpClient;
         _settings = settings.Value;
         _collector = new DeviceMetricsCollector();
-        _appDirectory = AppContext.BaseDirectory;
         _appVersion = ResolveAgentVersion();
         _heartbeatUri = new Uri($"{_settings.ApiBaseUrl.TrimEnd('/')}/v1/device/heartbeat");
     }
@@ -42,8 +38,8 @@ public class Worker : BackgroundService
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_settings.DeviceToken}");
         }
 
-        // Apply BGInfo immediately on startup
-        TryApplyBgInfo();
+        // Apply a clean RTEC desktop information card immediately on startup.
+        TryApplyDesktopInfo();
 
         int loopCounter = 0;
 
@@ -70,9 +66,7 @@ public class Worker : BackgroundService
 
                 _missingTokenWarningLogged = false;
                 var metrics = _collector.Collect();
-                var deviceName = string.IsNullOrWhiteSpace(_settings.DeviceNameOverride)
-                    ? metrics.Hostname
-                    : _settings.DeviceNameOverride.Trim();
+                var deviceName = ResolveDeviceName(metrics);
                 
                 var payload = new
                 {
@@ -116,11 +110,11 @@ public class Worker : BackgroundService
                 _logger.LogError(ex, "An error occurred while sending the heartbeat.");
             }
 
-            // Every ~60 loops (e.g. 1 hour if interval is 60s), re-apply the BGInfo to catch IP changes
+            // Every ~60 loops (e.g. 1 hour if interval is 60s), refresh desktop info to catch IP changes.
             loopCounter++;
             if (loopCounter >= 60)
             {
-                TryApplyBgInfo();
+                TryApplyDesktopInfo();
                 loopCounter = 0;
             }
 
@@ -133,54 +127,43 @@ public class Worker : BackgroundService
         return _settings.IntervalSeconds > 10 ? _settings.IntervalSeconds : 60;
     }
 
-    private void TryApplyBgInfo()
+    private string ResolveDeviceName(DeviceMetrics metrics)
+    {
+        return string.IsNullOrWhiteSpace(_settings.DeviceNameOverride)
+            ? metrics.Hostname
+            : _settings.DeviceNameOverride.Trim();
+    }
+
+    private void TryApplyDesktopInfo()
     {
         if (!_settings.EnableBgInfo)
         {
-            _logger.LogInformation("BGInfo is disabled in appsettings.");
+            _logger.LogInformation("Desktop information card is disabled in appsettings.");
             return;
         }
 
         try
         {
-            string bgInfoPath = Path.Combine(_appDirectory, "Bginfo.exe");
-            string configPath = Path.Combine(_appDirectory, "rtec-bginfo.bgi");
-
-            if (!File.Exists(bgInfoPath))
+            var metrics = _collector.Collect();
+            var outputPath = DesktopInfoRenderer.Apply(new DesktopInfoSnapshot
             {
-                _logger.LogWarning("Bginfo.exe was not found in the application directory. Skipping wallpaper update.");
-                return;
-            }
+                CompanyName = _settings.CompanyName,
+                DeviceName = ResolveDeviceName(metrics),
+                UserName = metrics.LoggedInUser,
+                IpAddress = metrics.LocalIpAddress,
+                MacAddress = metrics.MacAddress,
+                AdapterName = metrics.NetworkAdapterName,
+                AgentVersion = _appVersion,
+                PreserveExistingWallpaper = _settings.PreserveExistingWallpaper,
+                WallpaperImagePath = _settings.WallpaperImagePath,
+                UpdatedAt = DateTimeOffset.Now,
+            });
 
-            _logger.LogInformation("Applying Desktop Wallpaper Information via BGInfo...");
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = bgInfoPath,
-                // /timer:0 = Do not show countdown dialog
-                // /silent = No errors/prompts
-                // /nolicprompt = Accept sysinternals EULA automatically
-                Arguments = File.Exists(configPath) 
-                    ? $"\"{configPath}\" /timer:0 /silent /nolicprompt"
-                    : "/timer:0 /silent /nolicprompt",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(startInfo);
-            if (process != null)
-            {
-                // Give it 10 seconds to finish drawing the wallpaper
-                if (!process.WaitForExit(10000))
-                {
-                    process.Kill();
-                    _logger.LogWarning("Bginfo process took too long and was terminated.");
-                }
-            }
+            _logger.LogInformation("Desktop information card applied at {WallpaperPath}.", outputPath);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while trying to run Bginfo.");
+            _logger.LogError(ex, "An error occurred while applying desktop information.");
         }
     }
 

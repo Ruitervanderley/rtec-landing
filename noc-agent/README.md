@@ -7,7 +7,7 @@ Ele coleta métricas básicas de hardware, identifica melhor a máquina e envia 
 - Escrito em C# (.NET 8).
 - Roda de forma "invisível" como um Serviço do Windows (Windows Service).
 - Compilado como um executável portátil único (`win-x64`) contendo todo o runtime necessário embaraçado. Não exige a instalação prévia do .NET Framework no servidor destino.
-- Integração nativa com o **BGInfo da Microsoft Sysinternals** para estampar informações como IP e Nome do PC no Papel de Parede.
+- Identificação visual controlada pela RTEC na área de trabalho, sem usar o layout padrão poluído do BGInfo.
 - Envia versão do agente baseada no assembly, em vez de string hardcoded no código.
 - Envia identidade adicional da máquina: `machine_guid`, nome do adaptador de rede e versão do sistema operacional.
 
@@ -20,7 +20,7 @@ cd d:\PROJETOS\rtec-landing\noc-agent
 dotnet publish -c Release
 ```
 
-O arquivo gerado estará em: `\noc-agent\bin\Release\net8.0\win-x64\publish\noc-agent.exe`.
+O arquivo gerado estará em: `\noc-agent\bin\Release\net8.0-windows\win-x64\publish\noc-agent.exe`.
 
 ## Configuração
 
@@ -29,7 +29,10 @@ O arquivo [appsettings.json](/E:/PROJETOS/rtec-landing/noc-agent/appsettings.jso
 - `ApiBaseUrl`: URL pública da `noc-api`
 - `DeviceToken`: token do dispositivo provisionado no tenant
 - `DeviceNameOverride`: nome fixo opcional para aparecer no painel
-- `EnableBgInfo`: ativa ou desativa o BGInfo
+- `CompanyName`: nome da empresa exibido no cartão da área de trabalho
+- `EnableBgInfo`: ativa ou desativa a identificação visual na área de trabalho
+- `PreserveExistingWallpaper`: mantém o wallpaper atual antes de aplicar o cartão; por padrão fica `true` para não trocar o fundo do cliente
+- `WallpaperImagePath`: caminho local de uma imagem de fundo customizada no PC; aceita caminho absoluto ou relativo à pasta do agente, como `wallpaper.jpg`
 - `HeartbeatTimeoutSeconds`: timeout do POST do heartbeat
 - `IntervalSeconds`: intervalo entre heartbeats
 - `ServiceName`: nome do serviço Windows
@@ -42,13 +45,10 @@ O arquivo [appsettings.json](/E:/PROJETOS/rtec-landing/noc-agent/appsettings.jso
    - `appsettings.json`
    - `install-agent.ps1`
    - `uninstall-agent.ps1`
-3. Se `EnableBgInfo=true`, coloque também:
-   - `Bginfo.exe`
-   - `rtec-bginfo.bgi` opcional
-4. Abra o `appsettings.json`.
-5. Preencha o `DeviceToken` com o token válido gerado na `noc-api` para o tenant.
-6. Ajuste opcionalmente `DeviceNameOverride`, `IntervalSeconds` e `ServiceName`.
-7. Abra o **PowerShell como Administrador** e rode:
+3. Abra o `appsettings.json`.
+4. Preencha o `DeviceToken` com o token válido gerado no painel NOC para o tenant.
+5. Ajuste opcionalmente `CompanyName`, `DeviceNameOverride`, `PreserveExistingWallpaper`, `WallpaperImagePath`, `IntervalSeconds` e `ServiceName`.
+6. Abra o **PowerShell como Administrador** e rode:
 
 ```ps1
 Set-ExecutionPolicy -Scope Process Bypass
@@ -73,7 +73,7 @@ O agente agora começará a mandar heartbeat com:
 - GUID da máquina
 - versão do sistema operacional
 
-Se `EnableBgInfo=true`, ele também tentará desenhar as informações do servidor no papel de parede.
+Se `EnableBgInfo=true`, o instalador aplica um cartão limpo na área de trabalho com empresa, máquina, usuário, IP, MAC, placa de rede, versão do agente e horário da última atualização. O fundo pode ser o padrão RTEC, o wallpaper atual do usuário ou uma imagem local informada em `WallpaperImagePath`. Para usar imagem relativa, coloque `wallpaper.jpg`, `wallpaper.jpeg` ou `wallpaper.png` junto do instalador.
 
 ## Remoção
 

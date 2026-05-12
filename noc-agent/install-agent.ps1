@@ -50,8 +50,8 @@ if ([string]::IsNullOrWhiteSpace($agentSettings.DeviceToken)) {
     Write-Warning 'DeviceToken está vazio. O agente será instalado, mas não enviará heartbeat até receber um token válido.'
 }
 
-if ($agentSettings.EnableBgInfo -and -not $SkipBgInfoValidation -and -not (Test-Path -LiteralPath $sourceBgInfo)) {
-    throw 'EnableBgInfo=true, mas Bginfo.exe não foi encontrado ao lado do instalador. Use -SkipBgInfoValidation para ignorar.'
+if ($SkipBgInfoValidation) {
+    Write-Warning '-SkipBgInfoValidation foi mantido apenas por compatibilidade. O agente agora gera o layout da área de trabalho sem depender do Bginfo.exe.'
 }
 
 New-Item -ItemType Directory -Force -Path $InstallPath | Out-Null
@@ -64,6 +64,13 @@ if (Test-Path -LiteralPath $sourceBgInfo) {
 
 if (Test-Path -LiteralPath $sourceBgInfoProfile) {
     Copy-Item -LiteralPath $sourceBgInfoProfile -Destination (Join-Path $InstallPath 'rtec-bginfo.bgi') -Force
+}
+
+foreach ($wallpaperName in @('wallpaper.jpg', 'wallpaper.jpeg', 'wallpaper.png')) {
+    $sourceWallpaper = Join-Path $scriptDirectory $wallpaperName
+    if (Test-Path -LiteralPath $sourceWallpaper) {
+        Copy-Item -LiteralPath $sourceWallpaper -Destination (Join-Path $InstallPath $wallpaperName) -Force
+    }
 }
 
 $service = Get-Service -Name $resolvedServiceName -ErrorAction SilentlyContinue
@@ -79,6 +86,11 @@ if ($service) {
 
 sc.exe description $resolvedServiceName "RTEC NOC Agent - telemetria operacional e heartbeat do tenant." | Out-Null
 Start-Service -Name $resolvedServiceName
+
+if ($agentSettings.EnableBgInfo) {
+    Write-Host 'Aplicando identificação visual limpa na área de trabalho do usuário atual...'
+    & (Join-Path $InstallPath 'noc-agent.exe') --apply-desktop-info
+}
 
 Write-Host "Agente instalado com sucesso em $InstallPath"
 Write-Host "Serviço: $resolvedServiceName"

@@ -108,26 +108,85 @@ public class DeviceMetricsCollector
     {
         try
         {
-            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
-            {
-                if (ni.OperationalStatus == OperationalStatus.Up && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                {
-                    var props = ni.GetIPProperties();
-                    var ipv4 = props.UnicastAddresses.FirstOrDefault(a => a.Address.AddressFamily == AddressFamily.InterNetwork);
-                    if (ipv4 != null)
-                    {
-                        return new NetworkInterfaceInfo
-                        {
-                            IpAddress = ipv4.Address.ToString(),
-                            MacAddress = string.Join(":", ni.GetPhysicalAddress().GetAddressBytes().Select(b => b.ToString("X2"))),
-                            Name = ni.Name,
-                        };
-                    }
-                }
-            }
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(IsUsableInterface)
+                .Select(BuildNetworkInterfaceInfo)
+                .Where(info => info != null)
+                .OrderByDescending(info => info!.Score)
+                .FirstOrDefault();
         }
         catch { }
         return null;
+    }
+
+    private static bool IsUsableInterface(NetworkInterface networkInterface)
+    {
+        if (networkInterface.OperationalStatus != OperationalStatus.Up)
+        {
+            return false;
+        }
+
+        if (networkInterface.NetworkInterfaceType is NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel)
+        {
+            return false;
+        }
+
+        var physicalAddress = networkInterface.GetPhysicalAddress().GetAddressBytes();
+        if (physicalAddress.Length == 0 || physicalAddress.All(value => value == 0))
+        {
+            return false;
+        }
+
+        var identity = $"{networkInterface.Name} {networkInterface.Description}".ToLowerInvariant();
+        var blockedTerms = new[]
+        {
+            "virtual",
+            "vmware",
+            "hyper-v",
+            "bluetooth",
+            "loopback",
+            "pseudo",
+            "tunnel",
+            "tap",
+            "wi-fi direct",
+            "virtualbox",
+            "docker",
+            "npcap",
+        };
+
+        return !blockedTerms.Any(identity.Contains);
+    }
+
+    private static NetworkInterfaceInfo? BuildNetworkInterfaceInfo(NetworkInterface networkInterface)
+    {
+        var props = networkInterface.GetIPProperties();
+        var ipv4 = props.UnicastAddresses
+            .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
+            .Select(address => address.Address.ToString())
+            .FirstOrDefault(address => !address.StartsWith("169.254.", StringComparison.OrdinalIgnoreCase));
+
+        if (string.IsNullOrWhiteSpace(ipv4))
+        {
+            return null;
+        }
+
+        var hasGateway = props.GatewayAddresses.Any(address => address.Address.AddressFamily == AddressFamily.InterNetwork);
+        var typeScore = networkInterface.NetworkInterfaceType switch
+        {
+            NetworkInterfaceType.Ethernet => 40,
+            NetworkInterfaceType.Wireless80211 => 35,
+            _ => 10,
+        };
+        var speedScore = networkInterface.Speed > 0 ? Math.Min(20, (int)(networkInterface.Speed / 100_000_000)) : 0;
+        var gatewayScore = hasGateway ? 50 : 0;
+
+        return new NetworkInterfaceInfo
+        {
+            IpAddress = ipv4,
+            MacAddress = string.Join(":", networkInterface.GetPhysicalAddress().GetAddressBytes().Select(b => b.ToString("X2"))),
+            Name = string.IsNullOrWhiteSpace(networkInterface.Description) ? networkInterface.Name : networkInterface.Description,
+            Score = gatewayScore + typeScore + speedScore,
+        };
     }
 
     private string GetMachineGuid()
@@ -162,5 +221,6 @@ public class DeviceMetricsCollector
         public string IpAddress { get; init; } = string.Empty;
         public string MacAddress { get; init; } = string.Empty;
         public string Name { get; init; } = string.Empty;
+        public int Score { get; init; }
     }
 }
