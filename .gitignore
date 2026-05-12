@@ -67,5 +67,7 @@ noc-app/.env.local
 # Next.js build cache
 noc-app/.next
 
-# NOC Agent
-noc-agent/
+# NOC Agent build artifacts
+noc-agent/bin/
+noc-agent/obj/
+noc-agent/msbuild.log

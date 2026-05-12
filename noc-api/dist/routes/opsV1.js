@@ -1437,6 +1437,7 @@ export function createOpsV1Router(options) {
         try {
             const limitRaw = Number(req.query.limit ?? 200);
             const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(1000, Math.trunc(limitRaw))) : 200;
+            const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId.trim() : null;
             const rows = await db.execute(sql `
         select
           b.id,
@@ -1458,6 +1459,8 @@ export function createOpsV1Router(options) {
         from public.device_backups b
         left join public.tenant_devices td on td.id = b.device_fk
         left join public.tenants t on t.id = b.tenant_id
+        where true
+        ${tenantId ? sql `and b.tenant_id = ${tenantId}::uuid` : sql ``}
         order by b.created_at desc
         limit ${limit}
       `);

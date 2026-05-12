@@ -1,7 +1,7 @@
 'use client';
 
 import type { DeviceRow, TenantAgentDetail, TenantAgentProvisionResult } from '@/lib/ops-api';
-import { AlertCircle, KeyRound, Laptop, RefreshCcw, ShieldAlert, X } from 'lucide-react';
+import { AlertCircle, Download, KeyRound, Laptop, RefreshCcw, ShieldAlert, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -47,7 +47,11 @@ function TokenResultPanel(props: {
     AgentSettings: {
       ApiBaseUrl: 'https://api.rtectecnologia.com.br',
       DeviceToken: props.result.deviceToken,
+      DeviceNameOverride: props.result.deviceName,
+      EnableBgInfo: true,
+      HeartbeatTimeoutSeconds: 20,
       IntervalSeconds: 60,
+      ServiceName: 'RtecNocAgent',
     },
   }, null, 2);
 
@@ -87,6 +91,11 @@ function TokenResultPanel(props: {
         <div className="agent-token-panel__label">appsettings.json</div>
         <pre className="agent-token-panel__code">{configJson}</pre>
       </div>
+
+      <div className="ops-note-card ops-note-card--blue">
+        <strong>Fluxo de instalacao</strong>
+        <span>Copie o `noc-agent.exe`, este `appsettings.json`, `install-agent.ps1` e opcionalmente `Bginfo.exe` para a maquina do cliente. Depois rode o instalador em PowerShell como administrador.</span>
+      </div>
     </div>
   );
 }
@@ -103,6 +112,9 @@ export function TenantAgentManager(props: {
   const [successMsg, setSuccessMsg] = useState('');
   const [working, setWorking] = useState(false);
   const [result, setResult] = useState<TenantAgentProvisionResult | null>(null);
+  const coverageRatio = props.agent.summary.provisionedDevices > 0
+    ? Math.round((props.agent.summary.onlineDevices / props.agent.summary.provisionedDevices) * 100)
+    : 0;
 
   async function handleProvision(formData: FormData) {
     setWorking(true);
@@ -212,6 +224,13 @@ export function TenantAgentManager(props: {
           <strong className="summary-card__value">{formatDateTime(props.agent.summary.latestTokenIssuedAt)}</strong>
           <div className="summary-card__meta">Ultimo token emitido para esta empresa.</div>
         </div>
+        <div className="summary-card">
+          <span className="summary-card__label">Cobertura da frota</span>
+          <strong className="summary-card__value">
+            {props.agent.summary.provisionedDevices > 0 ? `${coverageRatio}%` : '--'}
+          </strong>
+          <div className="summary-card__meta">Percentual de maquinas provisionadas que seguem online agora.</div>
+        </div>
       </div>
 
       {props.agent.owner
@@ -247,6 +266,32 @@ export function TenantAgentManager(props: {
       {result
         ? <TokenResultPanel result={result} />
         : null}
+
+      <div className="ops-layout-grid">
+        <section className="ops-note-card">
+          <strong>Como implantar o agente nesta empresa</strong>
+          <ol className="ops-number-list">
+            <li>Gere o token desta empresa com o botão de provisionamento.</li>
+            <li>Copie o pacote do agente para a pasta local da maquina.</li>
+            <li>Substitua o `DeviceToken` no `appsettings.json` e ajuste o nome da maquina, se necessário.</li>
+            <li>Execute `install-agent.ps1` como administrador.</li>
+          </ol>
+        </section>
+
+        <section className="ops-note-card ops-note-card--green">
+          <strong>Pacote minimo do cliente</strong>
+          <div className="tenant-alert-block__signals">
+            <span className="tenant-alert-block__signal">
+              <Download size={14} />
+              noc-agent.exe
+            </span>
+            <span className="tenant-alert-block__signal">appsettings.json</span>
+            <span className="tenant-alert-block__signal">install-agent.ps1</span>
+            <span className="tenant-alert-block__signal">uninstall-agent.ps1</span>
+            <span className="tenant-alert-block__signal">Bginfo.exe opcional</span>
+          </div>
+        </section>
+      </div>
 
       <div className="agent-device-list">
         {props.devices.map((device) => {
@@ -357,7 +402,7 @@ export function TenantAgentManager(props: {
 
                   <label className="agent-modal__field">
                     <span>Versao inicial do agente</span>
-                    <input defaultValue="1.0.0" name="app_version" type="text" />
+                    <input defaultValue="1.1.0" name="app_version" type="text" />
                   </label>
 
                   <div className="agent-modal__footer">

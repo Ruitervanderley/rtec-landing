@@ -258,6 +258,13 @@ export type TenantDetail = {
   }>;
 };
 
+export type TenantOperationalAlert = {
+  description: string;
+  href: string;
+  title: string;
+  tone: 'danger' | 'warning' | 'success';
+};
+
 function getApiBaseUrl(): string {
   const base = process.env.OPS_API_URL ?? process.env.NEXT_PUBLIC_NOC_API_URL ?? '';
   return base.trim().replace(/\/$/, '');
@@ -380,8 +387,11 @@ export async function getDevices(limit = 300, tenantId?: string): Promise<Device
   return response.devices ?? [];
 }
 
-export async function getBackups(limit = 300): Promise<BackupRow[]> {
-  const response = await fetchAdmin<{ backups: BackupRow[] }>(`/admin/backups?limit=${limit}`);
+export async function getBackups(limit = 300, tenantId?: string): Promise<BackupRow[]> {
+  const url = tenantId
+    ? `/admin/backups?limit=${limit}&tenantId=${tenantId}`
+    : `/admin/backups?limit=${limit}`;
+  const response = await fetchAdmin<{ backups: BackupRow[] }>(url);
   return response.backups ?? [];
 }
 

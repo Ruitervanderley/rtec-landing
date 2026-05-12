@@ -2,16 +2,18 @@ import { AlertCircle, ArrowLeft, ExternalLink, Network, Server, ShieldCheck, Use
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { DeviceTable } from '@/components/DeviceTable';
 import { TenantAgentManager } from '@/components/TenantAgentManager';
+import { TenantAlertsWorkspace } from '@/components/TenantAlertsWorkspace';
+import { TenantBackupWorkspace } from '@/components/TenantBackupWorkspace';
+import { TenantDeviceWorkspace } from '@/components/TenantDeviceWorkspace';
 import { TenantInfrastructureEditor } from '@/components/TenantInfrastructureEditor';
 import { TenantUsersManager } from '@/components/TenantUsersManager';
 import { formatDate, formatDateTime } from '@/lib/format';
-import { getDevices, getTenantDetail, revokeDevice } from '@/lib/ops-api';
+import { getBackups, getDevices, getTenantDetail, revokeDevice } from '@/lib/ops-api';
 
 export const dynamic = 'force-dynamic';
 
-const tenantTabs = ['summary', 'agent', 'users', 'infra', 'cloudflare', 'devices'] as const;
+const tenantTabs = ['summary', 'agent', 'devices', 'backups', 'alerts', 'users', 'infra', 'cloudflare'] as const;
 
 type TenantTab = (typeof tenantTabs)[number];
 
@@ -75,6 +77,113 @@ function buildTabHref(tenantId: string, tab: TenantTab) {
   return `/tenants/${tenantId}?tab=${tab}`;
 }
 
+function getWorkspaceAlertClass(tone: 'danger' | 'warning' | 'success') {
+  if (tone === 'danger') {
+    return 'tenant-workspace-alert tenant-workspace-alert--danger';
+  }
+
+  if (tone === 'warning') {
+    return 'tenant-workspace-alert tenant-workspace-alert--warning';
+  }
+
+  return 'tenant-workspace-alert tenant-workspace-alert--success';
+}
+
+function toNumber(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getTenantOperationalAlerts(detail: Awaited<ReturnType<typeof getTenantDetail>>, devices: Awaited<ReturnType<typeof getDevices>>) {
+  const alerts: Array<{ href: string; tone: 'danger' | 'warning' | 'success'; title: string; description: string }> = [];
+  const offlineDevices = devices.filter(device => !device.is_online);
+  const staleDevices = devices.filter(device => !device.last_seen_at || new Date(device.last_seen_at).getTime() < Date.now() - (30 * 60 * 1000));
+  const stressedDevices = devices.filter((device) => {
+    const cpu = toNumber(device.cpu_usage_percent);
+    const diskFree = toNumber(device.disk_c_free_percent);
+    const ramUsed = toNumber(device.ram_used_mb);
+    const ramTotal = toNumber(device.ram_total_mb);
+    const ramRatio = ramUsed !== null && ramTotal !== null && ramTotal > 0 ? (ramUsed / ramTotal) * 100 : null;
+
+    return (cpu !== null && cpu >= 90) || (diskFree !== null && diskFree < 10) || (ramRatio !== null && ramRatio >= 90);
+  });
+
+  if (!detail.tenant.isActive) {
+    alerts.push({
+      description: 'A empresa esta inativa e requer revisão de licença antes da operação normal.',
+      href: buildTabHref(detail.tenant.tenantId, 'summary'),
+      title: 'Tenant inativo',
+      tone: 'danger',
+    });
+  }
+
+  if (offlineDevices.length > 0) {
+    alerts.push({
+      description: `${offlineDevices.length} maquina(s) sem comunicação ativa com o NOC Agent.`,
+      href: buildTabHref(detail.tenant.tenantId, 'devices'),
+      title: 'Dispositivos offline',
+      tone: 'danger',
+    });
+  }
+
+  if (staleDevices.length > 0) {
+    alerts.push({
+      description: `${staleDevices.length} maquina(s) com heartbeat atrasado para esta empresa.`,
+      href: buildTabHref(detail.tenant.tenantId, 'devices'),
+      title: 'Heartbeat atrasado',
+      tone: 'warning',
+    });
+  }
+
+  if (stressedDevices.length > 0) {
+    alerts.push({
+      description: `${stressedDevices.length} maquina(s) com CPU, RAM ou disco sob pressão.`,
+      href: buildTabHref(detail.tenant.tenantId, 'devices'),
+      title: 'Recursos em atenção',
+      tone: 'warning',
+    });
+  }
+
+  if (detail.agent.summary.provisionedDevices === 0) {
+    alerts.push({
+      description: 'Nenhuma máquina provisionada ainda para esta empresa.',
+      href: buildTabHref(detail.tenant.tenantId, 'agent'),
+      title: 'Agente não implantado',
+      tone: 'warning',
+    });
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({
+      description: 'Licença, agente e frota respondem dentro do esperado neste momento.',
+      href: buildTabHref(detail.tenant.tenantId, 'summary'),
+      title: 'Empresa estável',
+      tone: 'success',
+    });
+  }
+
+  return alerts;
+}
+
+function getTenantDeviceSpotlight(devices: Awaited<ReturnType<typeof getDevices>>) {
+  return [...devices]
+    .sort((left, right) => {
+      const leftPriority = left.is_online ? 1 : 0;
+      const rightPriority = right.is_online ? 1 : 0;
+
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
+      }
+
+      return (right.last_seen_at ?? '').localeCompare(left.last_seen_at ?? '');
+    })
+    .slice(0, 4);
+}
+
 function renderCloudflareChecklist(detail: Awaited<ReturnType<typeof getTenantDetail>>) {
   if (detail.tenant.cloudflareStatus === 'manual_redirect_required') {
     return (
@@ -133,8 +242,10 @@ export default async function TenantDetailPage(props: {
 
   let detail: Awaited<ReturnType<typeof getTenantDetail>> | null = null;
   let devices: Awaited<ReturnType<typeof getDevices>> = [];
+  let backups: Awaited<ReturnType<typeof getBackups>> = [];
   let errorMsg: string | null = null;
   let deviceErrorMsg: string | null = null;
+  let backupErrorMsg: string | null = null;
 
   try {
     detail = await getTenantDetail(id);
@@ -151,6 +262,12 @@ export default async function TenantDetailPage(props: {
       devices = await getDevices(500, id);
     } catch (error) {
       deviceErrorMsg = error instanceof Error ? error.message : 'Erro ao carregar dispositivos do tenant';
+    }
+
+    try {
+      backups = await getBackups(300, id);
+    } catch (error) {
+      backupErrorMsg = error instanceof Error ? error.message : 'Erro ao carregar backups do tenant';
     }
   }
 
@@ -179,6 +296,8 @@ export default async function TenantDetailPage(props: {
   }
 
   const tenantStatus = getTenantStatus(detail);
+  const operationalAlerts = getTenantOperationalAlerts(detail, devices);
+  const spotlightDevices = getTenantDeviceSpotlight(devices);
   const summaryCards = [
     {
       icon: ShieldCheck,
@@ -195,8 +314,8 @@ export default async function TenantDetailPage(props: {
     {
       icon: Server,
       label: 'Dispositivos',
-      meta: `Ultimo heartbeat ${formatDateTime(detail.tenant.lastSeenAt)}`,
-      value: `${detail.tenant.onlineDevices} online`,
+      meta: `${Math.max(detail.tenant.deviceCount - detail.tenant.onlineDevices, 0)} offline · ultimo heartbeat ${formatDateTime(detail.tenant.lastSeenAt)}`,
+      value: `${detail.tenant.onlineDevices}/${detail.tenant.deviceCount}`,
     },
     {
       icon: Network,
@@ -261,7 +380,21 @@ export default async function TenantDetailPage(props: {
             href={buildTabHref(detail.tenant.tenantId, tab)}
             key={tab}
           >
-            {tab === 'summary' ? 'Resumo' : tab === 'agent' ? 'Agente' : tab === 'users' ? 'Usuarios' : tab === 'infra' ? 'Infra' : tab === 'cloudflare' ? 'Cloudflare' : 'Dispositivos'}
+            {tab === 'summary'
+              ? 'Resumo'
+              : tab === 'agent'
+                ? 'Agente'
+                : tab === 'devices'
+                  ? 'Dispositivos'
+                  : tab === 'backups'
+                    ? 'Backups'
+                    : tab === 'alerts'
+                      ? 'Alertas'
+                      : tab === 'users'
+                        ? 'Usuarios'
+                        : tab === 'infra'
+                          ? 'Infra'
+                          : 'Cloudflare'}
           </Link>
         ))}
       </nav>
@@ -310,9 +443,37 @@ export default async function TenantDetailPage(props: {
                     <Link className="tenant-action-card" href={buildTabHref(detail.tenant.tenantId, 'devices')}>
                       <strong>Frota conectada</strong>
                       <span>
+                        {detail.tenant.onlineDevices}
+                        {' online de '}
                         {detail.tenant.deviceCount}
-                        {' dispositivo(s) · ultimo backup '}
+                        {' dispositivos'}
+                      </span>
+                    </Link>
+
+                    <Link className="tenant-action-card" href={buildTabHref(detail.tenant.tenantId, 'backups')}>
+                      <strong>Backups da empresa</strong>
+                      <span>
+                        {backups.length}
+                        {' registro(s) · ultimo backup '}
                         {formatDateTime(detail.tenant.lastBackupAt)}
+                      </span>
+                    </Link>
+
+                    <Link className="tenant-action-card" href={buildTabHref(detail.tenant.tenantId, 'users')}>
+                      <strong>Usuarios e acessos</strong>
+                      <span>
+                        {detail.users.length}
+                        {' vinculado(s) · '}
+                        {detail.tenant.adminUsers}
+                        {' admin(s)'}
+                      </span>
+                    </Link>
+
+                    <Link className="tenant-action-card" href={buildTabHref(detail.tenant.tenantId, 'alerts')}>
+                      <strong>Alertas da empresa</strong>
+                      <span>
+                        {operationalAlerts.length}
+                        {' sinal(is) operacional(is) aberto(s)'}
                       </span>
                     </Link>
 
@@ -368,6 +529,64 @@ export default async function TenantDetailPage(props: {
                   </div>
                 </section>
               </div>
+
+              <div className="ops-layout-grid">
+                <section className="card ops-section-card">
+                  <div className="ops-section-card__header">
+                    <div>
+                      <div className="page-hero__eyebrow">Prioridades da empresa</div>
+                      <h2 className="ops-section-card__title">O que tratar primeiro neste tenant</h2>
+                    </div>
+                  </div>
+
+                  <div className="tenant-workspace-alerts">
+                    {operationalAlerts.map(alert => (
+                      <Link className={getWorkspaceAlertClass(alert.tone)} href={alert.href} key={`${alert.title}-${alert.href}`}>
+                        <strong>{alert.title}</strong>
+                        <span>{alert.description}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="card ops-section-card">
+                  <div className="ops-section-card__header">
+                    <div>
+                      <div className="page-hero__eyebrow">Frota em evidência</div>
+                      <h2 className="ops-section-card__title">Máquinas que merecem revisão</h2>
+                    </div>
+                    <Link className="inline-link" href={buildTabHref(detail.tenant.tenantId, 'devices')}>
+                      Abrir aba dispositivos
+                      <ExternalLink size={14} />
+                    </Link>
+                  </div>
+
+                  <div className="tenant-spotlight-list">
+                    {spotlightDevices.map(device => (
+                      <div className="tenant-spotlight-item" key={device.id}>
+                        <div>
+                          <strong>{device.device_name || device.device_id}</strong>
+                          <span>
+                            {device.logged_in_user || '--'}
+                            {' · '}
+                            {device.local_ip || '--'}
+                          </span>
+                        </div>
+                        <div className="tenant-spotlight-item__meta">
+                          <span className={`badge ${device.is_online ? 'badge-success' : 'badge-error'}`}>
+                            {device.is_online ? 'Online' : 'Offline'}
+                          </span>
+                          <span>{formatDateTime(device.last_seen_at)}</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {spotlightDevices.length === 0
+                      ? <div className="ops-empty-note">Nenhuma máquina provisionada para esta empresa ainda.</div>
+                      : null}
+                  </div>
+                </section>
+              </div>
             </div>
           )
         : null}
@@ -415,20 +634,44 @@ export default async function TenantDetailPage(props: {
 
       {activeTab === 'devices'
         ? (
-            <div className="page-stack">
-              <section className="card ops-section-card">
-                <div className="ops-section-card__header">
-                  <div>
-                    <div className="page-hero__eyebrow">Frota conectada</div>
-                    <h2 className="ops-section-card__title">Dispositivos da empresa</h2>
-                  </div>
-                </div>
-                <p className="ops-copy-muted">
-                  Esta aba concentra somente os dispositivos deste tenant, com agrupamento, metricas e revogacao de acesso.
-                </p>
-              </section>
-              <DeviceTable devices={devices} error={deviceErrorMsg} revokeDeviceAction={revokeDeviceAction} />
-            </div>
+            <TenantDeviceWorkspace
+              devices={devices}
+              error={deviceErrorMsg}
+              revokeDeviceAction={revokeDeviceAction}
+              tenantId={detail.tenant.tenantId}
+              tenantName={detail.tenant.name}
+            />
+          )
+        : null}
+
+      {activeTab === 'backups'
+        ? (
+            backupErrorMsg
+              ? (
+                  <section className="card alert-panel alert-panel--error">
+                    <AlertCircle size={18} />
+                    {backupErrorMsg}
+                  </section>
+                )
+              : (
+                  <TenantBackupWorkspace
+                    backups={backups}
+                    tenantId={detail.tenant.tenantId}
+                    tenantName={detail.tenant.name}
+                  />
+                )
+          )
+        : null}
+
+      {activeTab === 'alerts'
+        ? (
+            <TenantAlertsWorkspace
+              alerts={operationalAlerts}
+              backups={backups}
+              devices={devices}
+              tenantId={detail.tenant.tenantId}
+              tenantName={detail.tenant.name}
+            />
           )
         : null}
     </section>
