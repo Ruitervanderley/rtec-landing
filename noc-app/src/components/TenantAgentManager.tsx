@@ -167,6 +167,7 @@ function getTokenStatus(device: DeviceRow) {
 }
 
 function TokenResultPanel(props: {
+  officialPackage: OfficialAgentPackage;
   result: TenantAgentProvisionResult;
   tenantName: string;
   wallpaper: AgentWallpaperConfig;
@@ -200,7 +201,7 @@ function TokenResultPanel(props: {
       `Token expira em: ${formatDateTime(props.result.expiresAtUtc)}`,
       '',
       'Como instalar:',
-      '1. Extraia o pacote RtecNocAgent-1.1.0-win-x64.zip oficial.',
+      `1. Extraia o pacote ${props.officialPackage.fileName} oficial.`,
       '2. Substitua o appsettings.json pelo arquivo deste ZIP.',
       '3. Se usar wallpaper customizado, coloque wallpaper.jpg, wallpaper.jpeg ou wallpaper.png ao lado do instalador.',
       '4. Abra o PowerShell como Administrador.',
@@ -286,7 +287,12 @@ function TokenResultPanel(props: {
 
       <div className="ops-note-card ops-note-card--blue">
         <strong>Fluxo de instalacao</strong>
-        <span>Use o pacote RtecNocAgent-1.1.0-win-x64.zip, substitua o appsettings.json por este conteudo e execute install-agent.ps1 como administrador na maquina do cliente. O instalador aplica uma identificação visual limpa na área de trabalho.</span>
+        <span>
+          Use o pacote
+          {' '}
+          {props.officialPackage.fileName}
+          , substitua o appsettings.json por este conteudo e execute install-agent.ps1 como administrador na maquina do cliente. O instalador aplica uma identificação visual limpa na área de trabalho.
+        </span>
       </div>
 
       <div className="ops-note-card">
@@ -483,7 +489,7 @@ export function TenantAgentManager(props: {
         : null}
 
       {result
-        ? <TokenResultPanel result={result} tenantName={props.tenantName} wallpaper={wallpaperResult} />
+        ? <TokenResultPanel officialPackage={props.officialPackage} result={result} tenantName={props.tenantName} wallpaper={wallpaperResult} />
         : null}
 
       <section className="agent-official-package">
@@ -668,7 +674,7 @@ export function TenantAgentManager(props: {
 
                   <label className="agent-modal__field">
                     <span>Versao inicial do agente</span>
-                    <input defaultValue="1.1.0" name="app_version" type="text" />
+                    <input defaultValue={props.officialPackage.version} name="app_version" type="text" />
                   </label>
 
                   <label className="agent-modal__field">

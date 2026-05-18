@@ -3,12 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 import { and, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { db, pool } from '../db/index.js';
-import { deviceApiTokens, deviceBackups, deviceHeartbeats, opsAlerts, tenantDevices, tenantInfraProfiles, } from '../db/schema.js';
+import { deviceApiTokens, deviceBackups, deviceCommands, deviceHeartbeats, opsAlerts, tenantDevices, tenantInfraProfiles, } from '../db/schema.js';
 import { requireAdminToken, requireDeviceToken } from '../ops/auth.js';
 import { isR2Configured } from '../ops/config.js';
 import { getProfileAccessInfo, getSupabaseIdentity, isAccessAllowed, } from '../ops/supabaseIdentity.js';
 import { DEVICE_TOKEN_TTL_DAYS, generateOpaqueToken, hashOpaqueToken, nowPlusDays, sanitizeObjectPathSegment, } from '../ops/tokenUtils.js';
 const VALID_BACKUP_TYPES = new Set(['POST_SESSION', 'DAILY']);
+const VALID_DEVICE_COMMAND_TYPES = new Set(['FORCE_HEARTBEAT', 'APPLY_DESKTOP_INFO', 'COLLECT_DIAGNOSTIC']);
 class InMemoryRateLimiter {
     buckets = new Map();
     consume(key, limit, windowMs) {
@@ -37,6 +38,21 @@ const PORTAL_PUBLIC_BASE_URL = (process.env.PANEL_PUBLIC_BASE_URL
 const TENANT_REDIRECT_ZONE_HOST = (process.env.TENANT_REDIRECT_ZONE_HOST ?? 'rtectecnologia.com.br')
     .trim()
     .toLowerCase();
+function serializeDeviceCommand(row) {
+    return {
+        id: row.id,
+        commandType: row.command_type,
+        status: row.status,
+        payload: row.payload ?? {},
+        result: row.result ?? null,
+        errorMessage: row.error_message ?? null,
+        requestedBy: row.requested_by ?? null,
+        requestedAt: toIsoString(row.requested_at),
+        claimedAt: toIsoString(row.claimed_at ?? null),
+        completedAt: toIsoString(row.completed_at ?? null),
+        expiresAt: toIsoString(row.expires_at ?? null),
+    };
+}
 function parseBearerToken(req) {
     const auth = req.header('authorization') ?? req.header('Authorization');
     if (!auth) {
@@ -1016,6 +1032,82 @@ export function createOpsV1Router(options) {
         catch (error) {
             console.error('POST /v1/device/heartbeat error:', error);
             res.status(500).json({ error: 'HEARTBEAT_ERROR' });
+        }
+    });
+    router.get('/device/commands', requireDeviceToken(), async (req, res) => {
+        if (!req.opsDevice) {
+            res.status(401).json({ error: 'UNAUTHORIZED_DEVICE' });
+            return;
+        }
+        if (!ensureRateLimit(`commands:${req.opsDevice.deviceId}`, 120, 60_000, res)) {
+            return;
+        }
+        try {
+            const limit = Math.min(Math.max(Number(req.query.limit ?? 3), 1), 10);
+            await pool.query(`
+        update public.device_commands
+        set status = 'EXPIRED', completed_at = now(), error_message = 'Command expired before pickup'
+        where device_fk = $1
+          and status in ('PENDING', 'CLAIMED')
+          and expires_at <= now()
+      `, [req.opsDevice.devicePk]);
+            const claimed = await pool.query(`
+        update public.device_commands
+        set status = 'CLAIMED', claimed_at = now()
+        where id in (
+          select id
+          from public.device_commands
+          where device_fk = $1
+            and status = 'PENDING'
+            and expires_at > now()
+          order by requested_at asc
+          limit $2
+          for update skip locked
+        )
+        returning id, command_type, status, payload, result, error_message, requested_by, requested_at, claimed_at, completed_at, expires_at
+      `, [req.opsDevice.devicePk, limit]);
+            res.json({
+                commands: claimed.rows.map(serializeDeviceCommand),
+                serverTimeUtc: new Date().toISOString(),
+            });
+        }
+        catch (error) {
+            console.error('GET /v1/device/commands error:', error);
+            res.status(500).json({ error: 'DEVICE_COMMANDS_ERROR' });
+        }
+    });
+    router.post('/device/commands/:id/complete', requireDeviceToken(), async (req, res) => {
+        if (!req.opsDevice) {
+            res.status(401).json({ error: 'UNAUTHORIZED_DEVICE' });
+            return;
+        }
+        try {
+            const commandId = req.params.id;
+            const { status, result, errorMessage } = req.body;
+            const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
+            if (normalizedStatus !== 'SUCCEEDED' && normalizedStatus !== 'FAILED') {
+                res.status(400).json({ error: 'status must be SUCCEEDED or FAILED' });
+                return;
+            }
+            const updated = await db
+                .update(deviceCommands)
+                .set({
+                status: normalizedStatus,
+                result: result && typeof result === 'object' ? result : null,
+                errorMessage: typeof errorMessage === 'string' ? errorMessage.slice(0, 1000) : null,
+                completedAt: new Date(),
+            })
+                .where(and(eq(deviceCommands.id, commandId), eq(deviceCommands.deviceFk, req.opsDevice.devicePk)))
+                .returning({ id: deviceCommands.id });
+            if (updated.length === 0) {
+                res.status(404).json({ error: 'COMMAND_NOT_FOUND' });
+                return;
+            }
+            res.json({ ok: true });
+        }
+        catch (error) {
+            console.error('POST /v1/device/commands/:id/complete error:', error);
+            res.status(500).json({ error: 'DEVICE_COMMAND_COMPLETE_ERROR' });
         }
     });
     router.post('/backups/request-upload', requireDeviceToken(), async (req, res) => {
@@ -2170,6 +2262,77 @@ export function createOpsV1Router(options) {
         catch (error) {
             console.error('POST /v1/admin/devices/:id/token error:', error);
             res.status(500).json({ error: 'ADMIN_DEVICE_TOKEN_ROTATE_ERROR' });
+        }
+    });
+    router.get('/admin/devices/:id/commands', requireAdminToken(options.config), async (req, res) => {
+        try {
+            const devicePk = String(req.params.id ?? '').trim();
+            if (!devicePk) {
+                res.status(400).json({ error: 'DEVICE_ID_REQUIRED' });
+                return;
+            }
+            const limit = Math.min(Math.max(Number(req.query.limit ?? 20), 1), 100);
+            const rows = await pool.query(`
+        select id, command_type, status, payload, result, error_message, requested_by, requested_at, claimed_at, completed_at, expires_at
+        from public.device_commands
+        where device_fk = $1
+        order by requested_at desc
+        limit $2
+      `, [devicePk, limit]);
+            res.json({ commands: rows.rows.map(serializeDeviceCommand) });
+        }
+        catch (error) {
+            console.error('GET /v1/admin/devices/:id/commands error:', error);
+            res.status(500).json({ error: 'ADMIN_DEVICE_COMMANDS_ERROR' });
+        }
+    });
+    router.post('/admin/devices/:id/commands', requireAdminToken(options.config), async (req, res) => {
+        try {
+            const devicePk = String(req.params.id ?? '').trim();
+            const commandType = toStringValue(req.body.command_type
+                ?? req.body.commandType).toUpperCase();
+            if (!devicePk) {
+                res.status(400).json({ error: 'DEVICE_ID_REQUIRED' });
+                return;
+            }
+            if (!VALID_DEVICE_COMMAND_TYPES.has(commandType)) {
+                res.status(400).json({ error: 'INVALID_COMMAND_TYPE' });
+                return;
+            }
+            const deviceRows = await db
+                .select({
+                id: tenantDevices.id,
+                tenantId: tenantDevices.tenantId,
+            })
+                .from(tenantDevices)
+                .where(and(eq(tenantDevices.id, devicePk), isNull(tenantDevices.revokedAt)))
+                .limit(1);
+            const device = deviceRows[0];
+            if (!device) {
+                res.status(404).json({ error: 'DEVICE_NOT_FOUND' });
+                return;
+            }
+            const inserted = await db
+                .insert(deviceCommands)
+                .values({
+                commandType,
+                deviceFk: device.id,
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+                payload: {},
+                requestedBy: 'ops-admin',
+                tenantId: device.tenantId,
+            })
+                .returning({
+                id: deviceCommands.id,
+            });
+            res.status(201).json({
+                ok: true,
+                commandId: inserted[0].id,
+            });
+        }
+        catch (error) {
+            console.error('POST /v1/admin/devices/:id/commands error:', error);
+            res.status(500).json({ error: 'ADMIN_DEVICE_COMMAND_CREATE_ERROR' });
         }
     });
     router.post('/admin/devices/:id/revoke', requireAdminToken(options.config), async (req, res) => {

@@ -1,9 +1,11 @@
-import { AlertCircle, ArrowLeft, Cpu, Laptop, UserRound, Wifi, WifiOff } from 'lucide-react';
+import type { DeviceCommandRow, DeviceCommandType } from '@/lib/ops-api';
+import { AlertCircle, ArrowLeft, Cpu, Laptop, RadioTower, RefreshCcw, ScanSearch, UserRound, Wallpaper, Wifi, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { queueDeviceCommandAction } from '@/app/actions/tenant';
 import { getDeviceOperationalStatus, getRamUsagePercent, toMetricNumber } from '@/lib/device-health';
 import { formatDateTime, formatDurationSeconds } from '@/lib/format';
-import { getDevices, getTenantDetail } from '@/lib/ops-api';
+import { getDeviceCommands, getDevices, getTenantDetail } from '@/lib/ops-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +20,28 @@ function formatRam(usedValue: string | number | null | undefined, totalValue: st
   return `${(used / 1024).toFixed(1)} GB / ${(total / 1024).toFixed(1)} GB`;
 }
 
+function getCommandLabel(commandType: DeviceCommandType) {
+  const labels: Record<DeviceCommandType, string> = {
+    APPLY_DESKTOP_INFO: 'Reaplicar card/wallpaper',
+    COLLECT_DIAGNOSTIC: 'Coletar diagnóstico',
+    FORCE_HEARTBEAT: 'Forçar heartbeat',
+  };
+
+  return labels[commandType] ?? commandType;
+}
+
+function getCommandStatusBadge(status: DeviceCommandRow['status']) {
+  if (status === 'SUCCEEDED') {
+    return 'badge-success';
+  }
+
+  if (status === 'FAILED' || status === 'EXPIRED' || status === 'CANCELED') {
+    return 'badge-error';
+  }
+
+  return 'badge-warning';
+}
+
 export default async function TenantDeviceDetailPage(props: {
   params: Promise<{ devicePk: string; id: string }>;
 }) {
@@ -25,11 +49,13 @@ export default async function TenantDeviceDetailPage(props: {
 
   let detail: Awaited<ReturnType<typeof getTenantDetail>> | null = null;
   let devices: Awaited<ReturnType<typeof getDevices>> = [];
+  let commands: Awaited<ReturnType<typeof getDeviceCommands>> = [];
 
   try {
-    [detail, devices] = await Promise.all([
+    [detail, devices, commands] = await Promise.all([
       getTenantDetail(id),
       getDevices(500, id),
+      getDeviceCommands(devicePk, 12),
     ]);
   } catch (error) {
     if (error instanceof Error && error.message.includes('404')) {
@@ -187,6 +213,97 @@ export default async function TenantDeviceDetailPage(props: {
           </div>
         </section>
       </div>
+
+      <section className="card ops-section-card">
+        <div className="ops-section-card__header">
+          <div>
+            <div className="page-hero__eyebrow">Comandos seguros</div>
+            <h2 className="ops-section-card__title">Ações remotas do NOC Agent</h2>
+          </div>
+          <RadioTower size={20} color="var(--accent-primary)" />
+        </div>
+
+        <p className="ops-copy-muted">
+          Estes comandos são enfileirados para o agente buscar no próximo ciclo. Não há execução arbitrária de script.
+        </p>
+
+        <div className="agent-command-grid">
+          {([
+            { commandType: 'FORCE_HEARTBEAT' as const, icon: RefreshCcw, text: 'Solicita uma comunicação imediata para atualizar status e métricas.' },
+            { commandType: 'APPLY_DESKTOP_INFO' as const, icon: Wallpaper, text: 'Reaplica o card visual do NOC no plano de fundo da estação.' },
+            { commandType: 'COLLECT_DIAGNOSTIC' as const, icon: ScanSearch, text: 'Coleta diagnóstico básico de CPU, RAM, disco, IP e usuário.' },
+          ]).map((command) => {
+            const Icon = command.icon;
+
+            return (
+              <form action={queueDeviceCommandAction} className="agent-command-card" key={command.commandType}>
+                <input name="tenant_id" type="hidden" value={id} />
+                <input name="device_pk" type="hidden" value={devicePk} />
+                <input name="command_type" type="hidden" value={command.commandType} />
+                <div className="agent-command-card__icon">
+                  <Icon size={18} />
+                </div>
+                <div>
+                  <strong>{getCommandLabel(command.commandType)}</strong>
+                  <span>{command.text}</span>
+                </div>
+                <button className="agent-secondary-button" type="submit">Enfileirar</button>
+              </form>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="card ops-section-card">
+        <div className="ops-section-card__header">
+          <div>
+            <div className="page-hero__eyebrow">Auditoria</div>
+            <h2 className="ops-section-card__title">Últimos comandos</h2>
+          </div>
+        </div>
+
+        {commands.length === 0
+          ? (
+              <div className="empty-state empty-state--compact">
+                Nenhum comando enfileirado para este dispositivo.
+              </div>
+            )
+          : (
+              <div className="agent-command-history">
+                {commands.map(command => (
+                  <article className="agent-command-history__item" key={command.id}>
+                    <div>
+                      <strong>{getCommandLabel(command.commandType)}</strong>
+                      <span>
+                        Solicitado em
+                        {' '}
+                        {formatDateTime(command.requestedAt)}
+                      </span>
+                    </div>
+                    <span className={`badge ${getCommandStatusBadge(command.status)}`}>{command.status}</span>
+                    <div className="ops-compact-list">
+                      <div className="ops-compact-list__row">
+                        <span>Coletado</span>
+                        <strong>{formatDateTime(command.claimedAt)}</strong>
+                      </div>
+                      <div className="ops-compact-list__row">
+                        <span>Finalizado</span>
+                        <strong>{formatDateTime(command.completedAt)}</strong>
+                      </div>
+                    </div>
+                    {command.errorMessage
+                      ? (
+                          <div className="tenant-device-card__alert">
+                            <AlertCircle size={14} />
+                            {command.errorMessage}
+                          </div>
+                        )
+                      : null}
+                  </article>
+                ))}
+              </div>
+            )}
+      </section>
 
       <section className="card ops-section-card">
         <div className="ops-section-card__header">

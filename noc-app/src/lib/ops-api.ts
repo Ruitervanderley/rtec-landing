@@ -259,6 +259,22 @@ export type TenantDetail = {
   }>;
 };
 
+export type DeviceCommandType = 'FORCE_HEARTBEAT' | 'APPLY_DESKTOP_INFO' | 'COLLECT_DIAGNOSTIC';
+
+export type DeviceCommandRow = {
+  claimedAt: string | null;
+  commandType: DeviceCommandType;
+  completedAt: string | null;
+  errorMessage: string | null;
+  expiresAt: string | null;
+  id: string;
+  payload: Record<string, unknown>;
+  requestedAt: string | null;
+  requestedBy: string | null;
+  result: Record<string, unknown> | null;
+  status: 'PENDING' | 'CLAIMED' | 'SUCCEEDED' | 'FAILED' | 'EXPIRED' | 'CANCELED';
+};
+
 export type TenantOperationalAlert = {
   description: string;
   href: string;
@@ -523,6 +539,20 @@ export async function updateTenant(props: {
     subdomain: props.subdomain,
     type: props.type,
     valid_until: props.validUntil,
+  });
+}
+
+export async function getDeviceCommands(devicePk: string, limit = 20): Promise<DeviceCommandRow[]> {
+  const response = await fetchAdmin<{ commands: DeviceCommandRow[] }>(`/admin/devices/${devicePk}/commands?limit=${limit}`);
+  return response.commands ?? [];
+}
+
+export async function queueDeviceCommand(props: {
+  commandType: DeviceCommandType;
+  devicePk: string;
+}): Promise<{ commandId: string; ok: boolean }> {
+  return postAdmin<{ commandId: string; ok: boolean }>(`/admin/devices/${props.devicePk}/commands`, {
+    command_type: props.commandType,
   });
 }
 

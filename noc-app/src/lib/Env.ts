@@ -44,7 +44,7 @@ export const Env = {
     return readEnv('NOC_AGENT_PACKAGE_URL');
   },
   get nocAgentPackageVersion() {
-    return readEnv('NOC_AGENT_PACKAGE_VERSION') || '1.1.0';
+    return readEnv('NOC_AGENT_PACKAGE_VERSION') || '1.2.0';
   },
   get nocAdminPassword() {
     return requireEnv('NOC_ADMIN_PASSWORD');

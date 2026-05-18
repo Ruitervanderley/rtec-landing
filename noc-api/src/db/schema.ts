@@ -208,6 +208,31 @@ export const deviceBackups = pgTable(
   ],
 );
 
+export const deviceCommands = pgTable(
+  'device_commands',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull(),
+    deviceFk: uuid('device_fk')
+      .notNull()
+      .references(() => tenantDevices.id, { onDelete: 'cascade' }),
+    commandType: text('command_type').notNull(),
+    status: text('status').notNull().default('PENDING'),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
+    result: jsonb('result').$type<Record<string, unknown> | null>(),
+    errorMessage: text('error_message'),
+    requestedBy: text('requested_by'),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  t => [
+    index('idx_device_commands_device_status_requested').on(t.deviceFk, t.status, t.requestedAt),
+    index('idx_device_commands_tenant_requested').on(t.tenantId, t.requestedAt),
+  ],
+);
+
 export const opsAlerts = pgTable(
   'ops_alerts',
   {
@@ -320,6 +345,7 @@ export const tenantDevicesRelations = relations(tenantDevices, ({ many }) => ({
   tokens: many(deviceApiTokens),
   heartbeats: many(deviceHeartbeats),
   backups: many(deviceBackups),
+  commands: many(deviceCommands),
 }));
 
 export const deviceApiTokensRelations = relations(deviceApiTokens, ({ one }) => ({
@@ -339,6 +365,13 @@ export const deviceHeartbeatsRelations = relations(deviceHeartbeats, ({ one }) =
 export const deviceBackupsRelations = relations(deviceBackups, ({ one }) => ({
   device: one(tenantDevices, {
     fields: [deviceBackups.deviceFk],
+    references: [tenantDevices.id],
+  }),
+}));
+
+export const deviceCommandsRelations = relations(deviceCommands, ({ one }) => ({
+  device: one(tenantDevices, {
+    fields: [deviceCommands.deviceFk],
     references: [tenantDevices.id],
   }),
 }));

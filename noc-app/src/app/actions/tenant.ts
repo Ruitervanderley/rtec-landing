@@ -1,6 +1,6 @@
 'use server';
 
-import type { TenantAgentProvisionResult } from '@/lib/ops-api';
+import type { DeviceCommandType, TenantAgentProvisionResult } from '@/lib/ops-api';
 import { revalidatePath } from 'next/cache';
 import { Env } from '@/lib/Env';
 
@@ -264,5 +264,45 @@ export async function revokeTenantAgentAction(formData: FormData): Promise<Actio
     return {
       error: error instanceof Error ? error.message : 'Erro de conexao com API NOC',
     };
+  }
+}
+
+export async function queueDeviceCommandAction(formData: FormData): Promise<void> {
+  const tenantId = String(formData.get('tenant_id') ?? '').trim();
+  const devicePk = String(formData.get('device_pk') ?? '').trim();
+  const commandType = String(formData.get('command_type') ?? '').trim().toUpperCase() as DeviceCommandType;
+  const allowedCommands: DeviceCommandType[] = ['FORCE_HEARTBEAT', 'APPLY_DESKTOP_INFO', 'COLLECT_DIAGNOSTIC'];
+
+  if (!tenantId || !devicePk) {
+    throw new Error('Tenant e dispositivo são obrigatórios.');
+  }
+
+  if (!allowedCommands.includes(commandType)) {
+    throw new Error('Comando inválido.');
+  }
+
+  try {
+    const response = await fetch(`${Env.opsApiBaseUrl}/v1/admin/devices/${devicePk}/commands`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Env.opsAdminServiceToken}`,
+      },
+      body: JSON.stringify({
+        command_type: commandType,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(data.error || `Falha na API: ${response.status}`);
+    }
+
+    revalidatePath('/devices');
+    revalidatePath('/tenants');
+    revalidatePath(`/tenants/${tenantId}`);
+    revalidatePath(`/tenants/${tenantId}/devices/${devicePk}`);
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Erro ao enfileirar comando do agente');
   }
 }

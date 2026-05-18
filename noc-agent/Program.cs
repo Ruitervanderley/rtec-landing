@@ -34,7 +34,7 @@ if (args.Contains("--apply-desktop-info", StringComparer.OrdinalIgnoreCase))
         IpAddress = metrics.LocalIpAddress,
         MacAddress = metrics.MacAddress,
         AdapterName = metrics.NetworkAdapterName,
-        AgentVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.1.0",
+        AgentVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.2.0",
         PreserveExistingWallpaper = agentSettings.PreserveExistingWallpaper,
         WallpaperImagePath = agentSettings.WallpaperImagePath,
         UpdatedAt = DateTimeOffset.Now,
@@ -53,7 +53,7 @@ builder.Services.AddHttpClient<Worker>((serviceProvider, client) =>
     client.Timeout = TimeSpan.FromSeconds(settings.HeartbeatTimeoutSeconds > 0
         ? settings.HeartbeatTimeoutSeconds
         : 20);
-    client.DefaultRequestHeaders.UserAgent.ParseAdd("RtecNocAgent/1.0");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("RtecNocAgent/1.2");
 });
 
 // Register the Worker

@@ -122,7 +122,7 @@ public static class DesktopInfoRenderer
 
     private static string NormalizeVersion(string value)
     {
-        var normalized = NormalizeText(value, "1.1.0");
+        var normalized = NormalizeText(value, "1.2.0");
         var metadataIndex = normalized.IndexOf('+');
         return metadataIndex > 0 ? normalized[..metadataIndex] : normalized;
     }
