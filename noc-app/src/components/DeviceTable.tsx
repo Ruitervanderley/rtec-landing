@@ -3,7 +3,7 @@
 import type { DeviceRow } from '@/lib/ops-api';
 import { AlertCircle, ArrowUpRight, Clock3, ShieldAlert, UserRound, Wifi, WifiOff } from 'lucide-react';
 import Link from 'next/link';
-import { getDeviceOperationalStatus, getRamUsagePercent, toMetricNumber } from '@/lib/device-health';
+import { DEVICE_HEALTH_THRESHOLDS, getDeviceOperationalStatus, getRamUsagePercent, toMetricNumber } from '@/lib/device-health';
 import { formatDateTime, formatDurationSeconds } from '@/lib/format';
 
 type DeviceTableProps = {
@@ -268,7 +268,7 @@ export function DeviceTable(props: DeviceTableProps) {
 
                               <div className="metric-grid">
                                 <div className={getMetricTone({
-                                  status: cpu !== null && cpu >= 90 ? 'danger' : cpu !== null && cpu >= 70 ? 'warning' : 'default',
+                                  status: cpu !== null && cpu >= DEVICE_HEALTH_THRESHOLDS.cpuWarningPercent ? 'danger' : cpu !== null && cpu >= 70 ? 'warning' : 'default',
                                 })}
                                 >
                                   <div className="metric-pill__label">CPU</div>
@@ -276,7 +276,7 @@ export function DeviceTable(props: DeviceTableProps) {
                                 </div>
 
                                 <div className={getMetricTone({
-                                  status: ramRatio !== null && ramRatio >= 90 ? 'danger' : ramRatio !== null && ramRatio >= 75 ? 'warning' : 'default',
+                                  status: ramRatio !== null && ramRatio >= DEVICE_HEALTH_THRESHOLDS.ramWarningPercent ? 'danger' : ramRatio !== null && ramRatio >= 75 ? 'warning' : 'default',
                                 })}
                                 >
                                   <div className="metric-pill__label">RAM</div>
@@ -284,7 +284,7 @@ export function DeviceTable(props: DeviceTableProps) {
                                 </div>
 
                                 <div className={getMetricTone({
-                                  status: diskFree !== null && diskFree < 10 ? 'danger' : diskFree !== null && diskFree < 20 ? 'warning' : 'default',
+                                  status: diskFree !== null && diskFree < DEVICE_HEALTH_THRESHOLDS.diskFreeWarningPercent ? 'danger' : diskFree !== null && diskFree < 20 ? 'warning' : 'default',
                                 })}
                                 >
                                   <div className="metric-pill__label">Disco C</div>

@@ -2514,6 +2514,265 @@ textarea {
   border: 1px dashed rgba(144, 170, 201, 0.34);
 }
 
+.empty-state--compact {
+  display: grid;
+  place-items: center;
+  gap: 0.55rem;
+  min-height: 180px;
+  padding: 1.4rem;
+}
+
+.ops-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ops-field span {
+  color: #617891;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ops-field input,
+.ops-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid rgba(144, 170, 201, 0.28);
+  border-radius: 14px;
+  background: rgba(245, 250, 255, 0.88);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.ops-field input:focus,
+.ops-field select:focus {
+  border-color: rgba(31, 138, 224, 0.46);
+  box-shadow: 0 0 0 3px rgba(31, 138, 224, 0.12);
+}
+
+.service-create-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-sm);
+}
+
+.service-create-form__header,
+.service-card__topline,
+.service-card__footer,
+.backup-tenant-card__header,
+.backup-tenant-card__footer,
+.service-incident-card__header,
+.service-incident-card__meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.service-create-form__grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(160px, 0.7fr) auto;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.service-form-feedback {
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.service-form-feedback--error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+}
+
+.service-form-feedback--success {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
+}
+
+.service-grid,
+.backup-tenant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.service-card {
+  display: grid;
+  gap: 1.1rem;
+  min-height: 210px;
+  padding: 1.2rem;
+  border-radius: 24px;
+  border: 1px solid rgba(144, 170, 201, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 248, 255, 0.92));
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.service-card--critical {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: linear-gradient(180deg, rgba(255, 250, 250, 0.98), rgba(255, 242, 242, 0.94));
+}
+
+.service-card--warning {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: linear-gradient(180deg, rgba(255, 252, 245, 0.98), rgba(255, 248, 235, 0.94));
+}
+
+.service-card__body {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.service-card__body strong {
+  display: block;
+  color: var(--text-primary);
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+}
+
+.service-card__body span,
+.service-card__footer,
+.service-asset-card span,
+.service-asset-card__meta,
+.service-incident-card p,
+.service-incident-card__meta {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.service-card__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background: rgba(31, 138, 224, 0.1);
+  color: var(--accent-primary);
+}
+
+.service-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.service-asset-list,
+.service-incident-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.service-asset-card,
+.service-incident-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(144, 170, 201, 0.2);
+  background: rgba(246, 250, 255, 0.9);
+}
+
+.service-asset-card strong,
+.service-incident-card strong {
+  color: var(--text-primary);
+}
+
+.service-asset-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.service-incident-card {
+  border-color: rgba(245, 158, 11, 0.24);
+  background: rgba(255, 251, 235, 0.76);
+}
+
+.backup-tenant-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(144, 170, 201, 0.22);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-sm);
+}
+
+.backup-tenant-card--attention {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: linear-gradient(180deg, rgba(255, 252, 245, 0.98), rgba(255, 248, 235, 0.94));
+}
+
+.backup-tenant-card__header strong {
+  display: block;
+  color: var(--text-primary);
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+}
+
+.backup-tenant-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+}
+
+.backup-tenant-card__metrics div {
+  padding: 0.8rem;
+  border-radius: 16px;
+  background: rgba(235, 244, 255, 0.72);
+  border: 1px solid rgba(144, 170, 201, 0.18);
+}
+
+.backup-tenant-card__metrics span {
+  display: block;
+  color: #617891;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.backup-tenant-card__metrics strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--text-primary);
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.35rem;
+}
+
+.base-table--compact {
+  min-width: 980px;
+}
+
+.table-error-cell {
+  color: #b91c1c;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 1200px) {
   .ops-shell {
     display: block;
@@ -2555,6 +2814,10 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .service-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .tenant-alert-grid {
     grid-template-columns: 1fr;
   }
@@ -2590,6 +2853,7 @@ textarea {
   .device-grid,
   .portal-card-grid,
   .portal-kpi-grid,
+  .service-create-form__grid,
   .tenant-link-grid,
   .tenant-backup-grid,
   .tenant-device-grid,

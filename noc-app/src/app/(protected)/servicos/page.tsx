@@ -1,121 +1,169 @@
-import { Plus, Server, Settings } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, CheckCircle2, Layers3, Server, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { getServices } from '@/lib/ops-api';
 import { CadastrarServico } from '../../CadastrarServico';
 
-const API_URL = process.env.NEXT_PUBLIC_NOC_API_URL ?? 'http://localhost:4000';
+export const dynamic = 'force-dynamic';
 
-async function getServices() {
-  const token = process.env.OPS_ADMIN_SERVICE_TOKEN ?? '';
-  const res = await fetch(`${API_URL}/v1/services`, {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  if (!res.ok) {
-    throw new Error('Falha ao carregar serviços');
+function getCriticalityMeta(criticidade: string) {
+  const normalized = criticidade.trim().toLowerCase();
+
+  if (normalized === 'critica') {
+    return {
+      badgeClass: 'badge-error',
+      cardClass: 'service-card service-card--critical',
+      label: 'Crítica',
+      priority: 0,
+    };
   }
-  const data = (await res.json()) as { services: Array<{ id: string; nome: string; criticidade: string }> };
-  return data.services;
-}
 
-function CriticidadeBadge({ criticidade }: { criticidade: string }) {
-  const cores: Record<string, string> = {
-    baixa: 'badge-success',
-    media: 'badge-warning',
-    alta: 'badge-warning',
-    critica: 'badge-error',
+  if (normalized === 'alta') {
+    return {
+      badgeClass: 'badge-warning',
+      cardClass: 'service-card service-card--warning',
+      label: 'Alta',
+      priority: 1,
+    };
+  }
+
+  if (normalized === 'media') {
+    return {
+      badgeClass: 'badge-warning',
+      cardClass: 'service-card',
+      label: 'Média',
+      priority: 2,
+    };
+  }
+
+  return {
+    badgeClass: 'badge-success',
+    cardClass: 'service-card',
+    label: 'Baixa',
+    priority: 3,
   };
-  const badgeClass = cores[criticidade] ?? 'badge-neutral';
-  return (
-    <span className={`badge ${badgeClass}`}>
-      {criticidade.toUpperCase()}
-    </span>
-  );
 }
 
 export default async function ServicosPage() {
-  let services: Array<{ id: string; nome: string; criticidade: string }> = [];
+  let services: Awaited<ReturnType<typeof getServices>> = [];
   let error: string | null = null;
+
   try {
     services = await getServices();
-  } catch (e) {
-    error = e instanceof Error ? e.message : 'Erro ao carregar';
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : 'Erro ao carregar serviços';
   }
 
+  const servicesByPriority = [...services].sort((left, right) => {
+    const leftMeta = getCriticalityMeta(left.criticidade);
+    const rightMeta = getCriticalityMeta(right.criticidade);
+
+    if (leftMeta.priority !== rightMeta.priority) {
+      return leftMeta.priority - rightMeta.priority;
+    }
+
+    return left.nome.localeCompare(right.nome, 'pt-BR');
+  });
+  const criticalServices = services.filter(service => getCriticalityMeta(service.criticidade).priority <= 1);
+  const stableServices = services.filter(service => getCriticalityMeta(service.criticidade).priority > 1);
+
   return (
-    <section>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{
-            fontSize: '1.75rem',
-            fontWeight: 800,
-            background: 'var(--brand-gradient)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-          >
-            <Server size={26} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-            Catálogo de Serviços NOC
+    <section className="page-stack">
+      <div className="page-hero">
+        <div className="page-hero__content">
+          <div className="page-hero__eyebrow">Catálogo e incidentes</div>
+          <h1 className="page-hero__title">
+            <Server size={28} color="var(--accent-primary)" />
+            Serviços NOC por criticidade
           </h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Gerenciamento de incidentes e mapeamento de dependências operacionais.</p>
+          <p className="page-hero__description">
+            Use esta área para mapear escopos operacionais, dependências e impactos. A prioridade agora fica clara antes
+            de abrir o detalhe técnico do serviço.
+          </p>
+        </div>
+
+        <div className="status-strip">
+          <span className="status-chip status-chip--critical">
+            {criticalServices.length}
+            {' críticos/altos'}
+          </span>
+          <span className="status-chip status-chip--success">
+            {stableServices.length}
+            {' estáveis'}
+          </span>
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
-        <Plus size={20} color="var(--text-muted)" />
-        <div style={{ flex: 1 }}>
-          <CadastrarServico />
-        </div>
+      {error
+        ? (
+            <div className="alert-panel alert-panel--error">
+              <AlertTriangle size={20} />
+              {error}
+            </div>
+          )
+        : null}
+
+      <div className="summary-strip">
+        <article className="summary-card">
+          <span className="summary-card__label">Serviços cadastrados</span>
+          <strong className="summary-card__value">{services.length}</strong>
+          <div className="summary-card__meta">Escopos operacionais acompanhados pelo NOC.</div>
+        </article>
+        <article className="summary-card">
+          <span className="summary-card__label">Alta atenção</span>
+          <strong className="summary-card__value">{criticalServices.length}</strong>
+          <div className="summary-card__meta">Serviços de criticidade alta ou crítica.</div>
+        </article>
+        <article className="summary-card">
+          <span className="summary-card__label">Fila estável</span>
+          <strong className="summary-card__value">{stableServices.length}</strong>
+          <div className="summary-card__meta">Serviços com criticidade média ou baixa.</div>
+        </article>
       </div>
 
-      {error && (
-        <div className="card" style={{ backgroundColor: '#fef2f2', borderColor: '#fca5a5', color: '#991b1b', marginBottom: '2rem' }}>
-          <strong>{error}</strong>
-          . Verifique se a NOC API está rodando em
-          {API_URL}
-          .
-        </div>
-      )}
+      <CadastrarServico />
 
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
-        {services.map(s => (
-          <li key={s.id}>
-            <Link
-              href={`/servicos/${s.id}`}
-              className="card"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                color: 'var(--text-primary)',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ padding: '0.5rem', background: '#f1f5f9', borderRadius: '8px' }}>
-                  <Settings size={20} color="var(--accent-primary)" />
-                </div>
-                <span style={{ fontWeight: 600, fontSize: '1rem' }}>{s.nome}</span>
+      {!error && services.length === 0
+        ? (
+            <div className="empty-state">
+              Nenhum serviço cadastrado. Crie o primeiro escopo para conectar incidentes, dependências e ativos.
+            </div>
+          )
+        : null}
+
+      <div className="service-grid">
+        {servicesByPriority.map((service) => {
+          const meta = getCriticalityMeta(service.criticidade);
+          const Icon = meta.priority <= 1 ? ShieldAlert : CheckCircle2;
+
+          return (
+            <Link className={meta.cardClass} href={`/servicos/${service.id}`} key={service.id}>
+              <div className="service-card__topline">
+                <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
+                <ArrowUpRight size={15} />
               </div>
-              <CriticidadeBadge criticidade={s.criticidade} />
-            </Link>
-          </li>
-        ))}
-      </ul>
 
-      {!error && services.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-          Nenhum serviço cadastrado no catálogo. Utilize o formulário acima para adicionar (POST /services).
-        </div>
-      )}
+              <div className="service-card__body">
+                <div className="service-card__icon">
+                  <Icon size={21} />
+                </div>
+                <div>
+                  <strong>{service.nome}</strong>
+                  <span>
+                    {meta.priority <= 1
+                      ? 'Abrir dependências e incidentes antes de qualquer janela.'
+                      : 'Escopo operacional cadastrado para correlação futura.'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="service-card__footer">
+                <Layers3 size={14} />
+                <span>Detalhe, ativos vinculados e impactos ativos</span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </section>
   );
 }

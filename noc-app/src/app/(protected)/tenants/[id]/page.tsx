@@ -8,6 +8,7 @@ import { TenantBackupWorkspace } from '@/components/TenantBackupWorkspace';
 import { TenantDeviceWorkspace } from '@/components/TenantDeviceWorkspace';
 import { TenantInfrastructureEditor } from '@/components/TenantInfrastructureEditor';
 import { TenantUsersManager } from '@/components/TenantUsersManager';
+import { getDeviceOperationalStatus } from '@/lib/device-health';
 import { Env } from '@/lib/Env';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { getBackups, getDevices, getTenantDetail, revokeDevice } from '@/lib/ops-api';
@@ -95,28 +96,14 @@ function getWorkspaceAlertClass(tone: 'danger' | 'warning' | 'success') {
   return 'tenant-workspace-alert tenant-workspace-alert--success';
 }
 
-function toNumber(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function getTenantOperationalAlerts(detail: Awaited<ReturnType<typeof getTenantDetail>>, devices: Awaited<ReturnType<typeof getDevices>>) {
   const alerts: Array<{ href: string; tone: 'danger' | 'warning' | 'success'; title: string; description: string }> = [];
   const offlineDevices = devices.filter(device => !device.is_online);
-  const staleDevices = devices.filter(device => !device.last_seen_at || new Date(device.last_seen_at).getTime() < Date.now() - (30 * 60 * 1000));
-  const stressedDevices = devices.filter((device) => {
-    const cpu = toNumber(device.cpu_usage_percent);
-    const diskFree = toNumber(device.disk_c_free_percent);
-    const ramUsed = toNumber(device.ram_used_mb);
-    const ramTotal = toNumber(device.ram_total_mb);
-    const ramRatio = ramUsed !== null && ramTotal !== null && ramTotal > 0 ? (ramUsed / ramTotal) * 100 : null;
-
-    return (cpu !== null && cpu >= 90) || (diskFree !== null && diskFree < 10) || (ramRatio !== null && ramRatio >= 90);
-  });
+  const deviceStatuses = devices.map(device => getDeviceOperationalStatus(device));
+  const staleDevices = deviceStatuses.filter(status => status.signals.includes('Heartbeat atrasado'));
+  const stressedDevices = deviceStatuses.filter(status => (
+    status.signals.some(signal => signal.startsWith('CPU ') || signal.startsWith('RAM ') || signal.startsWith('Disco C '))
+  ));
 
   if (!detail.tenant.isActive) {
     alerts.push({

@@ -266,6 +266,32 @@ export type TenantOperationalAlert = {
   tone: 'danger' | 'warning' | 'success';
 };
 
+export type NocServiceRow = {
+  criticidade: string;
+  id: string;
+  nome: string;
+};
+
+export type NocServiceDetail = {
+  devices: Array<{
+    id: string;
+    ip: string;
+    local: string;
+    nome: string;
+    tipo: string;
+  }>;
+  openIncidents: Array<{
+    confiancaDiagnostico: number | null;
+    id: string;
+    impactoOperacional: string | null;
+    severidade: string;
+    startedAt: string;
+    status: string;
+    titulo: string;
+  }>;
+  service: NocServiceRow;
+};
+
 function getApiBaseUrl(): string {
   const base = process.env.OPS_API_URL ?? process.env.NEXT_PUBLIC_NOC_API_URL ?? '';
   return base.trim().replace(/\/$/, '');
@@ -367,6 +393,28 @@ export async function getOverview(): Promise<OpsOverview> {
   return fetchAdmin<OpsOverview>('/admin/overview');
 }
 
+async function fetchOps<T>(path: string): Promise<T> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error('OPS_API_URL not configured');
+  }
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Ops API ${path} failed (${response.status}): ${body}`);
+  }
+
+  return (await response.json()) as T;
+}
+
 export async function getAdminHealth(): Promise<OpsAdminHealth> {
   return fetchAdmin<OpsAdminHealth>('/admin/health');
 }
@@ -394,6 +442,37 @@ export async function getBackups(limit = 300, tenantId?: string): Promise<Backup
     : `/admin/backups?limit=${limit}`;
   const response = await fetchAdmin<{ backups: BackupRow[] }>(url);
   return response.backups ?? [];
+}
+
+export async function getServices(): Promise<NocServiceRow[]> {
+  const response = await fetchOps<{ services: NocServiceRow[] }>('/services');
+  return response.services ?? [];
+}
+
+export async function getServiceDetail(serviceId: string): Promise<NocServiceDetail | null> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error('OPS_API_URL not configured');
+  }
+
+  const response = await fetch(`${baseUrl}/services/${serviceId}`, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Ops API /services/${serviceId} failed (${response.status}): ${body}`);
+  }
+
+  return (await response.json()) as NocServiceDetail;
 }
 
 export async function revokeDevice(devicePk: string): Promise<void> {
