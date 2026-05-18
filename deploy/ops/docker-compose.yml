@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     environment:
       - PORT=3001
+      - HOSTNAME=0.0.0.0
       - OPS_RELEASE_VERSION=${IMAGE_TAG:-main}
     expose:
       - '3001'
