@@ -6,6 +6,7 @@ import { Env } from '@/libs/Env';
 import { Link } from '@/libs/I18nNavigation';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { AppConfig } from '@/utils/AppConfig';
+import { ContactConfig } from '@/utils/ContactConfig';
 
 export default async function Layout(props: {
   children: React.ReactNode;
@@ -70,7 +71,7 @@ export default async function Layout(props: {
       {props.children}
       <FloatingWhatsApp
         label={tBase('floating_whatsapp_label')}
-        url={Env.NEXT_PUBLIC_WHATSAPP_URL}
+        url={Env.NEXT_PUBLIC_WHATSAPP_URL ?? ContactConfig.whatsappUrl}
       />
       <BackToTop label={tBase('back_to_top_label')} />
     </BaseTemplate>

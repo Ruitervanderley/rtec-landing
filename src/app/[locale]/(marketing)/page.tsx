@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import Image from 'next/image';
 import Link from 'next/link';
 import { AnimateInView } from '@/components/AnimateInView';
 import { FaqAccordion } from '@/components/FaqAccordion';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { Env } from '@/libs/Env';
 import { routing } from '@/libs/I18nRouting';
+import { ContactConfig } from '@/utils/ContactConfig';
 import { getBaseUrl, getI18nPath } from '@/utils/Helpers';
 
 type IndexPageProps = {
@@ -146,7 +148,7 @@ export default async function IndexPage(props: IndexPageProps) {
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Index' });
   const baseUrl = getBaseUrl();
-  const whatsappUrl = Env.NEXT_PUBLIC_WHATSAPP_URL ?? '#cta';
+  const whatsappUrl = Env.NEXT_PUBLIC_WHATSAPP_URL ?? ContactConfig.whatsappUrl;
   const primaryCtaHref = whatsappUrl.startsWith('http') ? whatsappUrl : '#cta';
   const isExternalCta = primaryCtaHref.startsWith('http');
 
@@ -183,14 +185,39 @@ export default async function IndexPage(props: IndexPageProps) {
     { step: '04', title: t('how_4_title'), desc: t('how_4_desc') },
   ];
 
+  const heroHighlights = [
+    t('hero_highlight_1'),
+    t('hero_highlight_2'),
+    t('hero_highlight_3'),
+  ];
+
+  const operationItems = [
+    { label: t('hero_panel_item_1_label'), value: t('hero_panel_item_1_value'), color: 'bg-emerald-400' },
+    { label: t('hero_panel_item_2_label'), value: t('hero_panel_item_2_value'), color: 'bg-blue-400' },
+    { label: t('hero_panel_item_3_label'), value: t('hero_panel_item_3_value'), color: 'bg-purple-400' },
+  ];
+
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     'name': 'Rtec Tecnologia',
     'url': baseUrl,
     'logo': `${baseUrl}/rtec-logo.png`,
+    'email': ContactConfig.email,
+    'telephone': ContactConfig.phoneInternational,
+    'sameAs': [ContactConfig.instagramUrl, ContactConfig.whatsappUrl],
     'description': t('meta_description'),
     'slogan': t('organization_slogan'),
+    'areaServed': {
+      '@type': 'Country',
+      'name': 'Brasil',
+    },
+    'address': {
+      '@type': 'PostalAddress',
+      'addressLocality': 'Catalão',
+      'addressRegion': 'GO',
+      'addressCountry': 'BR',
+    },
   };
 
   return (
@@ -213,44 +240,84 @@ export default async function IndexPage(props: IndexPageProps) {
             }}
           />
         </div>
-        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2" aria-hidden>
-          <div className="h-[600px] w-[900px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.12)_0%,transparent_65%)] blur-3xl" />
-        </div>
-        <div className="pointer-events-none absolute top-20 -right-40" aria-hidden>
-          <div className="h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.08)_0%,transparent_60%)] blur-3xl" />
-        </div>
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="text-center lg:text-left">
+            <div className="animate-fade-in-up mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-sm font-medium text-emerald-400 opacity-0">
+              <span className="inline-block size-2 animate-pulse rounded-full bg-emerald-500" />
+              {t('hero_brand')}
+            </div>
 
-        <div className="relative mx-auto max-w-4xl text-center">
-          <div className="animate-fade-in-up mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-sm font-medium text-emerald-400 opacity-0">
-            <span className="inline-block size-2 animate-pulse rounded-full bg-emerald-500" />
-            {t('hero_brand')}
+            <h1
+              id="hero-heading"
+              className="animate-fade-in-up animate-delay-1 bg-gradient-to-b from-white via-white to-slate-400 bg-clip-text text-3xl leading-[1.1] font-extrabold tracking-tight text-transparent opacity-0 sm:text-4xl md:text-5xl lg:text-[3.5rem]"
+            >
+              {t('hero_title')}
+            </h1>
+            <p className="animate-fade-in-up animate-delay-2 mt-6 max-w-2xl text-lg leading-relaxed text-slate-400 opacity-0 sm:text-xl lg:mx-0">
+              {t('hero_subtitle')}
+            </p>
+
+            <ul className="animate-fade-in-up animate-delay-3 mx-auto mt-6 grid max-w-2xl gap-3 text-left text-sm text-slate-300 opacity-0 sm:grid-cols-3 lg:mx-0">
+              {heroHighlights.map(highlight => (
+                <li key={highlight} className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                  <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-400" />
+                  <span>{highlight}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="animate-fade-in-up animate-delay-3 mt-10 flex flex-col items-center gap-4 opacity-0 lg:items-start">
+              <Link
+                href={primaryCtaHref}
+                target={isExternalCta ? '_blank' : undefined}
+                rel={isExternalCta ? 'noreferrer noopener' : undefined}
+                className={`${ctaButtonClass} min-w-[16rem]`}
+              >
+                <WhatsAppIcon className="size-6 shrink-0" />
+                <span>{t('cta_primary')}</span>
+              </Link>
+              <p className="text-sm text-slate-500">
+                {t('cta_trust')}
+                {' '}
+                {t('cta_trust_extra')}
+              </p>
+            </div>
           </div>
 
-          <h1
-            id="hero-heading"
-            className="animate-fade-in-up animate-delay-1 bg-gradient-to-b from-white via-white to-slate-400 bg-clip-text text-3xl leading-[1.1] font-extrabold tracking-tight text-transparent opacity-0 sm:text-4xl md:text-5xl lg:text-[3.5rem]"
-          >
-            {t('hero_title')}
-          </h1>
-          <p className="animate-fade-in-up animate-delay-2 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-400 opacity-0 sm:text-xl">
-            {t('hero_subtitle')}
-          </p>
-
-          <div className="animate-fade-in-up animate-delay-3 mt-10 flex flex-col items-center gap-4 opacity-0">
-            <Link
-              href={primaryCtaHref}
-              target={isExternalCta ? '_blank' : undefined}
-              rel={isExternalCta ? 'noreferrer noopener' : undefined}
-              className={`${ctaButtonClass} min-w-[16rem]`}
-            >
-              <WhatsAppIcon className="size-6 shrink-0" />
-              <span>{t('cta_primary')}</span>
-            </Link>
-            <p className="text-sm text-slate-500">
-              {t('cta_trust')}
-              {' '}
-              {t('cta_trust_extra')}
-            </p>
+          <div className="animate-fade-in-up animate-delay-2 relative mx-auto w-full max-w-xl opacity-0" aria-label={t('hero_panel_label')}>
+            <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111827]/90 shadow-2xl shadow-black/30">
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/rtec-logo.png"
+                    alt={t('hero_panel_logo_alt')}
+                    width={96}
+                    height={27}
+                    className="h-7 w-auto object-contain brightness-110"
+                  />
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                    {t('hero_panel_status')}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-500">{t('hero_panel_time')}</span>
+              </div>
+              <div className="grid gap-4 p-5">
+                {operationItems.map(item => (
+                  <div key={item.label} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                    <div className="mb-3 flex items-center justify-between gap-4">
+                      <span className="text-sm font-medium text-slate-300">{item.label}</span>
+                      <span className="text-sm font-bold text-white">{item.value}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/[0.06]">
+                      <div className={`h-2 w-[86%] rounded-full ${item.color}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-white/[0.06] bg-white/[0.02] px-5 py-4">
+                <p className="text-sm leading-relaxed text-slate-400">{t('hero_panel_summary')}</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

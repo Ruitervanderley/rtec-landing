@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/libs/I18nNavigation';
 import { AppConfig } from '@/utils/AppConfig';
+import { ContactConfig } from '@/utils/ContactConfig';
 
 export const BaseTemplate = (props: {
   leftNav?: React.ReactNode | null;
@@ -12,7 +13,6 @@ export const BaseTemplate = (props: {
   const tRoot = useTranslations('RootLayout');
   const email = t('contact_email_value');
   const phone = t('contact_phone_value');
-  const phoneHref = '5564999166172';
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-[#0b1121] text-white antialiased">
@@ -81,7 +81,7 @@ export const BaseTemplate = (props: {
               </p>
               <div className="mt-6 flex gap-4">
                 <a
-                  href="https://wa.me/5564999166172"
+                  href={ContactConfig.whatsappUrl}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="flex size-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-500 transition-all hover:border-emerald-500/30 hover:text-emerald-400"
@@ -92,7 +92,7 @@ export const BaseTemplate = (props: {
                   </svg>
                 </a>
                 <a
-                  href="https://instagram.com/rtectecnologia"
+                  href={ContactConfig.instagramUrl}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="flex size-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-500 transition-all hover:border-pink-500/30 hover:text-pink-400"
@@ -133,7 +133,7 @@ export const BaseTemplate = (props: {
                   <svg className="size-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
                   </svg>
-                  <a href={`https://wa.me/${phoneHref}`} className="transition-colors hover:text-emerald-400">
+                  <a href={ContactConfig.whatsappUrl} className="transition-colors hover:text-emerald-400">
                     {phone}
                   </a>
                 </li>
