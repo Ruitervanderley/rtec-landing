@@ -96,6 +96,23 @@ export default async function PortfolioPage(props: IPortfolioProps) {
       ],
       accent: 'from-blue-500/25',
     },
+    {
+      badge: t('case_3_badge'),
+      title: t('case_3_title'),
+      summary: t('case_3_summary'),
+      problemLabel: t('problem_label'),
+      problem: t('case_3_problem'),
+      solutionLabel: t('solution_label'),
+      solution: t('case_3_solution'),
+      resultLabel: t('result_label'),
+      result: t('case_3_result'),
+      metrics: [
+        { value: t('case_3_metric_1_value'), label: t('case_3_metric_1_label') },
+        { value: t('case_3_metric_2_value'), label: t('case_3_metric_2_label') },
+        { value: t('case_3_metric_3_value'), label: t('case_3_metric_3_label') },
+      ],
+      accent: 'from-purple-500/25',
+    },
   ];
 
   const trustItems = [
