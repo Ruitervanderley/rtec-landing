@@ -169,8 +169,7 @@ export default async function IndexPage(props: IndexPageProps) {
   const services = [
     { num: '01', title: t('service_1_title'), desc: t('service_1_desc'), icon: <IconBot />, gradient: 'from-emerald-500/20 to-transparent', border: 'hover:border-emerald-500/30', iconColor: 'text-emerald-400' },
     { num: '02', title: t('service_2_title'), desc: t('service_2_desc'), icon: <IconServer />, gradient: 'from-blue-500/20 to-transparent', border: 'hover:border-blue-500/30', iconColor: 'text-blue-400' },
-    { num: '03', title: t('service_3_title'), desc: t('service_3_desc'), icon: <IconCloud />, gradient: 'from-cyan-500/20 to-transparent', border: 'hover:border-cyan-500/30', iconColor: 'text-cyan-400' },
-    { num: '04', title: t('service_4_title'), desc: t('service_4_desc'), icon: <IconLink />, gradient: 'from-purple-500/20 to-transparent', border: 'hover:border-purple-500/30', iconColor: 'text-purple-400' },
+    { num: '03', title: t('service_3_title'), desc: t('service_3_desc'), icon: <IconLink />, gradient: 'from-purple-500/20 to-transparent', border: 'hover:border-purple-500/30', iconColor: 'text-purple-400' },
   ];
 
   const benefits = [
@@ -386,7 +385,7 @@ export default async function IndexPage(props: IndexPageProps) {
               {t('services_title')}
             </h2>
           </div>
-          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
             {services.map((service, index) => (
               <article
                 key={service.num}
