@@ -12,7 +12,7 @@ export const BaseTemplate = (props: {
   const tRoot = useTranslations('RootLayout');
   const email = t('contact_email_value');
   const phone = t('contact_phone_value');
-  const phoneHref = '5564999927088';
+  const phoneHref = '5564999166172';
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-[#0b1121] text-white antialiased">
@@ -81,7 +81,7 @@ export const BaseTemplate = (props: {
               </p>
               <div className="mt-6 flex gap-4">
                 <a
-                  href="https://wa.me/5564999927088"
+                  href="https://wa.me/5564999166172"
                   target="_blank"
                   rel="noreferrer noopener"
                   className="flex size-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-500 transition-all hover:border-emerald-500/30 hover:text-emerald-400"
