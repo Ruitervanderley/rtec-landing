@@ -15,11 +15,14 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  manifest: '/site.webmanifest',
   icons: [
-    { rel: 'apple-touch-icon', url: '/rtec-logo.png', sizes: '180x180' },
-    { rel: 'icon', type: 'image/png', sizes: '32x32', url: '/rtec-logo.png' },
-    { rel: 'icon', type: 'image/png', sizes: '16x16', url: '/rtec-logo.png' },
-    { rel: 'icon', url: '/rtec-logo.png' },
+    { rel: 'icon', url: '/favicon.ico', sizes: '48x48' },
+    { rel: 'icon', type: 'image/svg+xml', url: '/favicon.svg' },
+    { rel: 'icon', type: 'image/png', sizes: '96x96', url: '/favicon-96x96.png' },
+    { rel: 'icon', type: 'image/png', sizes: '32x32', url: '/favicon-32x32.png' },
+    { rel: 'icon', type: 'image/png', sizes: '16x16', url: '/favicon-16x16.png' },
+    { rel: 'apple-touch-icon', url: '/apple-touch-icon.png', sizes: '180x180' },
   ],
 };
 
