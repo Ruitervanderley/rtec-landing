@@ -100,37 +100,23 @@
     "faq_5_a": "Oui. Nous intervenons à distance sur les projets logiciel, automatisation, self-hosting et intégrations. Les projets d'infrastructure sur site sont évalués selon le périmètre et la localisation.",
     "cta_final_title": "Prêt à moderniser votre opération ?"
   },
-  "Counter": {
-    "meta_title": "Compteur",
-    "meta_description": "Exemple d'opération avec base de données",
-    "security_powered_by": "Sécurité, détection de bots et limitation de taux par"
-  },
-  "CounterForm": {
-    "presentation": "Le compteur est stocké dans la base de données et incrémenté par la valeur fournie.",
-    "label_increment": "Incrémenter de",
-    "button_increment": "Incrémenter",
-    "error_increment_range": "La valeur doit être comprise entre 1 et 3"
-  },
-  "CurrentCount": {
-    "count": "Compteur : {count}"
-  },
   "About": {
-    "meta_title": "À propos de Rtec Tecnologia",
-    "meta_description": "Découvrez le parcours de Rtec Tecnologia et notre manière de structurer les opérations avec infrastructure, cloud, automatisation et intelligence artificielle.",
+    "meta_title": "À propos de Rtec Tecnologia | Automatisation opérationnelle avec IA",
+    "meta_description": "Découvrez comment Rtec Tecnologia transforme les processus manuels en automatisations avec IA, intégrations, self-hosting et infrastructure sécurisée.",
     "eyebrow": "À propos",
-    "hero_title": "Une base technique solide avec une vision tournée vers l'avenir",
-    "hero_description": "Rtec associe expérience en infrastructure, opérations et automatisation pour construire des environnements fiables et des processus plus intelligents pour les entreprises en croissance.",
-    "story_title": "Notre parcours",
-    "story_paragraph": "Nous avons commencé par résoudre des défis d'infrastructure physique et de support technique pour des opérations locales. Au fil du temps, nous avons étendu notre champ d'action vers le cloud, la supervision, les intégrations et l'intelligence artificielle, avec la même logique : comprendre l'environnement du client, prioriser la stabilité et livrer des solutions utiles au quotidien.",
+    "hero_title": "Automatisation avec IA pour les opérations qui ont besoin de contrôle technique",
+    "hero_description": "Rtec intervient à l'intersection de l'ingénierie logicielle, de l'infrastructure sécurisée et de l'automatisation opérationnelle. L'objectif est de réduire le travail manuel, connecter les systèmes et créer des environnements fiables.",
+    "story_title": "Notre manière de penser la technologie",
+    "story_paragraph": "Nous ne traitons pas l'automatisation comme une couche isolée. Avant de créer agents, flux ou intégrations, nous comprenons les données, accès, systèmes, infrastructure et routines de l'équipe. Cette base technique permet de livrer des solutions IA utiles au quotidien.",
     "pillars_title": "Notre approche",
-    "pillar_1_title": "Diagnostic technique",
-    "pillar_1_description": "Nous cartographions les goulets d'étranglement, les risques et les opportunités avant toute proposition.",
-    "pillar_2_title": "Livraison orientée opération",
-    "pillar_2_description": "Des projets pensés pour limiter l'impact, documenter l'environnement et préserver la continuité de l'activité.",
-    "pillar_3_title": "Évolution continue",
-    "pillar_3_description": "Nous ne traitons pas la technologie comme une livraison isolée. Nous accompagnons et faisons évoluer la solution avec l'opération.",
+    "pillar_1_title": "Diagnostic opérationnel",
+    "pillar_1_description": "Nous cartographions les blocages, tâches répétitives, systèmes impliqués et risques techniques avant toute automatisation.",
+    "pillar_2_title": "Implémentation intégrée",
+    "pillar_2_description": "Nous développons agents, APIs, flux et environnements self-hosted connectés à l'opération réelle de l'entreprise.",
+    "pillar_3_title": "Continuité technique",
+    "pillar_3_description": "Nous documentons, supervisons et faisons évoluer la solution à mesure que l'opération mûrit.",
     "cta_title": "Parlons de votre opération",
-    "cta_description": "Si votre entreprise a besoin de structurer son infrastructure, son support, son cloud ou son automatisation, nous pouvons analyser le scénario et recommander la meilleure approche.",
+    "cta_description": "Si votre entreprise perd du temps avec des processus manuels, des données dispersées ou des outils déconnectés, nous pouvons analyser le scénario et recommander la meilleure approche.",
     "cta_button": "Parler à un expert"
   },
   "Portfolio": {
@@ -184,30 +170,5 @@
     "cta_title": "Vous voulez transformer un processus manuel en automatisation opérationnelle ?",
     "cta_description": "Indiquez où votre opération perd du temps. Nous évaluons processus, systèmes, données et infrastructure pour recommander le chemin le plus direct.",
     "cta_button": "Parler sur WhatsApp"
-  },
-  "SignIn": {
-    "meta_title": "Se connecter",
-    "meta_description": "Accédez à votre compte en toute sécurité."
-  },
-  "SignUp": {
-    "meta_title": "Créer un compte",
-    "meta_description": "Créez votre compte pour accéder à la plateforme."
-  },
-  "Dashboard": {
-    "meta_title": "Tableau de bord",
-    "hello_message": "Bonjour {email} !",
-    "alternative_message": "Besoin de fonctionnalités avancées ? Multi-tenant et équipes, rôles et permissions, Shadcn UI, typage de bout en bout avec oRPC, paiement Stripe et mode clair/sombre. Essayez <url></url>.",
-    "max_message": "Ou besoin d'une stack d'authentification self-hosted (Better Auth) ? Essayez <url></url>."
-  },
-  "UserProfile": {
-    "meta_title": "Profil utilisateur"
-  },
-  "DashboardLayout": {
-    "dashboard_link": "Tableau de bord",
-    "user_profile_link": "Gérer le compte",
-    "sign_out": "Se déconnecter"
-  },
-  "LocaleSwitcher": {
-    "change_language": "Changer de langue"
   }
 }

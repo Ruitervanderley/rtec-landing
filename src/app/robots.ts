@@ -5,8 +5,11 @@ import { getBaseUrl } from '@/utils/Helpers';
 export const dynamic = 'force-static';
 
 export default function robots(): MetadataRoute.Robots {
-  const disallow = routing.locales.map(locale =>
-    locale === routing.defaultLocale ? '/dashboard' : `/${locale}/dashboard`,
+  const privateRoutes = ['/counter', '/dashboard', '/sign-in', '/sign-up', '/api'];
+  const disallow = routing.locales.flatMap(locale =>
+    privateRoutes.map(route =>
+      locale === routing.defaultLocale ? route : `/${locale}${route}`,
+    ),
   );
 
   return {

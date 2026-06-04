@@ -1,5 +1,5 @@
 /**
- * Middleware for static export (e.g. Cloudflare Pages). No Clerk — only i18n and Arcjet.
+ * Middleware for static export (e.g. Cloudflare Pages) with i18n and Arcjet.
  * Used by scripts/build-for-pages.cjs by replacing proxy.ts during the build.
  */
 import type { NextFetchEvent, NextRequest } from 'next/server';
