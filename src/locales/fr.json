@@ -2,7 +2,8 @@
   "RootLayout": {
     "home_link": "Accueil",
     "portfolio_link": "Portfolio",
-    "contact_link": "Contact"
+    "contact_link": "Contact",
+    "services_link": "Services"
   },
   "BaseTemplate": {
     "footer_rights": "Tous droits réservés.",
@@ -22,7 +23,8 @@
     "contact_company_name_label": "Raison sociale",
     "contact_company_name_value": "Ruiter Vanderley da Silva",
     "contact_cnpj_label": "CNPJ",
-    "contact_cnpj_value": "31.343.322/0001-67"
+    "contact_cnpj_value": "31.343.322/0001-67",
+    "privacy_link": "Confidentialité"
   },
   "Index": {
     "meta_title": "Rtec Tecnologia | Automatisation opérationnelle avec IA et infrastructure sécurisée",
@@ -114,7 +116,17 @@
     "pain_3_desc": "Des outils importants ne partagent pas leurs données, générant ressaisie, vérification manuelle et failles de processus.",
     "pain_4_title": "Opération sans traçabilité",
     "pain_4_desc": "Sans alertes, journaux et flux documenté, les petits problèmes apparaissent seulement lorsqu'ils deviennent urgents.",
-    "stats_access_value": "VPN"
+    "stats_access_value": "VPN",
+    "technology_badge": "Technologies",
+    "technology_title": "Outils utilisés pour livrer une automatisation avec contrôle technique.",
+    "technology_description": "Nous choisissons des technologies matures, auditables et maintenables pour connecter systèmes, héberger services et automatiser les routines sans improvisation.",
+    "cta_option_1": "Automatiser le service",
+    "cta_option_1_message": "Bonjour, je veux automatiser le service dans mon entreprise.",
+    "cta_option_2": "Intégrer des systèmes",
+    "cta_option_2_message": "Bonjour, je veux intégrer des systèmes et réduire le travail manuel dans mon entreprise.",
+    "cta_option_3": "Organiser l'infrastructure",
+    "cta_option_3_message": "Bonjour, je veux organiser l'infrastructure, VPN ou self-hosting dans mon entreprise.",
+    "technology_ai_label": "IA générative"
   },
   "About": {
     "meta_title": "À propos de Rtec Tecnologia | Automatisation opérationnelle avec IA",
@@ -186,5 +198,47 @@
     "cta_title": "Vous voulez transformer un processus manuel en automatisation opérationnelle ?",
     "cta_description": "Indiquez où votre opération perd du temps. Nous évaluons processus, systèmes, données et infrastructure pour recommander le chemin le plus direct.",
     "cta_button": "Cartographier sur WhatsApp"
+  },
+  "ServicesPage": {
+    "meta_title": "Services | Automatisation IA, intégrations et self-hosting | Rtec Tecnologia",
+    "meta_description": "Services de Rtec Tecnologia pour automatisation IA, intégrations, self-hosting, VPN, Docker et infrastructure sécurisée.",
+    "eyebrow": "Services",
+    "page_title": "Solutions pour automatiser les processus et donner du contrôle à l'opération.",
+    "page_subtitle": "Nous intervenons du diagnostic au support technique, en connectant logiciel, IA et infrastructure sécurisée pour réduire le travail manuel.",
+    "service_1_title": "Automatisation IA et agents opérationnels",
+    "service_1_description": "Nous cartographions les tâches répétitives et créons agents, flux et intégrations pour service, routines administratives et suivi opérationnel.",
+    "service_1_outcome_1": "Triage et réponses standardisées avec appui IA.",
+    "service_1_outcome_2": "Flux n8n connectés aux APIs et outils internes.",
+    "service_1_outcome_3": "Moins de transfert manuel d'informations entre équipes.",
+    "service_2_title": "Intégrations, APIs et logiciel sur mesure",
+    "service_2_description": "Nous développons des intégrations avec Python, FastAPI et APIs externes pour connecter les systèmes avec clarté et traçabilité.",
+    "service_2_outcome_1": "Données circulant entre outils sans ressaisie.",
+    "service_2_outcome_2": "APIs documentées pour faire évoluer les processus.",
+    "service_2_outcome_3": "Routines internes plus prévisibles et auditables.",
+    "service_3_title": "Self-hosting, VPN et infrastructure sécurisée",
+    "service_3_description": "Nous structurons Docker, Headscale, VPN et services cloud pour garder accès, données et automatisations sous contrôle technique.",
+    "service_3_outcome_1": "Accès distant contrôlé pour équipes et services.",
+    "service_3_outcome_2": "Environnements documentés, réplicables et supervisables.",
+    "service_3_outcome_3": "Base technique prête pour automatisations critiques.",
+    "cta_title": "Quel service résout votre blocage en premier ?",
+    "cta_description": "Expliquez comment fonctionne votre opération aujourd'hui. Nous indiquons le chemin le plus direct pour automatiser avec contrôle.",
+    "cta_button": "Cartographier sur WhatsApp"
+  },
+  "PrivacyPage": {
+    "meta_title": "Politique de confidentialité | Rtec Tecnologia",
+    "meta_description": "Politique de confidentialité de Rtec Tecnologia pour contacts commerciaux, WhatsApp, e-mail et navigation sur le site.",
+    "eyebrow": "Confidentialité",
+    "page_title": "Politique de confidentialité",
+    "page_subtitle": "Cette page explique comment nous traitons les données envoyées lors de contacts commerciaux, WhatsApp, e-mail et navigation sur le site.",
+    "section_1_title": "Données collectées",
+    "section_1_body": "Nous pouvons recevoir nom, entreprise, téléphone, e-mail et informations sur le besoin technique lorsque vous nous contactez ou demandez une évaluation.",
+    "section_2_title": "Finalité d'utilisation",
+    "section_2_body": "Nous utilisons ces données pour répondre aux contacts, comprendre les demandes, préparer des propositions, fournir du support et maintenir les registres commerciaux nécessaires.",
+    "section_3_title": "Partage",
+    "section_3_body": "Nous ne vendons pas de données personnelles. Les informations peuvent être traitées par des outils de communication, hébergement, analytics ou sécurité utilisés pour opérer le site.",
+    "section_4_title": "Droits du titulaire",
+    "section_4_body": "Vous pouvez demander l'accès, la correction ou la suppression de données personnelles en nous contactant par l'e-mail indiqué sur cette page.",
+    "company_label": "Entreprise responsable",
+    "email_label": "Contact confidentialité"
   }
 }

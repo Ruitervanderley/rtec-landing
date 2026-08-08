@@ -55,6 +55,15 @@ export default async function Layout(props: {
               {tRoot('portfolio_link')}
             </Link>
           </li>
+          <li>
+            <Link
+              href="/services"
+              prefetch={false}
+              className="rounded text-slate-400 transition-colors hover:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            >
+              {tRoot('services_link')}
+            </Link>
+          </li>
         </>
       )}
       rightNav={(

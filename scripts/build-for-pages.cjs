@@ -17,7 +17,7 @@ const sitemapPath = path.join(root, 'src', 'app', 'sitemap.ts');
 const sitemapBackupPath = path.join(root, 'src', 'app', 'sitemap.ts.bak');
 const robotsPath = path.join(root, 'src', 'app', 'robots.ts');
 const robotsBackupPath = path.join(root, 'src', 'app', 'robots.ts.bak');
-const staticRoutes = ['', '/about', '/portfolio'];
+const staticRoutes = ['', '/about', '/portfolio', '/services', '/privacy'];
 const locales = ['pt-BR', 'fr'];
 const defaultLocale = 'pt-BR';
 

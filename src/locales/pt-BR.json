@@ -2,7 +2,8 @@
   "RootLayout": {
     "home_link": "Início",
     "portfolio_link": "Portfólio",
-    "contact_link": "Contato"
+    "contact_link": "Contato",
+    "services_link": "Serviços"
   },
   "BaseTemplate": {
     "footer_rights": "Todos os direitos reservados.",
@@ -22,7 +23,8 @@
     "contact_company_name_label": "Razão social",
     "contact_company_name_value": "Ruiter Vanderley da Silva",
     "contact_cnpj_label": "CNPJ",
-    "contact_cnpj_value": "31.343.322/0001-67"
+    "contact_cnpj_value": "31.343.322/0001-67",
+    "privacy_link": "Privacidade"
   },
   "Index": {
     "meta_title": "Rtec Tecnologia | Automação operacional com IA e infraestrutura segura",
@@ -114,7 +116,17 @@
     "pain_3_desc": "Ferramentas importantes não trocam dados entre si, gerando retrabalho, conferência manual e falhas de processo.",
     "pain_4_title": "Operação sem rastreabilidade",
     "pain_4_desc": "Sem alertas, logs e fluxo documentado, pequenos problemas só aparecem quando já viraram urgência.",
-    "stats_access_value": "VPN"
+    "stats_access_value": "VPN",
+    "technology_badge": "Tecnologias",
+    "technology_title": "Ferramentas usadas para entregar automação com controle técnico.",
+    "technology_description": "Escolhemos tecnologias maduras, auditáveis e fáceis de manter para conectar sistemas, hospedar serviços e automatizar rotinas sem prender sua operação em improvisos.",
+    "cta_option_1": "Automatizar atendimento",
+    "cta_option_1_message": "Olá, quero automatizar atendimento na minha empresa.",
+    "cta_option_2": "Integrar sistemas",
+    "cta_option_2_message": "Olá, quero integrar sistemas e reduzir retrabalho na minha empresa.",
+    "cta_option_3": "Organizar infraestrutura",
+    "cta_option_3_message": "Olá, quero organizar infraestrutura, VPN ou self-hosting na minha empresa.",
+    "technology_ai_label": "IA generativa"
   },
   "About": {
     "meta_title": "Sobre a Rtec Tecnologia | Automação operacional com IA",
@@ -186,5 +198,47 @@
     "cta_title": "Quer transformar um processo manual em automação operacional?",
     "cta_description": "Conte onde sua operação perde tempo. Avaliamos processos, sistemas, dados e infraestrutura para indicar o caminho mais direto.",
     "cta_button": "Mapear pelo WhatsApp"
+  },
+  "ServicesPage": {
+    "meta_title": "Serviços | Automação com IA, integrações e self-hosting | Rtec Tecnologia",
+    "meta_description": "Serviços da Rtec Tecnologia para automação com IA, integrações, self-hosting, VPN, Docker e infraestrutura segura.",
+    "eyebrow": "Serviços",
+    "page_title": "Soluções para automatizar processos e dar controle à operação.",
+    "page_subtitle": "Atuamos do diagnóstico à sustentação técnica, conectando software, IA e infraestrutura segura para reduzir trabalho manual e aumentar previsibilidade.",
+    "service_1_title": "Automação com IA e agentes operacionais",
+    "service_1_description": "Mapeamos tarefas repetitivas e criamos agentes, fluxos e integrações para atendimento, rotinas administrativas e acompanhamento operacional.",
+    "service_1_outcome_1": "Triagem e respostas padronizadas com apoio de IA.",
+    "service_1_outcome_2": "Fluxos n8n conectados a APIs e ferramentas internas.",
+    "service_1_outcome_3": "Menos transferência manual de informações entre equipes.",
+    "service_2_title": "Integrações, APIs e software sob medida",
+    "service_2_description": "Desenvolvemos integrações com Python, FastAPI e APIs externas para fazer sistemas conversarem com clareza e rastreabilidade.",
+    "service_2_outcome_1": "Dados trafegando entre ferramentas sem retrabalho.",
+    "service_2_outcome_2": "APIs documentadas para evoluir processos com segurança.",
+    "service_2_outcome_3": "Rotinas internas mais previsíveis e auditáveis.",
+    "service_3_title": "Self-hosting, VPN e infraestrutura segura",
+    "service_3_description": "Estruturamos ambientes Docker, Headscale, VPN e serviços em nuvem para manter acessos, dados e automações sob controle técnico.",
+    "service_3_outcome_1": "Acesso remoto controlado para equipes e serviços.",
+    "service_3_outcome_2": "Ambientes documentados, replicáveis e monitoráveis.",
+    "service_3_outcome_3": "Base técnica preparada para automações críticas.",
+    "cta_title": "Quer saber qual serviço resolve seu gargalo primeiro?",
+    "cta_description": "Conte como sua operação funciona hoje. Nós indicamos o caminho mais direto para automatizar sem perder controle.",
+    "cta_button": "Mapear pelo WhatsApp"
+  },
+  "PrivacyPage": {
+    "meta_title": "Política de privacidade | Rtec Tecnologia",
+    "meta_description": "Política de privacidade da Rtec Tecnologia para contatos comerciais, WhatsApp, e-mail e navegação no site.",
+    "eyebrow": "Privacidade",
+    "page_title": "Política de privacidade",
+    "page_subtitle": "Esta página explica como tratamos dados enviados em contatos comerciais, WhatsApp, e-mail e navegação no site.",
+    "section_1_title": "Dados coletados",
+    "section_1_body": "Podemos receber nome, empresa, telefone, e-mail e informações sobre a necessidade técnica quando você entra em contato conosco ou solicita uma avaliação.",
+    "section_2_title": "Finalidade de uso",
+    "section_2_body": "Usamos esses dados para responder contatos, entender demandas, elaborar propostas, prestar suporte e manter registros comerciais necessários à relação com clientes.",
+    "section_3_title": "Compartilhamento",
+    "section_3_body": "Não vendemos dados pessoais. Informações podem ser tratadas por ferramentas de comunicação, hospedagem, analytics ou segurança usadas para operar o site e atender solicitações.",
+    "section_4_title": "Direitos do titular",
+    "section_4_body": "Você pode solicitar acesso, correção ou exclusão de dados pessoais entrando em contato pelo e-mail informado nesta página.",
+    "company_label": "Empresa responsável",
+    "email_label": "Contato de privacidade"
   }
 }

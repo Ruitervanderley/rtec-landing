@@ -48,7 +48,7 @@ export async function generateMetadata(props: IPortfolioProps): Promise<Metadata
       siteName: 'Rtec Tecnologia',
       locale: openGraphLocaleByLocale[locale] ?? 'pt_BR',
       type: 'website',
-      images: [{ url: `${baseUrl}/rtec-logo.png`, width: 1200, height: 630, alt: 'Rtec Tecnologia' }],
+      images: [{ url: `${baseUrl}/og-rtec.svg`, width: 1200, height: 630, alt: 'Rtec Tecnologia' }],
     },
   };
 }

@@ -112,6 +112,7 @@ export const BaseTemplate = (props: {
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('home_link')}</Link></li>
                 <li><Link prefetch={false} href="/portfolio" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('portfolio_link')}</Link></li>
+                <li><Link prefetch={false} href="/services" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('services_link')}</Link></li>
                 <li><Link href="/#cta" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('contact_link')}</Link></li>
               </ul>
             </div>
@@ -184,6 +185,13 @@ export const BaseTemplate = (props: {
               className="text-slate-600 underline decoration-slate-700 underline-offset-2 transition-colors hover:text-emerald-400"
             >
               {t('sitemap_link')}
+            </Link>
+            <Link
+              href="/privacy"
+              prefetch={false}
+              className="text-slate-600 underline decoration-slate-700 underline-offset-2 transition-colors hover:text-emerald-400"
+            >
+              {t('privacy_link')}
             </Link>
           </div>
         </div>

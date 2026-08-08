@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Rtec Tecnologia</title>
+  <desc id="desc">Automação operacional com IA, software e infraestrutura segura.</desc>
+  <rect width="1200" height="630" fill="#0b1121"/>
+  <path d="M0 520 C260 430 360 650 620 540 C820 455 930 430 1200 500 L1200 630 L0 630 Z" fill="#064e3b" opacity="0.42"/>
+  <path d="M0 0 H1200 V630 H0 Z" fill="url(#grid)" opacity="0.16"/>
+  <circle cx="930" cy="120" r="210" fill="#10b981" opacity="0.12"/>
+  <circle cx="1000" cy="460" r="260" fill="#38bdf8" opacity="0.08"/>
+  <text x="88" y="135" fill="#34d399" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="4">RTEC TECNOLOGIA</text>
+  <text x="88" y="255" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800">Automação operacional</text>
+  <text x="88" y="340" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800">com IA para empresas</text>
+  <text x="88" y="425" fill="#cbd5e1" font-family="Arial, Helvetica, sans-serif" font-size="34">Software, integrações, self-hosting e infraestrutura segura.</text>
+  <text x="88" y="530" fill="#a7f3d0" font-family="Arial, Helvetica, sans-serif" font-size="28">rtectecnologia.com.br</text>
+  <defs>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-width="1"/>
+    </pattern>
+  </defs>
+</svg>

@@ -116,7 +116,7 @@ export async function generateMetadata(props: IndexPageProps): Promise<Metadata>
   );
   const title = t('meta_title');
   const description = t('meta_description');
-  const ogImage = `${baseUrl}/rtec-logo.png`;
+  const ogImage = `${baseUrl}/og-rtec.svg`;
 
   return {
     title,
@@ -183,6 +183,23 @@ export default async function IndexPage(props: IndexPageProps) {
     { title: t('pain_2_title'), desc: t('pain_2_desc') },
     { title: t('pain_3_title'), desc: t('pain_3_desc') },
     { title: t('pain_4_title'), desc: t('pain_4_desc') },
+  ];
+
+  const technologies = [
+    'Python',
+    'FastAPI',
+    'n8n',
+    'Docker',
+    'Headscale',
+    'Cloudflare',
+    'SQL',
+    t('technology_ai_label'),
+  ];
+
+  const ctaOptions = [
+    { label: t('cta_option_1'), href: `${ContactConfig.whatsappBaseUrl}?text=${encodeURIComponent(t('cta_option_1_message'))}` },
+    { label: t('cta_option_2'), href: `${ContactConfig.whatsappBaseUrl}?text=${encodeURIComponent(t('cta_option_2_message'))}` },
+    { label: t('cta_option_3'), href: `${ContactConfig.whatsappBaseUrl}?text=${encodeURIComponent(t('cta_option_3_message'))}` },
   ];
 
   const processSteps = [
@@ -470,8 +487,34 @@ export default async function IndexPage(props: IndexPageProps) {
         </AnimateInView>
       </section>
 
+      <section className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="technology-heading">
+        <AnimateInView className="mx-auto max-w-6xl">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+            <div>
+              <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('technology_badge')}</p>
+              <h2 id="technology-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
+                {t('technology_title')}
+              </h2>
+              <p className="animate-on-visible stagger-1 mt-5 text-base leading-relaxed text-slate-400">
+                {t('technology_description')}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {technologies.map((technology, index) => (
+                <span
+                  key={technology}
+                  className={`animate-on-visible stagger-${(index % 4) + 1} rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-300`}
+                >
+                  {technology}
+                </span>
+              ))}
+            </div>
+          </div>
+        </AnimateInView>
+      </section>
+
       <section
-        className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28"
+        className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28"
         aria-labelledby="how-heading"
       >
         <AnimateInView className="mx-auto max-w-6xl">
@@ -539,6 +582,19 @@ export default async function IndexPage(props: IndexPageProps) {
                 <span>{t('cta_primary')}</span>
               </Link>
               <p className="text-sm text-slate-500">{t('cta_trust_extra')}</p>
+              <div className="mt-3 flex flex-wrap justify-center gap-3">
+                {ctaOptions.map(option => (
+                  <Link
+                    key={option.label}
+                    href={option.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-emerald-500/30 hover:text-emerald-300"
+                  >
+                    {option.label}
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         </AnimateInView>
