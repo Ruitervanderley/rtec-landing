@@ -109,8 +109,10 @@ try {
 
   writeStaticSeoFiles(outDir);
 } finally {
-  fs.copyFileSync(proxyBackupPath, proxyPath);
-  fs.unlinkSync(proxyBackupPath);
+  if (fs.existsSync(proxyBackupPath)) {
+    fs.copyFileSync(proxyBackupPath, proxyPath);
+    fs.unlinkSync(proxyBackupPath);
+  }
   if (sitemapRestored) {
     fs.renameSync(sitemapBackupPath, sitemapPath);
   }

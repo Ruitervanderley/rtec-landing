@@ -159,6 +159,12 @@ export default async function IndexPage(props: IndexPageProps) {
     { value: 'IA', label: t('stats_automation_label') },
   ];
 
+  const qualificationItems = [
+    { label: t('qualification_1_label'), value: t('qualification_1_value') },
+    { label: t('qualification_2_label'), value: t('qualification_2_value') },
+    { label: t('qualification_3_label'), value: t('qualification_3_value') },
+  ];
+
   const aboutPillars = [
     { title: t('about_pillar_1_title'), sub: t('about_pillar_1_sub'), icon: <IconBuilding />, color: 'text-emerald-400', glow: 'group-hover:shadow-emerald-500/10' },
     { title: t('about_pillar_2_title'), sub: t('about_pillar_2_sub'), icon: <IconGlobe />, color: 'text-blue-400', glow: 'group-hover:shadow-blue-500/10' },
@@ -293,15 +299,23 @@ export default async function IndexPage(props: IndexPageProps) {
             </ul>
 
             <div className="animate-fade-in-up animate-delay-3 mt-10 flex flex-col items-center gap-4 opacity-0 lg:items-start">
-              <Link
-                href={primaryCtaHref}
-                target={isExternalCta ? '_blank' : undefined}
-                rel={isExternalCta ? 'noreferrer noopener' : undefined}
-                className={`${ctaButtonClass} min-w-[16rem]`}
-              >
-                <WhatsAppIcon className="size-6 shrink-0" />
-                <span>{t('cta_primary')}</span>
-              </Link>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                <Link
+                  href={primaryCtaHref}
+                  target={isExternalCta ? '_blank' : undefined}
+                  rel={isExternalCta ? 'noreferrer noopener' : undefined}
+                  className={`${ctaButtonClass} min-w-[16rem]`}
+                >
+                  <WhatsAppIcon className="size-6 shrink-0" />
+                  <span>{t('cta_primary')}</span>
+                </Link>
+                <Link
+                  href={getI18nPath('/services', locale)}
+                  className="inline-flex items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] px-7 py-4 text-lg font-semibold text-slate-200 transition-all duration-300 hover:border-emerald-500/30 hover:bg-white/[0.06] hover:text-white focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#0b1121] focus:outline-none"
+                >
+                  {t('cta_secondary')}
+                </Link>
+              </div>
               <p className="text-sm text-slate-500">
                 {t('cta_trust')}
                 {' '}
@@ -349,15 +363,25 @@ export default async function IndexPage(props: IndexPageProps) {
       </section>
 
       <section className="w-full border-y border-white/[0.06] bg-white/[0.02] px-4 py-10 sm:px-6">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-8 sm:gap-16">
-          {stats.map(stat => (
-            <div key={stat.label} className="text-center">
-              <div className="text-2xl font-extrabold tracking-tight text-emerald-400 sm:text-3xl">
-                {stat.value}
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+            {stats.map(stat => (
+              <div key={stat.label} className="text-center">
+                <div className="text-2xl font-extrabold tracking-tight text-emerald-400 sm:text-3xl">
+                  {stat.value}
+                </div>
+                <div className="mt-1 text-sm text-slate-500">{stat.label}</div>
               </div>
-              <div className="mt-1 text-sm text-slate-500">{stat.label}</div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {qualificationItems.map(item => (
+              <div key={item.label} className="rounded-xl border border-white/[0.06] bg-[#0b1121]/70 p-4">
+                <div className="text-xs font-semibold tracking-widest text-slate-500 uppercase">{item.label}</div>
+                <div className="mt-2 text-sm leading-snug font-semibold text-slate-200">{item.value}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -563,9 +587,6 @@ export default async function IndexPage(props: IndexPageProps) {
       </section>
 
       <section id="cta" className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-32" aria-labelledby="cta-heading">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <div className="absolute bottom-0 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.1)_0%,transparent_55%)] blur-3xl" />
-        </div>
         <AnimateInView className="relative mx-auto max-w-2xl text-center">
           <div className="rounded-3xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.06] to-transparent p-10 backdrop-blur-sm sm:p-14">
             <h2 id="cta-heading" className="animate-on-visible text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
