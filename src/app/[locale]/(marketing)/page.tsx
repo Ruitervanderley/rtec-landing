@@ -208,6 +208,8 @@ export default async function IndexPage(props: IndexPageProps) {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     'name': 'Rtec Tecnologia',
+    'legalName': ContactConfig.legalName,
+    'taxID': ContactConfig.cnpjRaw,
     'url': baseUrl,
     'logo': `${baseUrl}/rtec-logo.png`,
     'email': ContactConfig.email,

@@ -18,7 +18,11 @@
     "contact_phone_value": "(64) 99916-6172",
     "contact_location_value": "Intervention à distance au Brésil et projets sur site à la demande. Base à Ouvidor - GO.",
     "floating_whatsapp_label": "Ouvrir WhatsApp",
-    "back_to_top_label": "Retour en haut"
+    "back_to_top_label": "Retour en haut",
+    "contact_company_name_label": "Raison sociale",
+    "contact_company_name_value": "Ruiter Vanderley da Silva",
+    "contact_cnpj_label": "CNPJ",
+    "contact_cnpj_value": "31.343.322/0001-67"
   },
   "Index": {
     "meta_title": "Rtec Tecnologia | Automatisation opérationnelle avec IA et infrastructure sécurisée",

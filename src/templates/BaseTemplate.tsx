@@ -144,6 +144,26 @@ export const BaseTemplate = (props: {
                   </svg>
                   {t('contact_location_value')}
                 </li>
+                <li className="flex items-start gap-2">
+                  <svg className="mt-0.5 size-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15A2.25 2.25 0 0021.75 17.25V6.75A2.25 2.25 0 0019.5 4.5h-15A2.25 2.25 0 002.25 6.75v10.5A2.25 2.25 0 004.5 19.5zm3-10.125a1.875 1.875 0 100 3.75 1.875 1.875 0 000-3.75zm0 6.375a3.75 3.75 0 00-3.75 3.75h7.5a3.75 3.75 0 00-3.75-3.75z" />
+                  </svg>
+                  <span>
+                    {t('contact_company_name_label')}
+                    {': '}
+                    {t('contact_company_name_value')}
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="mt-0.5 size-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h7.5M8.25 9.75h7.5M8.25 12.75h7.5M8.25 15.75h4.5M4.5 4.5h15v15h-15v-15z" />
+                  </svg>
+                  <span>
+                    {t('contact_cnpj_label')}
+                    {': '}
+                    {t('contact_cnpj_value')}
+                  </span>
+                </li>
               </ul>
             </div>
           </div>

@@ -1,4 +1,7 @@
 export const ContactConfig = {
+  legalName: 'Ruiter Vanderley da Silva',
+  cnpjDisplay: '31.343.322/0001-67',
+  cnpjRaw: '31343322000167',
   email: 'contato@rtectecnologia.com.br',
   phoneDisplay: '(64) 99916-6172',
   phoneInternational: '+5564999166172',

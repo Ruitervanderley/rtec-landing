@@ -18,7 +18,11 @@
     "contact_phone_value": "(64) 99916-6172",
     "contact_location_value": "Atuação remota no Brasil e projetos presenciais sob demanda. Base em Ouvidor - GO.",
     "floating_whatsapp_label": "Abrir WhatsApp",
-    "back_to_top_label": "Voltar ao topo"
+    "back_to_top_label": "Voltar ao topo",
+    "contact_company_name_label": "Razão social",
+    "contact_company_name_value": "Ruiter Vanderley da Silva",
+    "contact_cnpj_label": "CNPJ",
+    "contact_cnpj_value": "31.343.322/0001-67"
   },
   "Index": {
     "meta_title": "Rtec Tecnologia | Automação operacional com IA e infraestrutura segura",
