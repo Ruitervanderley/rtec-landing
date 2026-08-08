@@ -11,11 +11,47 @@ const root = path.resolve(__dirname, '..');
 const proxyPath = path.join(root, 'src', 'proxy.ts');
 const proxyStaticPath = path.join(root, 'src', 'proxy-static.ts');
 const proxyBackupPath = path.join(root, 'src', 'proxy-backup.ts');
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rtectecnologia.com.br';
 
 const sitemapPath = path.join(root, 'src', 'app', 'sitemap.ts');
 const sitemapBackupPath = path.join(root, 'src', 'app', 'sitemap.ts.bak');
 const robotsPath = path.join(root, 'src', 'app', 'robots.ts');
 const robotsBackupPath = path.join(root, 'src', 'app', 'robots.ts.bak');
+const staticRoutes = ['', '/about', '/portfolio'];
+const locales = ['pt-BR', 'fr'];
+const defaultLocale = 'pt-BR';
+
+function getStaticPath(route, locale) {
+  if (locale === defaultLocale) {
+    return route || '';
+  }
+
+  return `/${locale}${route}`;
+}
+
+function writeStaticSeoFiles(outDir) {
+  const now = new Date().toISOString();
+  const sitemapEntries = staticRoutes.flatMap(route =>
+    locales.map(locale => `${siteUrl}${getStaticPath(route, locale)}`),
+  );
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapEntries.map(url => `  <url>
+    <loc>${url}</loc>
+    <lastmod>${now}</lastmod>
+  </url>`).join('\n')}
+</urlset>
+`;
+
+  const robotsTxt = `User-Agent: *
+Allow: /
+
+Sitemap: ${siteUrl}/sitemap.xml
+`;
+
+  fs.writeFileSync(path.join(outDir, 'sitemap.xml'), sitemapXml);
+  fs.writeFileSync(path.join(outDir, 'robots.txt'), robotsTxt);
+}
 
 if (!fs.existsSync(proxyStaticPath)) {
   console.error('src/proxy-static.ts not found');
@@ -70,6 +106,8 @@ try {
     console.log(`Copying ${ptBrHtml} to ${indexHtml}`);
     fs.copyFileSync(ptBrHtml, indexHtml);
   }
+
+  writeStaticSeoFiles(outDir);
 } finally {
   fs.copyFileSync(proxyBackupPath, proxyPath);
   fs.unlinkSync(proxyBackupPath);

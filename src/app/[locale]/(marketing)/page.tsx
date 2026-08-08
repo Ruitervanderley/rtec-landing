@@ -154,7 +154,7 @@ export default async function IndexPage(props: IndexPageProps) {
 
   const stats = [
     { value: '2018', label: t('stats_foundation_label') },
-    { value: '99.9%', label: t('stats_uptime_label') },
+    { value: t('stats_access_value'), label: t('stats_uptime_label') },
     { value: '24/7', label: t('stats_monitoring_label') },
     { value: 'IA', label: t('stats_automation_label') },
   ];
@@ -176,6 +176,13 @@ export default async function IndexPage(props: IndexPageProps) {
     { title: t('benefit_1_title'), desc: t('benefit_1_desc'), icon: <IconTrendingDown />, color: 'text-emerald-400', border: 'hover:border-emerald-500/30' },
     { title: t('benefit_2_title'), desc: t('benefit_2_desc'), icon: <IconRocket />, color: 'text-blue-400', border: 'hover:border-blue-500/30' },
     { title: t('benefit_3_title'), desc: t('benefit_3_desc'), icon: <IconShield />, color: 'text-purple-400', border: 'hover:border-purple-500/30' },
+  ];
+
+  const painPoints = [
+    { title: t('pain_1_title'), desc: t('pain_1_desc') },
+    { title: t('pain_2_title'), desc: t('pain_2_desc') },
+    { title: t('pain_3_title'), desc: t('pain_3_desc') },
+    { title: t('pain_4_title'), desc: t('pain_4_desc') },
   ];
 
   const processSteps = [
@@ -214,7 +221,7 @@ export default async function IndexPage(props: IndexPageProps) {
     },
     'address': {
       '@type': 'PostalAddress',
-      'addressLocality': 'Catalão',
+      'addressLocality': 'Ouvidor',
       'addressRegion': 'GO',
       'addressCountry': 'BR',
     },
@@ -374,8 +381,36 @@ export default async function IndexPage(props: IndexPageProps) {
         </AnimateInView>
       </section>
 
+      <section className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="pain-heading">
+        <AnimateInView className="mx-auto max-w-6xl">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div>
+              <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('pain_badge')}</p>
+              <h2 id="pain-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
+                {t('pain_title')}
+              </h2>
+              <p className="animate-on-visible stagger-1 mt-5 text-base leading-relaxed text-slate-400">
+                {t('pain_description')}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {painPoints.map((painPoint, index) => (
+                <div
+                  key={painPoint.title}
+                  className={`animate-on-visible stagger-${index + 1} rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all duration-300 hover:border-emerald-500/30 hover:bg-white/[0.05]`}
+                >
+                  <span className="mb-4 block size-2 rounded-full bg-emerald-400" />
+                  <h3 className="text-lg font-semibold text-white">{painPoint.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-500">{painPoint.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnimateInView>
+      </section>
+
       <section
-        className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28"
+        className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28"
         aria-labelledby="services-heading"
       >
         <AnimateInView className="mx-auto max-w-6xl">
