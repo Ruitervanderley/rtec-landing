@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/libs/I18nNavigation';
+import { routing } from '@/libs/I18nRouting';
+import { getBaseUrl, getI18nPath } from '@/utils/Helpers';
 
 type AboutPageProps = {
   params: Promise<{ locale: string }>;
@@ -10,12 +12,23 @@ export async function generateMetadata(props: AboutPageProps): Promise<Metadata>
   const { locale } = await props.params;
   const t = await getTranslations({
     locale,
-    namespace: 'About',
+    namespace: 'AboutPage',
   });
 
   return {
     title: t('meta_title'),
     description: t('meta_description'),
+    alternates: {
+      canonical: `${getBaseUrl()}${getI18nPath('/about', locale)}`,
+      languages: Object.fromEntries(routing.locales.map(language => [language, `${getBaseUrl()}${getI18nPath('/about', language)}`])),
+    },
+    openGraph: {
+      title: t('meta_title'),
+      description: t('meta_description'),
+      url: `${getBaseUrl()}${getI18nPath('/about', locale)}`,
+      type: 'website',
+      images: [{ url: `${getBaseUrl()}/og-rtec.png`, width: 1200, height: 630 }],
+    },
   };
 }
 
@@ -24,7 +37,7 @@ export default async function AboutPage(props: AboutPageProps) {
   setRequestLocale(locale);
   const t = await getTranslations({
     locale,
-    namespace: 'About',
+    namespace: 'AboutPage',
   });
 
   const pillars = [

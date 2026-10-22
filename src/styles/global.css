@@ -51,7 +51,7 @@
 
 /* Animate when parent .animate-in-view gets .visible */
 .animate-in-view .animate-on-visible {
-  opacity: 0;
+  opacity: 1;
 }
 
 .animate-in-view.visible .animate-on-visible {
@@ -95,4 +95,14 @@
     animation-duration: 0.01ms;
     animation-delay: 0s;
   }
+}
+
+html {
+  scroll-padding-top: 6rem;
+}
+
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #34d399;
+  outline-offset: 4px;
 }

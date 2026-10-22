@@ -51,14 +51,6 @@ function IconCloud() {
   );
 }
 
-function IconBot() {
-  return (
-    <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-    </svg>
-  );
-}
-
 function IconServer() {
   return (
     <svg className="size-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -104,7 +96,7 @@ const ctaButtonClass
 
 export async function generateMetadata(props: IndexPageProps): Promise<Metadata> {
   const { locale } = await props.params;
-  const t = await getTranslations({ locale, namespace: 'Index' });
+  const t = await getTranslations({ locale, namespace: 'IndexPage' });
   const baseUrl = getBaseUrl();
   const path = getI18nPath('', locale);
   const canonicalUrl = path ? `${baseUrl}${path}` : baseUrl;
@@ -116,7 +108,7 @@ export async function generateMetadata(props: IndexPageProps): Promise<Metadata>
   );
   const title = t('meta_title');
   const description = t('meta_description');
-  const ogImage = `${baseUrl}/og-rtec.svg`;
+  const ogImage = `${baseUrl}/og-rtec.png`;
 
   return {
     title,
@@ -129,10 +121,10 @@ export async function generateMetadata(props: IndexPageProps): Promise<Metadata>
       title,
       description,
       url: canonicalUrl,
-      siteName: 'Rtec Tecnologia',
+      siteName: 'RTEC Soluções Tecnológicas',
       locale: openGraphLocaleByLocale[locale] ?? 'pt_BR',
       type: 'website',
-      images: [{ url: ogImage, width: 1200, height: 630, alt: 'Rtec Tecnologia' }],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: 'RTEC Soluções Tecnológicas' }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -146,7 +138,7 @@ export async function generateMetadata(props: IndexPageProps): Promise<Metadata>
 export default async function IndexPage(props: IndexPageProps) {
   const { locale } = await props.params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: 'Index' });
+  const t = await getTranslations({ locale, namespace: 'IndexPage' });
   const baseUrl = getBaseUrl();
   const whatsappUrl = Env.NEXT_PUBLIC_WHATSAPP_URL ?? ContactConfig.whatsappUrl;
   const primaryCtaHref = whatsappUrl.startsWith('http') ? whatsappUrl : '#cta';
@@ -155,8 +147,8 @@ export default async function IndexPage(props: IndexPageProps) {
   const stats = [
     { value: '2018', label: t('stats_foundation_label') },
     { value: t('stats_access_value'), label: t('stats_uptime_label') },
-    { value: '24/7', label: t('stats_monitoring_label') },
-    { value: 'IA', label: t('stats_automation_label') },
+    { value: t('stats_monitoring_value'), label: t('stats_monitoring_label') },
+    { value: t('stats_automation_value'), label: t('stats_automation_label') },
   ];
 
   const qualificationItems = [
@@ -173,9 +165,10 @@ export default async function IndexPage(props: IndexPageProps) {
   ];
 
   const services = [
-    { num: '01', title: t('service_1_title'), desc: t('service_1_desc'), icon: <IconBot />, gradient: 'from-emerald-500/20 to-transparent', border: 'hover:border-emerald-500/30', iconColor: 'text-emerald-400' },
+    { num: '01', title: t('service_1_title'), desc: t('service_1_desc'), icon: <IconShield />, gradient: 'from-emerald-500/20 to-transparent', border: 'hover:border-emerald-500/30', iconColor: 'text-emerald-400' },
     { num: '02', title: t('service_2_title'), desc: t('service_2_desc'), icon: <IconServer />, gradient: 'from-blue-500/20 to-transparent', border: 'hover:border-blue-500/30', iconColor: 'text-blue-400' },
-    { num: '03', title: t('service_3_title'), desc: t('service_3_desc'), icon: <IconLink />, gradient: 'from-purple-500/20 to-transparent', border: 'hover:border-purple-500/30', iconColor: 'text-purple-400' },
+    { num: '03', title: t('service_4_title'), desc: t('service_4_desc'), icon: <IconCpu />, gradient: 'from-cyan-500/20 to-transparent', border: 'hover:border-cyan-500/30', iconColor: 'text-cyan-400' },
+    { num: '04', title: t('service_3_title'), desc: t('service_3_desc'), icon: <IconLink />, gradient: 'from-purple-500/20 to-transparent', border: 'hover:border-purple-500/30', iconColor: 'text-purple-400' },
   ];
 
   const benefits = [
@@ -191,20 +184,10 @@ export default async function IndexPage(props: IndexPageProps) {
     { title: t('pain_4_title'), desc: t('pain_4_desc') },
   ];
 
-  const technologies = [
-    'Python',
-    'FastAPI',
-    'n8n',
-    'Docker',
-    'Headscale',
-    'Cloudflare',
-    'SQL',
-    t('technology_ai_label'),
-  ];
-
   const ctaOptions = [
     { label: t('cta_option_1'), href: `${ContactConfig.whatsappBaseUrl}?text=${encodeURIComponent(t('cta_option_1_message'))}` },
     { label: t('cta_option_2'), href: `${ContactConfig.whatsappBaseUrl}?text=${encodeURIComponent(t('cta_option_2_message'))}` },
+    { label: t('cta_option_4'), href: `${ContactConfig.whatsappBaseUrl}?text=${encodeURIComponent(t('cta_option_4_message'))}` },
     { label: t('cta_option_3'), href: `${ContactConfig.whatsappBaseUrl}?text=${encodeURIComponent(t('cta_option_3_message'))}` },
   ];
 
@@ -230,7 +213,7 @@ export default async function IndexPage(props: IndexPageProps) {
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    'name': 'Rtec Tecnologia',
+    'name': 'RTEC Soluções Tecnológicas',
     'legalName': ContactConfig.legalName,
     'taxID': ContactConfig.cnpjRaw,
     'url': baseUrl,
@@ -260,7 +243,7 @@ export default async function IndexPage(props: IndexPageProps) {
       />
 
       <section
-        className="relative w-full overflow-hidden px-4 pt-20 pb-16 sm:px-6 md:pt-28 md:pb-24 lg:pt-36 lg:pb-32"
+        className="relative w-full overflow-hidden px-4 pt-20 pb-16 sm:px-6 md:pt-28 md:pb-24 lg:pt-20 lg:pb-24"
         aria-labelledby="hero-heading"
       >
         <div className="pointer-events-none absolute inset-0" aria-hidden>
@@ -275,7 +258,7 @@ export default async function IndexPage(props: IndexPageProps) {
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="text-center lg:text-left">
             <div className="animate-fade-in-up mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-sm font-medium text-emerald-400 opacity-0">
-              <span className="inline-block size-2 animate-pulse rounded-full bg-emerald-500" />
+              <span className="inline-block size-2 animate-pulse rounded-full bg-emerald-500" aria-hidden />
               {t('hero_brand')}
             </div>
 
@@ -289,22 +272,13 @@ export default async function IndexPage(props: IndexPageProps) {
               {t('hero_subtitle')}
             </p>
 
-            <ul className="animate-fade-in-up animate-delay-3 mx-auto mt-6 grid max-w-2xl gap-3 text-left text-sm text-slate-300 opacity-0 sm:grid-cols-3 lg:mx-0">
-              {heroHighlights.map(highlight => (
-                <li key={highlight} className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
-                  <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-400" />
-                  <span>{highlight}</span>
-                </li>
-              ))}
-            </ul>
-
             <div className="animate-fade-in-up animate-delay-3 mt-10 flex flex-col items-center gap-4 opacity-0 lg:items-start">
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
                 <Link
                   href={primaryCtaHref}
                   target={isExternalCta ? '_blank' : undefined}
                   rel={isExternalCta ? 'noreferrer noopener' : undefined}
-                  className={`${ctaButtonClass} min-w-[16rem]`}
+                  className={`${ctaButtonClass} w-full sm:w-auto`}
                 >
                   <WhatsAppIcon className="size-6 shrink-0" />
                   <span>{t('cta_primary')}</span>
@@ -316,18 +290,27 @@ export default async function IndexPage(props: IndexPageProps) {
                   {t('cta_secondary')}
                 </Link>
               </div>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-400">
                 {t('cta_trust')}
                 {' '}
                 {t('cta_trust_extra')}
               </p>
             </div>
+            <ul className="animate-fade-in-up animate-delay-3 mx-auto mt-6 grid max-w-2xl gap-3 text-left text-sm text-slate-300 opacity-0 sm:grid-cols-3 lg:mx-0">
+              {heroHighlights.map(highlight => (
+                <li key={highlight} className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                  <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-400" />
+                  <span>{highlight}</span>
+                </li>
+              ))}
+            </ul>
+
           </div>
 
           <div className="animate-fade-in-up animate-delay-2 relative mx-auto w-full max-w-xl opacity-0" aria-label={t('hero_panel_label')}>
             <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111827]/90 shadow-2xl shadow-black/30">
-              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
+                <div className="flex flex-wrap items-center gap-3">
                   <Image
                     src="/rtec-logo.png"
                     alt={t('hero_panel_logo_alt')}
@@ -339,18 +322,19 @@ export default async function IndexPage(props: IndexPageProps) {
                     {t('hero_panel_status')}
                   </span>
                 </div>
-                <span className="text-xs text-slate-500">{t('hero_panel_time')}</span>
+                <span className="text-xs text-slate-400">{t('hero_panel_time')}</span>
               </div>
               <div className="grid gap-4 p-5">
                 {operationItems.map(item => (
                   <div key={item.label} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-                    <div className="mb-3 flex items-center justify-between gap-4">
-                      <span className="text-sm font-medium text-slate-300">{item.label}</span>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                        <span className={`size-2 shrink-0 rounded-full ${item.color}`} aria-hidden />
+                        {item.label}
+                      </span>
                       <span className="text-sm font-bold text-white">{item.value}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-white/[0.06]">
-                      <div className={`h-2 w-[86%] rounded-full ${item.color}`} />
-                    </div>
+
                   </div>
                 ))}
               </div>
@@ -370,14 +354,14 @@ export default async function IndexPage(props: IndexPageProps) {
                 <div className="text-2xl font-extrabold tracking-tight text-emerald-400 sm:text-3xl">
                   {stat.value}
                 </div>
-                <div className="mt-1 text-sm text-slate-500">{stat.label}</div>
+                <div className="mt-1 text-sm text-slate-400">{stat.label}</div>
               </div>
             ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {qualificationItems.map(item => (
               <div key={item.label} className="rounded-xl border border-white/[0.06] bg-[#0b1121]/70 p-4">
-                <div className="text-xs font-semibold tracking-widest text-slate-500 uppercase">{item.label}</div>
+                <div className="text-xs font-semibold tracking-widest text-slate-400 uppercase">{item.label}</div>
                 <div className="mt-2 text-sm leading-snug font-semibold text-slate-200">{item.value}</div>
               </div>
             ))}
@@ -385,7 +369,69 @@ export default async function IndexPage(props: IndexPageProps) {
         </div>
       </section>
 
-      <section className="relative w-full px-4 py-24 sm:px-6 md:py-28" aria-labelledby="about-heading">
+      <section className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-16 sm:px-6 md:py-20" aria-labelledby="pain-heading">
+        <AnimateInView className="mx-auto max-w-6xl">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div>
+              <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('pain_badge')}</p>
+              <h2 id="pain-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
+                {t('pain_title')}
+              </h2>
+              <p className="animate-on-visible stagger-1 mt-5 text-base leading-relaxed text-slate-400">
+                {t('pain_description')}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {painPoints.map((painPoint, index) => (
+                <div
+                  key={painPoint.title}
+                  className={`animate-on-visible stagger-${index + 1} rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all duration-300 hover:border-emerald-500/30 hover:bg-white/[0.05]`}
+                >
+                  <span className="mb-4 block size-2 rounded-full bg-emerald-400" />
+                  <h3 className="text-lg font-semibold text-white">{painPoint.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-400">{painPoint.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnimateInView>
+      </section>
+
+      <section
+        className="relative w-full border-t border-white/[0.06] px-4 py-16 sm:px-6 md:py-20"
+        aria-labelledby="services-heading"
+      >
+        <AnimateInView className="mx-auto max-w-6xl">
+          <div className="text-center">
+            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('services_badge')}</p>
+            <h2 id="services-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
+              {t('services_title')}
+            </h2>
+          </div>
+          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
+            {services.map((service, index) => (
+              <article
+                key={service.num}
+                className={`animate-on-visible stagger-${index + 1} group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${service.border}`}
+              >
+                <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${service.gradient} opacity-0 transition-opacity duration-500 group-hover:opacity-100`} />
+                <div className="relative">
+                  <div className={`inline-flex rounded-xl bg-white/[0.06] p-3 ${service.iconColor}`}>
+                    {service.icon}
+                  </div>
+                  <span className="mt-5 block text-xs font-bold tracking-widest text-slate-400 uppercase">
+                    {service.num}
+                  </span>
+                  <h3 className="mt-2 text-xl font-bold text-white">{service.title}</h3>
+                  <p className="mt-3 flex-1 leading-relaxed text-slate-400">{service.desc}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </AnimateInView>
+      </section>
+
+      <section className="relative w-full px-4 py-16 sm:px-6 md:py-20" aria-labelledby="about-heading">
         <AnimateInView className="mx-auto max-w-6xl">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-20">
             <div>
@@ -414,7 +460,7 @@ export default async function IndexPage(props: IndexPageProps) {
                   <h3 className="mt-3 text-lg font-semibold text-white">
                     {pillar.title}
                   </h3>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-2 text-sm text-slate-400">
                     {pillar.sub}
                   </p>
                 </div>
@@ -424,69 +470,7 @@ export default async function IndexPage(props: IndexPageProps) {
         </AnimateInView>
       </section>
 
-      <section className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="pain-heading">
-        <AnimateInView className="mx-auto max-w-6xl">
-          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-            <div>
-              <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('pain_badge')}</p>
-              <h2 id="pain-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                {t('pain_title')}
-              </h2>
-              <p className="animate-on-visible stagger-1 mt-5 text-base leading-relaxed text-slate-400">
-                {t('pain_description')}
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {painPoints.map((painPoint, index) => (
-                <div
-                  key={painPoint.title}
-                  className={`animate-on-visible stagger-${index + 1} rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all duration-300 hover:border-emerald-500/30 hover:bg-white/[0.05]`}
-                >
-                  <span className="mb-4 block size-2 rounded-full bg-emerald-400" />
-                  <h3 className="text-lg font-semibold text-white">{painPoint.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-500">{painPoint.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </AnimateInView>
-      </section>
-
-      <section
-        className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28"
-        aria-labelledby="services-heading"
-      >
-        <AnimateInView className="mx-auto max-w-6xl">
-          <div className="text-center">
-            <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('services_badge')}</p>
-            <h2 id="services-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
-              {t('services_title')}
-            </h2>
-          </div>
-          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
-            {services.map((service, index) => (
-              <article
-                key={service.num}
-                className={`animate-on-visible stagger-${index + 1} group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${service.border}`}
-              >
-                <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${service.gradient} opacity-0 transition-opacity duration-500 group-hover:opacity-100`} />
-                <div className="relative">
-                  <div className={`inline-flex rounded-xl bg-white/[0.06] p-3 ${service.iconColor}`}>
-                    {service.icon}
-                  </div>
-                  <span className="mt-5 block text-xs font-bold tracking-widest text-slate-600 uppercase">
-                    {service.num}
-                  </span>
-                  <h3 className="mt-2 text-xl font-bold text-white">{service.title}</h3>
-                  <p className="mt-3 flex-1 leading-relaxed text-slate-400">{service.desc}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </AnimateInView>
-      </section>
-
-      <section className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="benefits-heading">
+      <section className="relative w-full border-t border-white/[0.06] px-4 py-16 sm:px-6 md:py-20" aria-labelledby="benefits-heading">
         <AnimateInView className="mx-auto max-w-6xl">
           <div className="text-center">
             <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('benefits_badge')}</p>
@@ -511,34 +495,20 @@ export default async function IndexPage(props: IndexPageProps) {
         </AnimateInView>
       </section>
 
-      <section className="relative w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="technology-heading">
-        <AnimateInView className="mx-auto max-w-6xl">
-          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-            <div>
-              <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('technology_badge')}</p>
-              <h2 id="technology-heading" className="animate-on-visible mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                {t('technology_title')}
-              </h2>
-              <p className="animate-on-visible stagger-1 mt-5 text-base leading-relaxed text-slate-400">
-                {t('technology_description')}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {technologies.map((technology, index) => (
-                <span
-                  key={technology}
-                  className={`animate-on-visible stagger-${(index % 4) + 1} rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-300`}
-                >
-                  {technology}
-                </span>
-              ))}
-            </div>
+      <section className="w-full border-t border-white/[0.06] bg-[#060a14] px-4 py-16 sm:px-6" aria-labelledby="portfolio-heading">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+          <div>
+            <h2 id="portfolio-heading" className="text-2xl font-bold text-white">{t('portfolio_title')}</h2>
+            <p className="mt-3 max-w-2xl leading-relaxed text-slate-400">{t('portfolio_description')}</p>
           </div>
-        </AnimateInView>
+          <Link href={getI18nPath('/portfolio', locale)} className="shrink-0 rounded-xl border border-emerald-500/30 px-5 py-3 font-semibold text-emerald-300 hover:bg-emerald-500/10">
+            {t('portfolio_link')}
+          </Link>
+        </div>
       </section>
 
       <section
-        className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28"
+        className="relative w-full border-t border-white/[0.06] px-4 py-16 sm:px-6 md:py-20"
         aria-labelledby="how-heading"
       >
         <AnimateInView className="mx-auto max-w-6xl">
@@ -559,14 +529,14 @@ export default async function IndexPage(props: IndexPageProps) {
                   {item.step}
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-white">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">{item.desc}</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">{item.desc}</p>
               </div>
             ))}
           </div>
         </AnimateInView>
       </section>
 
-      <section className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-28" aria-labelledby="faq-heading">
+      <section className="relative w-full border-t border-white/[0.06] px-4 py-16 sm:px-6 md:py-20" aria-labelledby="faq-heading">
         <AnimateInView className="mx-auto max-w-3xl">
           <div className="text-center">
             <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase">{t('faq_badge')}</p>
@@ -588,7 +558,7 @@ export default async function IndexPage(props: IndexPageProps) {
 
       <section id="cta" className="relative w-full border-t border-white/[0.06] px-4 py-24 sm:px-6 md:py-32" aria-labelledby="cta-heading">
         <AnimateInView className="relative mx-auto max-w-2xl text-center">
-          <div className="rounded-3xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.06] to-transparent p-10 backdrop-blur-sm sm:p-14">
+          <div className="rounded-3xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.06] to-transparent p-6 backdrop-blur-sm sm:p-14">
             <h2 id="cta-heading" className="animate-on-visible text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
               {t('cta_final_title')}
             </h2>
@@ -597,12 +567,12 @@ export default async function IndexPage(props: IndexPageProps) {
                 href={primaryCtaHref}
                 target={isExternalCta ? '_blank' : undefined}
                 rel={isExternalCta ? 'noreferrer noopener' : undefined}
-                className={`${ctaButtonClass} min-w-[16rem]`}
+                className={`${ctaButtonClass} w-full sm:w-auto`}
               >
                 <WhatsAppIcon className="size-6 shrink-0" />
                 <span>{t('cta_primary')}</span>
               </Link>
-              <p className="text-sm text-slate-500">{t('cta_trust_extra')}</p>
+              <p className="text-sm text-slate-400">{t('cta_trust_extra')}</p>
               <div className="mt-3 flex flex-wrap justify-center gap-3">
                 {ctaOptions.map(option => (
                   <Link

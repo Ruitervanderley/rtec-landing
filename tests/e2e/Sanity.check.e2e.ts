@@ -2,31 +2,31 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Sanity', () => {
   test.describe('Static pages', () => {
-    test('should display the homepage', async ({ page, baseURL }) => {
+    test('displays the homepage', async ({ page, baseURL }) => {
       await page.goto(`${baseURL}/`);
 
       await expect(
-        page.getByRole('heading', { name: /Automatizamos suas operações/i }),
+        page.getByRole('heading', { name: /Segurança eletrônica e informática/i }),
       ).toBeVisible();
     });
 
-    test('should display the about page', async ({ page, baseURL }) => {
+    test('displays the about page', async ({ page, baseURL }) => {
       await page.goto(`${baseURL}/about`);
 
       await expect(
-        page.getByRole('heading', { name: /Tecnologia com base sólida e visão de futuro/i }),
+        page.getByRole('heading', { name: /Segurança eletrônica, informática, redes e servidores/i }),
       ).toBeVisible();
     });
 
-    test('should navigate to the portfolio page', async ({ page, baseURL }) => {
+    test('navigates to the portfolio page', async ({ page, baseURL }) => {
       await page.goto(`${baseURL}/`);
 
-      await page.getByRole('link', { name: 'Portfólio' }).click();
+      await page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Portfólio' }).click();
 
       await expect(page).toHaveURL(/portfolio$/);
 
       await expect(
-        page.getByRole('heading', { name: /Nossos casos de sucesso/i }),
+        page.getByRole('heading', { name: /Provas de execução em operações críticas/i }),
       ).toBeVisible();
     });
   });

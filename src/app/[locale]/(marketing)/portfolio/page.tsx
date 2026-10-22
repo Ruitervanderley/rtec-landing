@@ -7,7 +7,7 @@ import { routing } from '@/libs/I18nRouting';
 import { ContactConfig } from '@/utils/ContactConfig';
 import { getBaseUrl, getI18nPath } from '@/utils/Helpers';
 
-type IPortfolioProps = {
+type PortfolioPageProps = {
   params: Promise<{ locale: string }>;
 };
 
@@ -16,11 +16,11 @@ const openGraphLocaleByLocale: Record<string, string> = {
   'fr': 'fr_FR',
 };
 
-export async function generateMetadata(props: IPortfolioProps): Promise<Metadata> {
+export async function generateMetadata(props: PortfolioPageProps): Promise<Metadata> {
   const { locale } = await props.params;
   const t = await getTranslations({
     locale,
-    namespace: 'Portfolio',
+    namespace: 'PortfolioPage',
   });
   const baseUrl = getBaseUrl();
   const path = getI18nPath('/portfolio', locale);
@@ -45,20 +45,20 @@ export async function generateMetadata(props: IPortfolioProps): Promise<Metadata
       title,
       description,
       url: canonicalUrl,
-      siteName: 'Rtec Tecnologia',
+      siteName: 'RTEC Soluções Tecnológicas',
       locale: openGraphLocaleByLocale[locale] ?? 'pt_BR',
       type: 'website',
-      images: [{ url: `${baseUrl}/og-rtec.svg`, width: 1200, height: 630, alt: 'Rtec Tecnologia' }],
+      images: [{ url: `${baseUrl}/og-rtec.png`, width: 1200, height: 630, alt: 'RTEC Soluções Tecnológicas' }],
     },
   };
 }
 
-export default async function PortfolioPage(props: IPortfolioProps) {
+export default async function PortfolioPage(props: PortfolioPageProps) {
   const { locale } = await props.params;
   setRequestLocale(locale);
   const t = await getTranslations({
     locale,
-    namespace: 'Portfolio',
+    namespace: 'PortfolioPage',
   });
   const whatsappUrl = Env.NEXT_PUBLIC_WHATSAPP_URL ?? ContactConfig.whatsappUrl;
   const caseStudies = [

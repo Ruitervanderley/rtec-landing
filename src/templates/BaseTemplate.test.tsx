@@ -1,13 +1,18 @@
 import { NextIntlClientProvider } from 'next-intl';
-import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { page } from 'vitest/browser';
 import messages from '@/locales/pt-BR.json';
 import { BaseTemplate } from './BaseTemplate';
 
+vi.mock('@/libs/I18nNavigation', () => ({
+  Link: (props: React.ComponentProps<'a'>) => createElement('a', { href: props.href, className: props.className, children: props.children }),
+}));
+
 describe('Base template', () => {
-  describe('Render method', () => {
-    it('should have 3 menu items', async () => {
+  describe('Navigation', () => {
+    it('renders the supplied navigation items', async () => {
       await render(
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
           <BaseTemplate
@@ -24,7 +29,7 @@ describe('Base template', () => {
         </NextIntlClientProvider>,
       );
 
-      const menuItemList = page.getByRole('listitem');
+      const menuItemList = page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('listitem');
 
       expect(menuItemList.elements()).toHaveLength(3);
     });
@@ -43,7 +48,7 @@ describe('Base template', () => {
       const [el] = await copyrightSection.elements();
       const text = el?.textContent ?? '';
 
-      expect(text).toContain('Rtec');
+      expect(text).toContain('RTEC');
       expect(text).toContain('Todos os direitos reservados');
     });
   });

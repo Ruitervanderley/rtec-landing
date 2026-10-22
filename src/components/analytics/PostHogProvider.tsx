@@ -17,6 +17,29 @@ export const PostHogProvider = (props: { children: React.ReactNode }) => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!Env.NEXT_PUBLIC_POSTHOG_KEY) {
+      return;
+    }
+
+    const captureContact = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const link = event.target.closest('a');
+      if (!link || new URL(link.href).hostname !== 'wa.me') {
+        return;
+      }
+      posthog.capture('whatsapp_contact_clicked', {
+        page_path: window.location.pathname,
+        label: link.getAttribute('aria-label') ?? link.textContent?.trim(),
+        placement: link.closest('header') ? 'header' : link.closest('footer') ? 'footer' : 'content',
+      });
+    };
+    document.addEventListener('click', captureContact);
+    return () => document.removeEventListener('click', captureContact);
+  }, []);
+
   if (!Env.NEXT_PUBLIC_POSTHOG_KEY) {
     return props.children;
   }

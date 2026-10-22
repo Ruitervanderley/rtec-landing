@@ -42,9 +42,10 @@ export function FaqAccordion(props: { items: FaqItem[] }) {
             </button>
             <div
               id={`faq-answer-${i}`}
+              hidden={!isOpen}
               role="region"
               aria-labelledby={`faq-question-${i}`}
-              className="grid transition-[grid-template-rows] duration-300 ease-out"
+              className={isOpen ? 'grid' : 'hidden'}
               style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
             >
               <div className="overflow-hidden">

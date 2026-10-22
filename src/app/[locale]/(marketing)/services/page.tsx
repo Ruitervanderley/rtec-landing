@@ -39,10 +39,10 @@ export async function generateMetadata(props: ServicesPageProps): Promise<Metada
       title: t('meta_title'),
       description: t('meta_description'),
       url: canonicalUrl,
-      siteName: 'Rtec Tecnologia',
+      siteName: 'RTEC Soluções Tecnológicas',
       locale: openGraphLocaleByLocale[locale] ?? 'pt_BR',
       type: 'website',
-      images: [{ url: `${baseUrl}/og-rtec.svg`, width: 1200, height: 630, alt: 'Rtec Tecnologia' }],
+      images: [{ url: `${baseUrl}/og-rtec.png`, width: 1200, height: 630, alt: 'RTEC Soluções Tecnológicas' }],
     },
   };
 }
@@ -68,6 +68,16 @@ export default async function ServicesPage(props: ServicesPageProps) {
       description: t('service_3_description'),
       outcomes: [t('service_3_outcome_1'), t('service_3_outcome_2'), t('service_3_outcome_3')],
     },
+    {
+      title: t('service_4_title'),
+      description: t('service_4_description'),
+      outcomes: [t('service_4_outcome_1'), t('service_4_outcome_2'), t('service_4_outcome_3')],
+    },
+  ];
+  const engagements = [
+    { title: t('engagement_1_title'), description: t('engagement_1_description') },
+    { title: t('engagement_2_title'), description: t('engagement_2_description') },
+    { title: t('engagement_3_title'), description: t('engagement_3_description') },
   ];
 
   return (
@@ -82,7 +92,7 @@ export default async function ServicesPage(props: ServicesPageProps) {
             {t('page_subtitle')}
           </p>
 
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          <div className="mt-14 grid gap-6 md:grid-cols-2">
             {services.map((service, index) => (
               <article key={service.title} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7">
                 <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">
@@ -102,6 +112,20 @@ export default async function ServicesPage(props: ServicesPageProps) {
               </article>
             ))}
           </div>
+
+          <section className="mt-16" aria-labelledby="engagement-heading">
+            <h2 id="engagement-heading" className="text-2xl font-bold text-white">{t('engagement_title')}</h2>
+            <p className="mt-4 max-w-3xl leading-relaxed text-slate-400">{t('engagement_description')}</p>
+            <div className="mt-8 grid gap-6 lg:grid-cols-3">
+              {engagements.map(engagement => (
+                <article key={engagement.title} className="rounded-2xl border border-white/10 bg-[#060a14] p-6">
+                  <h3 className="text-lg font-semibold text-emerald-300">{engagement.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-300">{engagement.description}</p>
+                </article>
+              ))}
+            </div>
+            <p className="mt-6 rounded-xl border border-white/10 p-5 text-sm leading-relaxed text-slate-300">{t('monitoring_note')}</p>
+          </section>
 
           <div className="mt-14 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-8 text-center">
             <h2 className="text-2xl font-bold text-white">{t('cta_title')}</h2>

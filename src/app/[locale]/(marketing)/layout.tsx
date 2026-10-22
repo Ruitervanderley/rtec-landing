@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import Image from 'next/image';
 import { BackToTop } from '@/components/BackToTop';
 import { FloatingWhatsApp } from '@/components/FloatingWhatsApp';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Env } from '@/libs/Env';
 import { Link } from '@/libs/I18nNavigation';
 import { BaseTemplate } from '@/templates/BaseTemplate';
@@ -14,9 +15,16 @@ export default async function Layout(props: {
 }) {
   const { locale } = await props.params;
   setRequestLocale(locale);
-  const tIndex = await getTranslations({ locale, namespace: 'Index' });
+  const tIndex = await getTranslations({ locale, namespace: 'IndexPage' });
   const tRoot = await getTranslations({ locale, namespace: 'RootLayout' });
   const tBase = await getTranslations({ locale, namespace: 'BaseTemplate' });
+
+  const navItems = [
+    { href: '/', label: tRoot('home_link') },
+    { href: '/services', label: tRoot('services_link') },
+    { href: '/portfolio', label: tRoot('portfolio_link') },
+    { href: '/about', label: tRoot('about_link') },
+  ];
 
   return (
     <BaseTemplate
@@ -38,43 +46,38 @@ export default async function Layout(props: {
               />
             </Link>
           </li>
-          <li>
-            <Link
-              href="/"
-              className="rounded text-slate-400 transition-colors hover:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            >
-              {tRoot('home_link')}
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/portfolio"
-              prefetch={false}
-              className="rounded text-slate-400 transition-colors hover:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            >
-              {tRoot('portfolio_link')}
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/services"
-              prefetch={false}
-              className="rounded text-slate-400 transition-colors hover:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            >
-              {tRoot('services_link')}
-            </Link>
-          </li>
+          {navItems.map(item => (
+            <li key={item.href}>
+              <Link href={item.href} prefetch={false} className="rounded py-3 text-slate-300 transition-colors hover:text-white">
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </>
+      )}
+      mobileNav={(
+        <>
+          {navItems.map(item => (
+            <li key={item.href}>
+              <Link href={item.href} prefetch={false} className="block rounded-lg px-4 py-3 hover:bg-white/5">{item.label}</Link>
+            </li>
+          ))}
+          <li><Link href="/#cta" className="block rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white">{tIndex('header_cta')}</Link></li>
+          <li><LanguageSwitcher /></li>
         </>
       )}
       rightNav={(
-        <li>
-          <Link
-            href="/#cta"
-            className="rounded-xl border border-emerald-500/30 bg-emerald-600/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 shadow-sm transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-600 hover:text-white hover:shadow-emerald-500/20 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-          >
-            {tIndex('header_cta')}
-          </Link>
-        </li>
+        <>
+          <li><LanguageSwitcher /></li>
+          <li>
+            <Link
+              href="/#cta"
+              className="rounded-xl border border-emerald-500/30 bg-emerald-600/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 shadow-sm transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-600 hover:text-white hover:shadow-emerald-500/20 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            >
+              {tIndex('header_cta')}
+            </Link>
+          </li>
+        </>
       )}
     >
       {props.children}

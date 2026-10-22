@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import { MobileNavigation } from '@/components/MobileNavigation';
 import { Link } from '@/libs/I18nNavigation';
 import { AppConfig } from '@/utils/AppConfig';
 import { ContactConfig } from '@/utils/ContactConfig';
@@ -7,6 +8,7 @@ import { ContactConfig } from '@/utils/ContactConfig';
 export const BaseTemplate = (props: {
   leftNav?: React.ReactNode | null;
   rightNav?: React.ReactNode;
+  mobileNav?: React.ReactNode;
   children: React.ReactNode;
 }) => {
   const t = useTranslations('BaseTemplate');
@@ -21,39 +23,35 @@ export const BaseTemplate = (props: {
       </a>
 
       <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0b1121]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          {props.leftNav != null && props.leftNav !== undefined
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <Link href="/" className="shrink-0 rounded focus-visible:ring-2 focus-visible:ring-emerald-400 xl:hidden" aria-label={AppConfig.name}>
+            <Image src="/rtec-logo.png" alt={t('brand_alt')} width={160} height={45} className="h-10 w-auto" priority />
+          </Link>
+          {props.leftNav != null
             ? (
-                <nav aria-label="Main navigation">
-                  <ul className="flex items-center gap-6 text-sm font-medium text-slate-300">
+                <nav aria-label={t('navigation_label')} className="hidden xl:block">
+                  <ul className="flex items-center gap-5 text-sm font-medium text-slate-300">
                     {props.leftNav}
                   </ul>
                 </nav>
               )
             : (
-                <Link
-                  href="/"
-                  className="flex items-center rounded focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none"
-                  aria-label={AppConfig.name}
-                >
-                  <Image
-                    src="/rtec-logo.png"
-                    alt={t('brand_alt')}
-                    width={180}
-                    height={50}
-                    className="h-10 w-auto object-contain brightness-110 sm:h-12"
-                    priority
-                  />
+                <Link href="/" className="hidden xl:block" aria-label={AppConfig.name}>
+                  <Image src="/rtec-logo.png" alt={t('brand_alt')} width={160} height={45} className="h-10 w-auto" priority />
                 </Link>
               )}
-
           {props.rightNav != null
             ? (
-                <nav>
-                  <ul className="flex items-center gap-6 text-sm font-medium">
-                    {props.rightNav}
-                  </ul>
-                </nav>
+                <div className="hidden xl:block">
+                  <ul className="flex items-center gap-4 text-sm font-medium">{props.rightNav}</ul>
+                </div>
+              )
+            : null}
+          {props.mobileNav != null
+            ? (
+                <MobileNavigation label={t('menu_label')} navigationLabel={t('navigation_label')}>
+                  {props.mobileNav}
+                </MobileNavigation>
               )
             : null}
         </div>
@@ -65,7 +63,7 @@ export const BaseTemplate = (props: {
 
       <footer className="border-t border-white/[0.06] bg-[#060a14]">
         <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-2 xl:grid-cols-4">
             <div className="md:col-span-2">
               <Link href="/">
                 <Image
@@ -76,7 +74,7 @@ export const BaseTemplate = (props: {
                   className="h-10 w-auto brightness-110"
                 />
               </Link>
-              <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
                 {t('company_description')}
               </p>
               <div className="mt-6 flex gap-4">
@@ -84,7 +82,7 @@ export const BaseTemplate = (props: {
                   href={ContactConfig.whatsappUrl}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="flex size-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-500 transition-all hover:border-emerald-500/30 hover:text-emerald-400"
+                  className="flex size-11 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-400 transition-all hover:border-emerald-500/30 hover:text-emerald-400"
                   aria-label={t('social_whatsapp_label')}
                 >
                   <svg className="size-4" fill="currentColor" viewBox="0 0 24 24">
@@ -95,7 +93,7 @@ export const BaseTemplate = (props: {
                   href={ContactConfig.instagramUrl}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="flex size-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-500 transition-all hover:border-pink-500/30 hover:text-pink-400"
+                  className="flex size-11 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-400 transition-all hover:border-pink-500/30 hover:text-pink-400"
                   aria-label={t('social_instagram_label')}
                 >
                   <svg className="size-4" fill="currentColor" viewBox="0 0 24 24">
@@ -110,10 +108,11 @@ export const BaseTemplate = (props: {
                 {t('company_section_title')}
               </h4>
               <ul className="mt-4 space-y-3 text-sm">
-                <li><Link href="/" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('home_link')}</Link></li>
-                <li><Link prefetch={false} href="/portfolio" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('portfolio_link')}</Link></li>
-                <li><Link prefetch={false} href="/services" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('services_link')}</Link></li>
-                <li><Link href="/#cta" className="text-slate-500 transition-colors hover:text-emerald-400">{tRoot('contact_link')}</Link></li>
+                <li><Link href="/" className="text-slate-400 transition-colors hover:text-emerald-400">{tRoot('home_link')}</Link></li>
+                <li><Link prefetch={false} href="/portfolio" className="text-slate-400 transition-colors hover:text-emerald-400">{tRoot('portfolio_link')}</Link></li>
+                <li><Link prefetch={false} href="/services" className="text-slate-400 transition-colors hover:text-emerald-400">{tRoot('services_link')}</Link></li>
+                <li><Link prefetch={false} href="/about" className="text-slate-400 transition-colors hover:text-emerald-400">{tRoot('about_link')}</Link></li>
+                <li><Link href="/#cta" className="text-slate-400 transition-colors hover:text-emerald-400">{tRoot('contact_link')}</Link></li>
               </ul>
             </div>
 
@@ -121,12 +120,12 @@ export const BaseTemplate = (props: {
               <h4 className="text-sm font-semibold tracking-wider text-slate-300 uppercase">
                 {t('contact_section_title')}
               </h4>
-              <ul className="mt-4 space-y-3 text-sm text-slate-500">
+              <ul className="mt-4 space-y-3 text-sm text-slate-400">
                 <li className="flex items-center gap-2">
                   <svg className="size-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                   </svg>
-                  <a href={`mailto:${email}`} className="transition-colors hover:text-emerald-400">
+                  <a href={`mailto:${email}`} className="min-w-0 break-words transition-colors hover:text-emerald-400">
                     {email}
                   </a>
                 </li>
@@ -134,7 +133,7 @@ export const BaseTemplate = (props: {
                   <svg className="size-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
                   </svg>
-                  <a href={ContactConfig.whatsappUrl} className="transition-colors hover:text-emerald-400">
+                  <a href={ContactConfig.whatsappUrl} className="min-w-0 break-words transition-colors hover:text-emerald-400">
                     {phone}
                   </a>
                 </li>
@@ -169,7 +168,7 @@ export const BaseTemplate = (props: {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.06] pt-8 text-xs text-slate-600">
+          <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.06] pt-8 text-xs text-slate-400">
             <p>
               ©
               {' '}
@@ -182,14 +181,14 @@ export const BaseTemplate = (props: {
             </p>
             <Link
               href="/sitemap.xml"
-              className="text-slate-600 underline decoration-slate-700 underline-offset-2 transition-colors hover:text-emerald-400"
+              className="text-slate-400 underline decoration-slate-700 underline-offset-2 transition-colors hover:text-emerald-400"
             >
               {t('sitemap_link')}
             </Link>
             <Link
               href="/privacy"
               prefetch={false}
-              className="text-slate-600 underline decoration-slate-700 underline-offset-2 transition-colors hover:text-emerald-400"
+              className="text-slate-400 underline decoration-slate-700 underline-offset-2 transition-colors hover:text-emerald-400"
             >
               {t('privacy_link')}
             </Link>

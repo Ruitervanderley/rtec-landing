@@ -6,7 +6,7 @@ export const Env = createEnv({
     ARCJET_KEY: z.string().startsWith('ajkey_').optional(),
   },
   client: {
-    NEXT_PUBLIC_APP_URL: z.string().optional(),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
     NEXT_PUBLIC_BETTER_STACK_SOURCE_TOKEN: z.string().optional(),
     NEXT_PUBLIC_BETTER_STACK_INGESTING_HOST: z.string().optional(),
     NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),

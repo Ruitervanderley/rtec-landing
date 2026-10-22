@@ -29,9 +29,9 @@ export default defineConfig<ChromaticConfig>({
   // Run your local dev server before starting the tests:
   // https://playwright.dev/docs/test-advanced#launching-a-development-web-server-during-the-tests
   webServer: {
-    command: process.env.CI ? 'npm run start' : 'npm run dev:next',
+    command: process.env.CI ? `node node_modules/next/dist/bin/next start --port ${PORT}` : `node node_modules/next/dist/bin/next dev --port ${PORT}`,
     url: baseURL,
-    timeout: 60 * 1000,
+    timeout: 180 * 1000,
     reuseExistingServer: !process.env.CI,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 2 * 1000 },
     env: {

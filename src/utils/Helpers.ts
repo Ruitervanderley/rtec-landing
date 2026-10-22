@@ -1,11 +1,12 @@
+import { Env } from '@/libs/Env';
 import { routing } from '@/libs/I18nRouting';
 
 export const getBaseUrl = () => {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
+  if (Env.NEXT_PUBLIC_APP_URL) {
+    return Env.NEXT_PUBLIC_APP_URL;
   }
 
-  return 'http://localhost:3000';
+  return 'https://rtectecnologia.com.br';
 };
 
 export const getI18nPath = (url: string, locale: string) => {
